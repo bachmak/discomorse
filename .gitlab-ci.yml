@@ -1,3 +1,9 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
 default:
   image: python:3.12-slim
 
@@ -13,30 +19,37 @@ variables:
   UV_LINK_MODE: copy           # avoids hardlink issues across filesystems in CI
   npm_config_cache: "$CI_PROJECT_DIR/.cache/npm"
 
-# ── Anchors ───────────────────────────────────────────────────────────────────
+# ── Templates ─────────────────────────────────────────────────────────────────
 
 .backend:
-  rules:
-    - changes:
-        - backend/**/*
-
-.frontend:
-  image: node:22-alpine
-  rules:
-    - changes:
-        - frontend/**/*
-
-# ── Backend ───────────────────────────────────────────────────────────────────
-
-backend:lint:
-  extends: .backend
-  stage: lint
   cache:
     key:
       files:
         - backend/pyproject.toml
     paths:
       - .cache/uv
+
+.frontend:
+  image: node:22-alpine
+  cache:
+    key:
+      files:
+        - frontend/package.json
+    paths:
+      - .cache/npm
+      - frontend/node_modules
+  before_script:
+    - cd frontend && npm ci
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+
+backend:lint:
+  extends: .backend
+  stage: lint
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [backend/**/*, .gitlab-ci.yml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   before_script:
     - pip install uv --quiet
     - uv sync --project backend
@@ -46,86 +59,73 @@ backend:lint:
 backend:typecheck:
   extends: .backend
   stage: typecheck
-  cache:
-    key:
-      files:
-        - backend/pyproject.toml
-    paths:
-      - .cache/uv
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [backend/**/*, .gitlab-ci.yml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   before_script:
     - pip install uv --quiet
     - uv sync --project backend --extra server-audio
   script:
     - uv run --project backend mypy --strict backend/src
 
+backend:docker:
+  stage: docker
+  image: docker:26
+  services:
+    - docker:26-dind
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [backend/Dockerfile, docker-compose.yml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: [backend/Dockerfile, docker-compose.yml]
+  script:
+    - docker build backend/ -t morse-decoder-backend
+
 backend:security:
   extends: .backend
   stage: security
-  cache:
-    key:
-      files:
-        - backend/pyproject.toml
-    paths:
-      - .cache/uv
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [backend/pyproject.toml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: [backend/pyproject.toml]
   before_script:
     - pip install uv --quiet
     - uv export --project backend --no-hashes --format requirements-txt -o /tmp/reqs.txt
   script:
     - uv tool run pip-audit -r /tmp/reqs.txt
 
-backend:docker:
-  extends: .backend
-  stage: docker
-  image: docker:26
-  services:
-    - docker:26-dind
-  script:
-    - docker build backend/ -t morse-decoder-backend
-
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
 frontend:lint:
   extends: .frontend
   stage: lint
-  cache:
-    key:
-      files:
-        - frontend/package.json
-    paths:
-      - .cache/npm
-      - frontend/node_modules
-  before_script:
-    - cd frontend && npm ci
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [frontend/**/*, .gitlab-ci.yml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - npm run lint
 
 frontend:typecheck:
   extends: .frontend
   stage: typecheck
-  cache:
-    key:
-      files:
-        - frontend/package.json
-    paths:
-      - .cache/npm
-      - frontend/node_modules
-  before_script:
-    - cd frontend && npm ci
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [frontend/**/*, .gitlab-ci.yml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - npm run typecheck
 
 frontend:build:
   extends: .frontend
   stage: build
-  cache:
-    key:
-      files:
-        - frontend/package.json
-    paths:
-      - .cache/npm
-      - frontend/node_modules
-  before_script:
-    - cd frontend && npm ci
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [frontend/**/*, .gitlab-ci.yml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - npm run build
   artifacts:
@@ -133,17 +133,27 @@ frontend:build:
       - frontend/dist/
     expire_in: 1 week
 
-frontend:security:
-  extends: .frontend
-  stage: security
-  script:
-    - cd frontend && npm audit --audit-level=high
-
 frontend:docker:
-  extends: .frontend
   stage: docker
   image: docker:26
   services:
     - docker:26-dind
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [frontend/Dockerfile, docker-compose.yml]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: [frontend/Dockerfile, docker-compose.yml]
   script:
     - docker build frontend/ -t morse-decoder-frontend
+
+frontend:security:
+  extends: .frontend
+  stage: security
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [frontend/package.json]
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: [frontend/package.json]
+  script:
+    - npm audit --audit-level=high
