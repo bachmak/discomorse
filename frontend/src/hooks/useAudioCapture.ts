@@ -1,6 +1,5 @@
 import { useRef } from "react";
 
-const TARGET_SAMPLE_RATE = 8000;
 const CHUNK_SAMPLES = 2048;
 
 export function useAudioCapture(onChunk: (pcm: ArrayBuffer) => void) {
@@ -10,9 +9,6 @@ export function useAudioCapture(onChunk: (pcm: ArrayBuffer) => void) {
     streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
     const ctx = new AudioContext();
     const source = ctx.createMediaStreamSource(streamRef.current);
-
-    const offline = new OfflineAudioContext(1, CHUNK_SAMPLES, TARGET_SAMPLE_RATE);
-    const bufSrc = offline.createBufferSource();
 
     source.connect(ctx.destination);
 

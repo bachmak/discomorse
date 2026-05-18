@@ -1,7 +1,6 @@
 import io
 from collections.abc import AsyncIterator
 
-import numpy as np
 from pydub import AudioSegment
 
 from morse_decoder.audio.base import AudioSource
@@ -13,7 +12,11 @@ class FileSource(AudioSource):
 
     def __init__(self, data: bytes, fmt: str = "mp3") -> None:
         seg = AudioSegment.from_file(io.BytesIO(data), format=fmt)
-        seg = seg.set_frame_rate(settings.audio.sample_rate).set_channels(1).set_sample_width(2)
+        seg = (
+            seg.set_frame_rate(settings.audio.sample_rate)
+            .set_channels(1)
+            .set_sample_width(2)
+        )
         self._raw = seg.raw_data
 
     async def stream(self) -> AsyncIterator[bytes]:  # type: ignore[override]

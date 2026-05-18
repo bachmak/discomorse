@@ -4,13 +4,13 @@ import json
 from fastapi import WebSocket, WebSocketDisconnect
 
 from morse_decoder.audio.browser_mic import BrowserMicSource
-from morse_decoder.pipeline.types import WaterfallFrame, FFTFrame
-from morse_decoder.plugins.factory import (
-    create_tone_detector,
-    create_timing_decoder,
-    create_interpreter,
-)
 from morse_decoder.pipeline.runner import PipelineRunner
+from morse_decoder.pipeline.types import FFTFrame, WaterfallFrame
+from morse_decoder.plugins.factory import (
+    create_interpreter,
+    create_timing_decoder,
+    create_tone_detector,
+)
 
 
 async def handle_mic_stream(ws: WebSocket) -> None:
@@ -18,10 +18,12 @@ async def handle_mic_stream(ws: WebSocket) -> None:
     source = BrowserMicSource()
 
     async def send_waterfall(frame: WaterfallFrame) -> None:
-        await ws.send_text(json.dumps({"type": "waterfall", "data": frame.magnitudes, "ts": frame.timestamp}))
+        payload = {"type": "waterfall", "data": frame.magnitudes, "ts": frame.timestamp}
+        await ws.send_text(json.dumps(payload))
 
     async def send_fft(frame: FFTFrame) -> None:
-        await ws.send_text(json.dumps({"type": "fft", "data": frame.magnitudes, "ts": frame.timestamp}))
+        payload = {"type": "fft", "data": frame.magnitudes, "ts": frame.timestamp}
+        await ws.send_text(json.dumps(payload))
 
     async def send_text(text: str) -> None:
         await ws.send_text(json.dumps({"type": "text", "data": text}))
