@@ -8,35 +8,70 @@ stages:
   - docker
   - security
 
-# ── Backend ───────────────────────────────────────────────────────────────────
+variables:
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.cache/uv"
+  UV_LINK_MODE: copy           # avoids hardlink issues across filesystems in CI
+  npm_config_cache: "$CI_PROJECT_DIR/.cache/npm"
+
+# ── Anchors ───────────────────────────────────────────────────────────────────
 
 .backend:
   rules:
     - changes:
         - backend/**/*
 
+.frontend:
+  image: node:22-alpine
+  rules:
+    - changes:
+        - frontend/**/*
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+
 backend:lint:
   extends: .backend
   stage: lint
+  cache:
+    key:
+      files:
+        - backend/pyproject.toml
+    paths:
+      - .cache/uv
+  before_script:
+    - pip install uv --quiet
+    - uv sync --project backend
   script:
-    - pip install uv
-    - uv pip install --system ruff
-    - ruff check backend/src
+    - uv run --project backend ruff check backend/src
 
 backend:typecheck:
   extends: .backend
   stage: typecheck
+  cache:
+    key:
+      files:
+        - backend/pyproject.toml
+    paths:
+      - .cache/uv
+  before_script:
+    - pip install uv --quiet
+    - uv sync --project backend --extra server-audio
   script:
-    - pip install uv
-    - uv pip install --system -e backend[server-audio] mypy
-    - mypy --strict backend/src
+    - uv run --project backend mypy --strict backend/src
 
 backend:security:
   extends: .backend
   stage: security
+  cache:
+    key:
+      files:
+        - backend/pyproject.toml
+    paths:
+      - .cache/uv
+  before_script:
+    - pip install uv --quiet
+    - uv export --project backend --no-hashes --format requirements-txt -o /tmp/reqs.txt
   script:
-    - pip install pip-audit
-    - pip-audit -r backend/pyproject.toml
+    - uv tool run pip-audit -r /tmp/reqs.txt
 
 backend:docker:
   extends: .backend
@@ -49,29 +84,54 @@ backend:docker:
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
-.frontend:
-  image: node:22-alpine
-  rules:
-    - changes:
-        - frontend/**/*
-
 frontend:lint:
   extends: .frontend
   stage: lint
+  cache:
+    key:
+      files:
+        - frontend/package.json
+    paths:
+      - .cache/npm
+      - frontend/node_modules
+  before_script:
+    - cd frontend && npm ci
   script:
-    - cd frontend && npm ci && npm run lint
+    - npm run lint
 
 frontend:typecheck:
   extends: .frontend
   stage: typecheck
+  cache:
+    key:
+      files:
+        - frontend/package.json
+    paths:
+      - .cache/npm
+      - frontend/node_modules
+  before_script:
+    - cd frontend && npm ci
   script:
-    - cd frontend && npm ci && npm run typecheck
+    - npm run typecheck
 
 frontend:build:
   extends: .frontend
   stage: build
+  cache:
+    key:
+      files:
+        - frontend/package.json
+    paths:
+      - .cache/npm
+      - frontend/node_modules
+  before_script:
+    - cd frontend && npm ci
   script:
-    - cd frontend && npm ci && npm run build
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 week
 
 frontend:security:
   extends: .frontend
