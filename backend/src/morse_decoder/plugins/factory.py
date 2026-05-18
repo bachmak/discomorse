@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from morse_decoder.config import settings
-from morse_decoder.plugins.base import ToneDetector, TimingDecoder, Interpreter
+from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
 
 if TYPE_CHECKING:
     pass

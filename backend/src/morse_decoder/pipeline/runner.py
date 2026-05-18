@@ -1,9 +1,8 @@
-import asyncio
-from collections.abc import AsyncIterator, Callable
+from collections.abc import Callable
 
 from morse_decoder.audio.base import AudioSource
-from morse_decoder.plugins.base import ToneDetector, TimingDecoder, Interpreter
-from morse_decoder.pipeline.types import WaterfallFrame, FFTFrame, Token
+from morse_decoder.pipeline.types import FFTFrame, WaterfallFrame
+from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
 
 
 class PipelineRunner:
