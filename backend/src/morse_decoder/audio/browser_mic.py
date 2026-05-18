@@ -13,6 +13,6 @@ class BrowserMicSource(AudioSource):
     async def push(self, chunk: bytes) -> None:
         await self._queue.put(chunk)
 
-    async def stream(self) -> AsyncIterator[bytes]:  # type: ignore[override]
+    async def stream(self) -> AsyncIterator[bytes]:
         while True:
             yield await self._queue.get()

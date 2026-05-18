@@ -28,14 +28,23 @@ async def handle_mic_stream(ws: WebSocket) -> None:
     async def send_text(text: str) -> None:
         await ws.send_text(json.dumps({"type": "text", "data": text}))
 
+    def fire_waterfall(frame: WaterfallFrame) -> None:
+        asyncio.ensure_future(send_waterfall(frame))
+
+    def fire_fft(frame: FFTFrame) -> None:
+        asyncio.ensure_future(send_fft(frame))
+
+    def fire_text(text: str) -> None:
+        asyncio.ensure_future(send_text(text))
+
     runner = PipelineRunner(
         source=source,
         tone_detector=create_tone_detector(),
         timing_decoder=create_timing_decoder(),
         interpreter=create_interpreter(),
-        on_waterfall=lambda f: asyncio.ensure_future(send_waterfall(f)),
-        on_fft=lambda f: asyncio.ensure_future(send_fft(f)),
-        on_text=lambda t: asyncio.ensure_future(send_text(t)),
+        on_waterfall=fire_waterfall,
+        on_fft=fire_fft,
+        on_text=fire_text,
     )
 
     pipeline_task = asyncio.create_task(runner.run())

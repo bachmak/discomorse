@@ -1,7 +1,7 @@
 import io
 from collections.abc import AsyncIterator
 
-from pydub import AudioSegment
+from pydub import AudioSegment  # type: ignore[import-untyped]  # pydub has no type stubs
 
 from morse_decoder.audio.base import AudioSource
 from morse_decoder.config import settings
@@ -19,7 +19,7 @@ class FileSource(AudioSource):
         )
         self._raw = seg.raw_data
 
-    async def stream(self) -> AsyncIterator[bytes]:  # type: ignore[override]
+    async def stream(self) -> AsyncIterator[bytes]:
         chunk = settings.audio.chunk_size * 2  # 2 bytes per Int16 sample
         for i in range(0, len(self._raw), chunk):
             yield self._raw[i : i + chunk]
