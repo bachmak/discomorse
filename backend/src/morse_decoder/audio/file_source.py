@@ -1,9 +1,7 @@
 import io
 from collections.abc import AsyncIterator
 
-from pydub import (
-    AudioSegment,  # type: ignore[import-untyped]  # pydub has no type stubs
-)
+from pydub import AudioSegment  # type: ignore[import-untyped]  # no stubs
 
 from morse_decoder.audio.base import AudioSource
 from morse_decoder.config import settings
