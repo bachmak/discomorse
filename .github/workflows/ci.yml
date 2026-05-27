@@ -42,8 +42,10 @@ jobs:
               - 'docker-compose.yml'
             backend_deps:
               - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
             frontend_deps:
               - 'frontend/package.json'
+              - 'frontend/package-lock.json'
 
   # ── Backend ───────────────────────────────────────────────────────────────────
 
