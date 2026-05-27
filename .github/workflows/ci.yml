@@ -84,7 +84,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv export --project backend --no-hashes --format requirements-txt -o /tmp/reqs.txt
+      - run: uv export --project backend --no-hashes --no-emit-project --format requirements-txt -o /tmp/reqs.txt
       - run: uvx pip-audit -r /tmp/reqs.txt
 
   # ── Frontend ──────────────────────────────────────────────────────────────────
