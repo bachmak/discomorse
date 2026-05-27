@@ -8,6 +8,10 @@ on:
     - cron: "0 6 * * 1" # weekly Monday 06:00 UTC — security scans
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -38,8 +42,10 @@ jobs:
               - 'docker-compose.yml'
             backend_deps:
               - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
             frontend_deps:
               - 'frontend/package.json'
+              - 'frontend/package-lock.json'
 
   # ── Backend ───────────────────────────────────────────────────────────────────
 
@@ -84,7 +90,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv export --project backend --no-hashes --format requirements-txt -o /tmp/reqs.txt
+      - run: uv export --project backend --no-hashes --no-emit-project --format requirements-txt -o /tmp/reqs.txt
       - run: uvx pip-audit -r /tmp/reqs.txt
 
   # ── Frontend ──────────────────────────────────────────────────────────────────
