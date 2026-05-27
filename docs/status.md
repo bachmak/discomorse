@@ -50,7 +50,7 @@
 |---|---|
 | `docker-compose.yml` | Done — backend + frontend + Caddy |
 | `Caddyfile` | Done — reverse proxy routes (`/api/*`, `/ws/*` → backend, rest → frontend) |
-| `.gitlab-ci.yml` | Done — path-triggered jobs: lint, typecheck, build, Docker, security |
+| `.github/workflows/ci.yml` | Done — path-triggered jobs: lint, typecheck, build, Docker, security |
 | `.pre-commit-config.yaml` | Done — ruff + mypy hooks |
 | `.gitignore` | Done |
 | `models/en/` | Directory created, no corpus files yet |

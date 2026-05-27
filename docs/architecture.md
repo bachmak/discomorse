@@ -22,9 +22,9 @@ Web-based, real-time Morse code decoder. Python backend handles all signal proce
 | Code quality | ruff + pre-commit + mypy --strict |
 | Containerization | docker-compose (backend + frontend + Caddy) |
 | Reverse proxy | Caddy (automatic HTTPS via Let's Encrypt) |
-| Repository | Monorepo on GitLab |
-| Branching | GitHub Flow (short-lived feature branches → main via MR) |
-| CI/CD | GitLab CI: lint, typecheck, build, Docker build, security scan |
+| Repository | Monorepo on GitHub |
+| Branching | GitHub Flow (short-lived feature branches → main via PR) |
+| CI/CD | GitHub Actions: lint, typecheck, build, Docker build, security scan |
 
 ---
 
@@ -56,7 +56,7 @@ morse-decoder/
 │   └── architecture.md
 ├── docker-compose.yml
 ├── Caddyfile
-├── .gitlab-ci.yml
+├── .github/workflows/ci.yml
 └── .pre-commit-config.yaml
 ```
 
@@ -206,7 +206,7 @@ Strict typing enforced throughout the Python backend:
 
 ---
 
-## CI/CD (GitLab)
+## CI/CD (GitHub Actions)
 
 Path-based triggers: backend jobs only run when `backend/` changes; frontend jobs only when `frontend/` changes.
 
