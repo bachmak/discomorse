@@ -10,15 +10,16 @@
 | `Dockerfile` | Done — FFmpeg + uv install |
 | `src/morse_decoder/config.py` | Done — pydantic-settings, two-layer TOML + env var overrides |
 | `src/morse_decoder/audio/base.py` | Done — `AudioSource` ABC |
-| `src/morse_decoder/audio/browser_mic.py` | Done — `BrowserMicSource` (asyncio.Queue, push from WS) |
+| `src/morse_decoder/audio/browser_mic.py` | Done — `BrowserMicSource` (asyncio.Queue, push from WS; `EndOfStream` sentinel pushed to end stream) |
 | `src/morse_decoder/audio/file_source.py` | Done — `FileSource` (pydub decode → chunked PCM) |
 | `src/morse_decoder/plugins/base.py` | Done — `ToneDetector`, `TimingDecoder`, `Interpreter` ABCs |
 | `src/morse_decoder/plugins/factory.py` | Done — decorator registry + `create_*` factory functions |
-| `src/morse_decoder/pipeline/types.py` | Done — `MorseElement`, `Token`, `WaterfallFrame`, `FFTFrame` DTOs |
+| `src/morse_decoder/pipeline/types.py` | Done — `MorseElement`, `TokenKind`, `Token` domain DTOs |
+| `src/morse_decoder/pipeline/events.py` | Done — `OutboundEvent` hierarchy (Template Method `to_payload`): `MagnitudeFrame` → `WaterfallFrame`/`FFTFrame`, `DecodedText` |
 | `src/morse_decoder/pipeline/letter_decoder.py` | Done — full ITU table, pure `decode_sequence` function |
-| `src/morse_decoder/pipeline/runner.py` | Done — `PipelineRunner` wiring source → detector → decoder → interpreter |
+| `src/morse_decoder/pipeline/runner.py` | Done — `PipelineRunner` streams source → detector → decoder → interpreter, yields `OutboundEvent`s (async generator) |
 | `src/morse_decoder/api/routes.py` | Stub — `/health` done; `/upload` stub (no pipeline wired yet) |
-| `src/morse_decoder/api/websocket.py` | Done — `handle_mic_stream` wires `BrowserMicSource` → `PipelineRunner` |
+| `src/morse_decoder/api/websocket.py` | Done — `handle_mic_stream` runs duplex pumps under `TaskGroup`; `BrowserMicSource` ↔ `PipelineRunner` |
 | **`STFTDetector`** | **Not implemented** — `ToneDetector` plugin, register with `@register_tone_detector("STFTDetector")` |
 | **`AdaptiveThresholdDecoder`** | **Not implemented** — `TimingDecoder` plugin, register with `@register_timing_decoder("AdaptiveThresholdDecoder")` |
 | **`NoisyChannelInterpreter`** (or HuggingFace) | **Not implemented** — `Interpreter` plugin, decision still open (see architecture.md) |
