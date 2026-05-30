@@ -14,7 +14,7 @@
 | `src/morse_decoder/audio/file_source.py` | Done — `FileSource` (pydub decode → chunked PCM) |
 | `src/morse_decoder/plugins/base.py` | Done — `ToneDetector`, `TimingDecoder`, `Interpreter` ABCs |
 | `src/morse_decoder/plugins/factory.py` | Done — decorator registry + `create_*` factory functions |
-| `src/morse_decoder/pipeline/types.py` | Done — `MorseElement` enum + `Token` class hierarchy (`Letter`/`Digit`/`Prosign`/`Unknown`) |
+| `src/morse_decoder/pipeline/types.py` | Done — `MorseElement` hierarchy (`Signal` → `Dit`/`Dah`; `Space` → `IntraCharSpace`/`InterCharSpace`/`WordSpace`) + `Token` hierarchy (`Letter`/`Digit`/`Prosign`/`Unknown`) |
 | `src/morse_decoder/pipeline/events.py` | Done — `OutboundEvent` hierarchy (Template Method `to_payload`): `MagnitudeFrame` → `WaterfallFrame`/`FFTFrame`, `DecodedText` |
 | `src/morse_decoder/pipeline/letter_decoder.py` | Done — full ITU table, `decode_sequence` via `CodeClassifier` chain of responsibility |
 | `src/morse_decoder/pipeline/runner.py` | Done — `PipelineRunner` streams source → detector → decoder → interpreter, yields `OutboundEvent`s (async generator) |

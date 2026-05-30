@@ -3,6 +3,7 @@ from morse_decoder.pipeline.types import (
     Letter,
     MorseElement,
     Prosign,
+    Signal,
     Token,
     Unknown,
 )
@@ -32,11 +33,7 @@ _TOKEN_TYPES: tuple[type[Token], ...] = (Unknown, Prosign, Digit, Letter)
 
 
 def _to_code(elements: list[MorseElement]) -> str:
-    return "".join(
-        "." if e == MorseElement.DIT else "-"
-        for e in elements
-        if e in (MorseElement.DIT, MorseElement.DAH)
-    )
+    return "".join(e.code_symbol for e in elements if isinstance(e, Signal))
 
 
 def decode_sequence(elements: list[MorseElement]) -> Token:
