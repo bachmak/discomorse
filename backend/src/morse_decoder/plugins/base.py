@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from morse_decoder.pipeline.types import MorseElement, ToneReeding
+from morse_decoder.pipeline.types import MorseElement, ToneReading
 
 
 class ToneDetector(ABC):
