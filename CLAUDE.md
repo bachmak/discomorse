@@ -17,6 +17,19 @@ Things NOT to do:
 - don't return multiple values. Instead: use a new type
 - don't use callbacks. Instead: direct flow with async, await, yield
 
+How to write tests:
+- write table-driven tests with @pytest.mark.parametrize instead of many isolated test functions with duplicated code.
+Example:
+```python
+@pytest.mark.parametrize("a, b, want", [
+    pytest.param(2,  3, 5, id="positive"),
+    pytest.param(0,  0, 0, id="zero"),
+    pytest.param(-1, 1, 0, id="negative"),
+])
+def test_add(a, b, want):
+    assert add(a, b) == want
+```
+
 No `# type: ignore` without a comment explaining why.
 
 Check `docs/status.md` before starting work on a new component — it tracks what is scaffolded versus what still needs to be built.
