@@ -9,6 +9,9 @@ dependencies = [
     "numpy>=2.0",
     "scipy>=1.14",
     "pydub>=0.25",
+    # pydub imports the stdlib `audioop`, removed in Python 3.13 (PEP 594).
+    # audioop-lts is the sanctioned PyPI backport; no-op on <3.13.
+    "audioop-lts>=0.2; python_version >= '3.13'",
     "pydantic-settings>=2.6",
     "tomli>=2.0",
 ]
