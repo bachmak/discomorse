@@ -12,6 +12,11 @@ Aggressively and proactively follow and enforce these guidelines when writing co
 
 Write code like Robert C. Martin.
 
+Things NOT to do:
+- don't use Any. Instead: set of concrete types
+- don't return multiple values. Instead: use a new type
+- don't use callbacks. Instead: direct flow with async, await, yield
+
 No `# type: ignore` without a comment explaining why.
 
 Check `docs/status.md` before starting work on a new component — it tracks what is scaffolded versus what still needs to be built.
