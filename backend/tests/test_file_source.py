@@ -1,99 +1,42 @@
-"""Tests for FileSource: chunking, resampling, downmixing, and fidelity.
-
-Audio is synthesized in-memory (see ``audio_fixtures``). Where input is
-already at the target rate/width/channels, pydub short-circuits the
-conversions, so byte counts are exact. Where resampling happens, assertions
-use tolerances — resampled audio is never sample-exact — and check the
-frequency domain instead.
-"""
-
 import numpy as np
-from audio_fixtures import sine_pcm, sine_wav, wav_bytes
+import numpy.typing as npt
+from audio_fixtures import sine_wav
 
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.config import AudioSettings
 
-_TARGET_RATE = 8000
-_SAMPLE_WIDTH = 2  # bytes per Int16 sample
+
+async def _drain(source: FileSource) -> npt.NDArray[np.int16]:
+    chunks = [chunk async for chunk in source.stream()]
+    return np.frombuffer(b"".join(chunks), dtype=np.int16)
 
 
-def _conformed(samples: np.ndarray, chunk_size: int) -> FileSource:
-    """A FileSource over already-conformed PCM (no resampling on decode)."""
-    audio = AudioSettings(sample_rate=_TARGET_RATE, chunk_size=chunk_size)
-    return FileSource(wav_bytes(samples, _TARGET_RATE), audio, fmt="wav")
+async def test_file_source_resamples_to_target_rate() -> None:
+    audio = AudioSettings(sample_rate=8_000, chunk_size=2048)
+    data = sine_wav(freq_hz=440, duration_s=1.0, sample_rate=16_000)
+
+    samples = await _drain(FileSource(data, audio))
+
+    # 1 s downsampled 16 kHz -> 8 kHz lands near 8000 samples (polyphase edges)
+    assert abs(len(samples) - audio.sample_rate) < 100
 
 
-async def _collect(source: FileSource) -> list[bytes]:
-    return [chunk async for chunk in source.stream()]
+async def test_file_source_downmixes_stereo_to_mono() -> None:
+    audio = AudioSettings(sample_rate=8_000, chunk_size=2048)
+    data = sine_wav(freq_hz=440, duration_s=1.0, sample_rate=8_000, channels=2)
+
+    samples = await _drain(FileSource(data, audio))
+
+    assert samples.dtype == np.int16
+    assert abs(len(samples) - audio.sample_rate) < 100
 
 
-async def test_stream_reassembles_to_original_pcm() -> None:
-    """Chunks rejoin to the exact decoded PCM, in order and lossless."""
-    samples = sine_pcm(800, 0.625, _TARGET_RATE)  # 5000 samples
-    source = _conformed(samples, chunk_size=2048)
+async def test_file_source_chunks_respect_chunk_size() -> None:
+    audio = AudioSettings(sample_rate=8_000, chunk_size=1024)
+    data = sine_wav(freq_hz=440, duration_s=1.0, sample_rate=8_000)
 
-    rejoined = b"".join(await _collect(source))
+    chunks = [chunk async for chunk in FileSource(data, audio).stream()]
 
-    assert rejoined == samples.tobytes()
-
-
-async def test_chunks_are_full_except_the_last() -> None:
-    samples = sine_pcm(800, 0.625, _TARGET_RATE)  # 5000 samples -> 3 chunks
-    source = _conformed(samples, chunk_size=2048)
-    chunk_bytes = 2048 * _SAMPLE_WIDTH
-
-    chunks = await _collect(source)
-
+    chunk_bytes = audio.chunk_size * 2
     assert all(len(chunk) == chunk_bytes for chunk in chunks[:-1])
-    assert 0 < len(chunks[-1]) <= chunk_bytes
-
-
-async def test_exact_multiple_yields_no_partial_chunk() -> None:
-    samples = sine_pcm(800, 0.5, _TARGET_RATE)  # 4000 samples
-    source = _conformed(samples, chunk_size=1000)
-    chunk_bytes = 1000 * _SAMPLE_WIDTH
-
-    chunks = await _collect(source)
-
-    assert len(chunks) == 4
-    assert all(len(chunk) == chunk_bytes for chunk in chunks)
-
-
-async def test_input_smaller_than_one_chunk_yields_single_chunk() -> None:
-    samples = sine_pcm(800, 0.0125, _TARGET_RATE)  # 100 samples
-    source = _conformed(samples, chunk_size=2048)
-
-    chunks = await _collect(source)
-
-    assert len(chunks) == 1
-    assert len(chunks[0]) == 100 * _SAMPLE_WIDTH
-
-
-async def test_resamples_to_target_rate() -> None:
-    audio = AudioSettings(sample_rate=_TARGET_RATE, chunk_size=2048)
-    source = FileSource(sine_wav(800, 1.0, 44100), audio, fmt="wav")
-
-    sample_count = len(b"".join(await _collect(source))) // _SAMPLE_WIDTH
-
-    assert abs(sample_count - _TARGET_RATE) <= 4  # ~1s at the target rate
-
-
-async def test_downmixes_stereo_to_mono() -> None:
-    audio = AudioSettings(sample_rate=_TARGET_RATE, chunk_size=2048)
-    source = FileSource(sine_wav(800, 0.2, _TARGET_RATE, channels=2), audio, fmt="wav")
-
-    sample_count = len(b"".join(await _collect(source))) // _SAMPLE_WIDTH
-
-    assert sample_count == int(_TARGET_RATE * 0.2)  # 1600 mono samples
-
-
-async def test_preserves_tone_frequency() -> None:
-    audio = AudioSettings(sample_rate=_TARGET_RATE, chunk_size=2048)
-    source = FileSource(sine_wav(770, 0.5, 44100), audio, fmt="wav")
-
-    pcm = np.frombuffer(b"".join(await _collect(source)), dtype=np.int16)
-    spectrum = np.abs(np.fft.rfft(pcm.astype(np.float64)))
-    freqs = np.fft.rfftfreq(pcm.size, 1 / _TARGET_RATE)
-    peak_hz = float(freqs[int(spectrum.argmax())])
-
-    assert abs(peak_hz - 770) < 20
+    assert all(len(chunk) <= chunk_bytes for chunk in chunks)

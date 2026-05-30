@@ -7,11 +7,14 @@
 | `pyproject.toml` | Done — uv, all deps, ruff + mypy config |
 | `config.toml` | Done — default values for all sections |
 | `config.local.toml` | Gitignored, not created — add locally as needed |
-| `Dockerfile` | Done — FFmpeg + uv install |
+| `Dockerfile` | Done — uv install (no FFmpeg; soundfile bundles libsndfile) |
 | `src/morse_decoder/config.py` | Done — pydantic-settings, two-layer TOML + env var overrides |
 | `src/morse_decoder/audio/base.py` | Done — `AudioSource` ABC |
 | `src/morse_decoder/audio/browser_mic.py` | Done — `BrowserMicSource` (asyncio.Queue, push from WS; `EndOfStream` sentinel pushed to end stream) |
-| `src/morse_decoder/audio/file_source.py` | Done — `FileSource` (pydub decode → chunked PCM) |
+| `src/morse_decoder/audio/decoded.py` | Done — `DecodedAudio` DTO (float32 samples + native rate) |
+| `src/morse_decoder/audio/decoder.py` | Done — `AudioDecoder` ABC + `SoundFileDecoder` (libsndfile via soundfile) |
+| `src/morse_decoder/audio/pcm_normalizer.py` | Done — `PcmNormalizer` (numpy/scipy mono + resample_poly + Int16) |
+| `src/morse_decoder/audio/file_source.py` | Done — `FileSource` (soundfile decode → PcmNormalizer → chunked PCM; injectable decoder) |
 | `src/morse_decoder/plugins/base.py` | Done — `ToneDetector`, `TimingDecoder`, `Interpreter` ABCs |
 | `src/morse_decoder/plugins/factory.py` | Done — decorator registry + `create_*` factory functions |
 | `src/morse_decoder/pipeline/types.py` | Done — `MorseElement`, `TokenKind`, `Token` domain DTOs |
@@ -23,7 +26,7 @@
 | **`STFTDetector`** | **Not implemented** — `ToneDetector` plugin, register with `@register_tone_detector("STFTDetector")` |
 | **`AdaptiveThresholdDecoder`** | **Not implemented** — `TimingDecoder` plugin, register with `@register_timing_decoder("AdaptiveThresholdDecoder")` |
 | **`NoisyChannelInterpreter`** (or HuggingFace) | **Not implemented** — `Interpreter` plugin, decision still open (see architecture.md) |
-| Tests | **Not started** |
+| Tests | In progress — pytest wired (`asyncio_mode=auto`); `test_smoke`, `test_file_source` (decode/resample/chunk) |
 
 ## Frontend
 
