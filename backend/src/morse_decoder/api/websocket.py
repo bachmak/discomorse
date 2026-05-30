@@ -1,40 +1,65 @@
 import asyncio
 import json
+from abc import ABC, abstractmethod
 
 from fastapi import WebSocket, WebSocketDisconnect
 
 from morse_decoder.audio.browser_mic import BrowserMicSource, EndOfStream
 from morse_decoder.pipeline.runner import PipelineRunner
-from morse_decoder.plugins.factory import (
-    create_interpreter,
-    create_timing_decoder,
-    create_tone_detector,
-)
+from morse_decoder.plugins.factory import create_pipeline_runner
 
 
 async def handle_mic_stream(ws: WebSocket) -> None:
     await ws.accept()
-    source = BrowserMicSource()
-    runner = PipelineRunner(
-        source=source,
-        tone_detector=create_tone_detector(),
-        timing_decoder=create_timing_decoder(),
-        interpreter=create_interpreter(),
-    )
-    try:
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(_pump_audio_in(ws, source))
-            tg.create_task(_pump_events_out(ws, runner))
-    except* WebSocketDisconnect:
-        pass
+    await MicStreamSession(ws).run()
 
 
-async def _pump_audio_in(ws: WebSocket, source: BrowserMicSource) -> None:
-    async for chunk in ws.iter_bytes():
-        await source.push(chunk)
-    await source.push(EndOfStream())
+class Pump(ABC):
+    """One direction of a duplex WebSocket transfer."""
+
+    @abstractmethod
+    async def run(self) -> None: ...
 
 
-async def _pump_events_out(ws: WebSocket, runner: PipelineRunner) -> None:
-    async for event in runner.run():
-        await ws.send_text(json.dumps(event.to_payload()))
+class MicStreamSession:
+    """Drives a mic stream: audio in, decoded events out, over one socket."""
+
+    def __init__(self, ws: WebSocket) -> None:
+        source = BrowserMicSource()
+        self._pumps: tuple[Pump, Pump] = (
+            AudioInboundPump(ws, source),
+            EventOutboundPump(ws, create_pipeline_runner(source)),
+        )
+
+    async def run(self) -> None:
+        try:
+            async with asyncio.TaskGroup() as group:
+                for pump in self._pumps:
+                    group.create_task(pump.run())
+        except* WebSocketDisconnect:
+            pass
+
+
+class AudioInboundPump(Pump):
+    """Forwards inbound socket bytes into the audio source, then closes it."""
+
+    def __init__(self, ws: WebSocket, source: BrowserMicSource) -> None:
+        self._ws = ws
+        self._source = source
+
+    async def run(self) -> None:
+        async for chunk in self._ws.iter_bytes():
+            await self._source.push(chunk)
+        await self._source.push(EndOfStream())
+
+
+class EventOutboundPump(Pump):
+    """Streams decoded pipeline events out to the socket as JSON text."""
+
+    def __init__(self, ws: WebSocket, runner: PipelineRunner) -> None:
+        self._ws = ws
+        self._runner = runner
+
+    async def run(self) -> None:
+        async for event in self._runner.run():
+            await self._ws.send_text(json.dumps(event.to_payload()))
