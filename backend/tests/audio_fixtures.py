@@ -2,17 +2,16 @@
 
 No binary fixtures are committed: each test builds a known signal (a pure
 tone) and encodes it as WAV bytes — the input shape ``FileSource`` accepts.
-WAV keeps decoding deterministic and sidesteps the ffmpeg code path.
+WAV keeps decoding deterministic.
 """
 
 import io
 
 import numpy as np
 import numpy.typing as npt
-from pydub import AudioSegment
+import soundfile as sf  # type: ignore[import-untyped]  # no stubs
 
 _INT16_MAX = 32767
-_SAMPLE_WIDTH = 2  # bytes per Int16 sample
 
 
 def sine_pcm(
@@ -27,15 +26,9 @@ def wav_bytes(
     samples: npt.NDArray[np.int16], sample_rate: int, channels: int = 1
 ) -> bytes:
     """Encode mono Int16 samples as WAV, duplicated across ``channels``."""
-    interleaved = np.repeat(samples, channels) if channels > 1 else samples
-    segment = AudioSegment(
-        interleaved.tobytes(),
-        frame_rate=sample_rate,
-        sample_width=_SAMPLE_WIDTH,
-        channels=channels,
-    )
+    frames = samples if channels == 1 else np.tile(samples[:, None], (1, channels))
     buffer = io.BytesIO()
-    segment.export(buffer, format="wav")
+    sf.write(buffer, frames, sample_rate, format="WAV", subtype="PCM_16")
     return buffer.getvalue()
 
 
