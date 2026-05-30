@@ -21,15 +21,3 @@ class TokenKind(Enum):
 class Token:
     kind: TokenKind
     value: str
-
-
-@dataclass(frozen=True)
-class WaterfallFrame:
-    magnitudes: list[float]
-    timestamp: float
-
-
-@dataclass(frozen=True)
-class FFTFrame:
-    magnitudes: list[float]
-    timestamp: float

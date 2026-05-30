@@ -19,6 +19,9 @@ models/**/*.bin
 models/**/*.pt
 models/**/*.pkl
 
+# IDE
+.idea/
+
 # Misc
 .DS_Store
 *.swp
