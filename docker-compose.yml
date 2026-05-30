@@ -1,9 +1,6 @@
 services:
   backend:
     build: ./backend
-    environment:
-      - SERVER__HOST=0.0.0.0
-      - SERVER__PORT=8000
     expose:
       - "8000"
 
