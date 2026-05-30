@@ -1,10 +1,7 @@
-from typing import TYPE_CHECKING
-
+from morse_decoder.audio.base import AudioSource
 from morse_decoder.config import settings
+from morse_decoder.pipeline.runner import PipelineRunner
 from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
-
-if TYPE_CHECKING:
-    pass
 
 _tone_detectors: dict[str, type[ToneDetector]] = {}
 _timing_decoders: dict[str, type[TimingDecoder]] = {}
@@ -51,3 +48,12 @@ def create_interpreter() -> Interpreter:
     if name not in _interpreters:
         raise KeyError(f"Unknown interpreter: {name!r}")
     return _interpreters[name]()
+
+
+def create_pipeline_runner(source: AudioSource) -> PipelineRunner:
+    return PipelineRunner(
+        source=source,
+        tone_detector=create_tone_detector(),
+        timing_decoder=create_timing_decoder(),
+        interpreter=create_interpreter(),
+    )
