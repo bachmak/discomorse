@@ -1,4 +1,11 @@
-from morse_decoder.pipeline.types import MorseElement, Token, TokenKind
+from morse_decoder.pipeline.types import (
+    Digit,
+    Letter,
+    MorseElement,
+    Prosign,
+    Token,
+    Unknown,
+)
 
 _ITU_TABLE: dict[str, str] = {
     ".-": "A", "-...": "B", "-.-.": "C", "-..": "D", ".": "E",
@@ -19,21 +26,24 @@ _ITU_TABLE: dict[str, str] = {
     "-.---.": "KN",
 }
 
-_DIGIT_CHARS = set("0123456789")
-_PROSIGN_CHARS = {"AA", "CT", "SK", "SN", "BT", "KN", "OS"}
+# Asked in order; the first kind that claims the code wins. `Unknown` and
+# `Letter` bracket the chain, so every code yields exactly one token.
+_TOKEN_TYPES: tuple[type[Token], ...] = (Unknown, Prosign, Digit, Letter)
 
 
-def decode_sequence(elements: list[MorseElement]) -> Token:
-    code = "".join(
+def _to_code(elements: list[MorseElement]) -> str:
+    return "".join(
         "." if e == MorseElement.DIT else "-"
         for e in elements
         if e in (MorseElement.DIT, MorseElement.DAH)
     )
-    value = _ITU_TABLE.get(code)
-    if value is None:
-        return Token(kind=TokenKind.UNKNOWN, value=code)
-    if value in _PROSIGN_CHARS:
-        return Token(kind=TokenKind.PROSIGN, value=value)
-    if value in _DIGIT_CHARS:
-        return Token(kind=TokenKind.DIGIT, value=value)
-    return Token(kind=TokenKind.LETTER, value=value)
+
+
+def decode_sequence(elements: list[MorseElement]) -> Token:
+    code = _to_code(elements)
+    char = _ITU_TABLE.get(code)
+    for token_type in _TOKEN_TYPES:
+        token = token_type.claim(code, char)
+        if token is not None:
+            return token
+    raise AssertionError("Letter is a catch-all; the chain always yields a token")

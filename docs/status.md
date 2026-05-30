@@ -14,9 +14,9 @@
 | `src/morse_decoder/audio/file_source.py` | Done — `FileSource` (pydub decode → chunked PCM) |
 | `src/morse_decoder/plugins/base.py` | Done — `ToneDetector`, `TimingDecoder`, `Interpreter` ABCs |
 | `src/morse_decoder/plugins/factory.py` | Done — decorator registry + `create_*` factory functions |
-| `src/morse_decoder/pipeline/types.py` | Done — `MorseElement`, `TokenKind`, `Token` domain DTOs |
+| `src/morse_decoder/pipeline/types.py` | Done — `MorseElement` enum + `Token` class hierarchy (`Letter`/`Digit`/`Prosign`/`Unknown`) |
 | `src/morse_decoder/pipeline/events.py` | Done — `OutboundEvent` hierarchy (Template Method `to_payload`): `MagnitudeFrame` → `WaterfallFrame`/`FFTFrame`, `DecodedText` |
-| `src/morse_decoder/pipeline/letter_decoder.py` | Done — full ITU table, pure `decode_sequence` function |
+| `src/morse_decoder/pipeline/letter_decoder.py` | Done — full ITU table, `decode_sequence` via `CodeClassifier` chain of responsibility |
 | `src/morse_decoder/pipeline/runner.py` | Done — `PipelineRunner` streams source → detector → decoder → interpreter, yields `OutboundEvent`s (async generator) |
 | `src/morse_decoder/api/routes.py` | Stub — `/health` done; `/upload` stub (no pipeline wired yet) |
 | `src/morse_decoder/api/websocket.py` | Done — `handle_mic_stream` runs duplex pumps under `TaskGroup`; `BrowserMicSource` ↔ `PipelineRunner` |
