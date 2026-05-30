@@ -73,6 +73,19 @@ jobs:
       - run: uv sync --project backend --extra server-audio
       - run: uv run --project backend mypy --strict backend/src
 
+  backend-test:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg # pydub decode path
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --project backend
+      - run: uv run --project backend pytest backend/tests
+
   backend-docker:
     needs: changes
     if: ${{ needs.changes.outputs.backend_docker == 'true' }}
