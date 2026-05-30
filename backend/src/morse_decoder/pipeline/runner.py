@@ -32,11 +32,11 @@ class PipelineRunner:
                 yield event
 
     async def _process_chunk(self, chunk: bytes) -> AsyncIterator[OutboundEvent]:
-        tone_on, fft_mags = await self._tone_detector.process(chunk)
+        reading = await self._tone_detector.process(chunk)
         ts = time.monotonic()
-        yield FFTFrame(magnitudes=fft_mags, timestamp=ts)
-        yield WaterfallFrame(magnitudes=fft_mags, timestamp=ts)
-        async for event in self._decode(tone_on, ts):
+        yield FFTFrame(magnitudes=reading.magnitudes, timestamp=ts)
+        yield WaterfallFrame(magnitudes=reading.magnitudes, timestamp=ts)
+        async for event in self._decode(reading.tone_on, ts):
             yield event
 
     async def _decode(self, tone_on: bool, ts: float) -> AsyncIterator[OutboundEvent]:

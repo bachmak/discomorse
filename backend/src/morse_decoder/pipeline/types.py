@@ -2,6 +2,14 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 
+@dataclass(frozen=True)
+class ToneReading:
+    """A tone detector's verdict for one PCM chunk: tone state plus its spectrum."""
+
+    tone_on: bool
+    magnitudes: list[float]
+
+
 class MorseElement(Enum):
     DIT = auto()
     DAH = auto()
