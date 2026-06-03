@@ -14,7 +14,7 @@ class _FakeDetector(ToneDetector):
     """Stand-in tone detector that records the settings it was built with."""
 
     async def process(self, pcm: bytes) -> ToneReading:
-        return ToneReading(tone_on=False, magnitudes=[])
+        return ToneReading(samples=(), magnitudes=[])
 
 
 def test_resolve_returns_registered_class() -> None:

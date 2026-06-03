@@ -5,7 +5,7 @@ from morse_decoder.config import (
     TimingDecoderSettings,
     ToneDetectorSettings,
 )
-from morse_decoder.pipeline.types import MorseElement, ToneReading
+from morse_decoder.pipeline.types import MorseElement, ToneReading, ToneSample
 from morse_decoder.plugins.configurable import Plugin
 
 
