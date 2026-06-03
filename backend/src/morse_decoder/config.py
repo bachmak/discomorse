@@ -17,6 +17,12 @@ class PipelineSettings(BaseSettings):
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "NoisyChannelInterpreter"
     language: str = "en"
+    # Per-plugin parameters, keyed by stage. Each dict is validated against the
+    # selected plugin's `Config` model before construction, so its keys must
+    # match that model's fields; unknown keys or wrong types are rejected. IMMPROTANT
+    tone_detector_config: dict[str, object] = Field(default_factory=dict)
+    timing_decoder_config: dict[str, object] = Field(default_factory=dict)
+    interpreter_config: dict[str, object] = Field(default_factory=dict)
 
 
 class FFTSettings(BaseSettings):

@@ -1,2 +1,12 @@
 # Override defaults here. See config.py for available settings.
 # For local overrides (not checked in), use config.local.toml.
+
+# Per-plugin parameters are validated against the selected plugin's `Config`
+# model. Keys must match that model's fields; unknown keys or wrong types fail
+# at startup with a clear error.
+# [pipeline]
+# tone_detector = "STFTDetector"
+#
+# [pipeline.tone_detector_config]
+# target_freq_hz = 700
+# bandwidth_hz = 50
