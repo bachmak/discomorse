@@ -13,6 +13,9 @@ from morse_decoder.plugins.base import ToneDetector
 class _FakeDetector(ToneDetector):
     """Stand-in tone detector that records the settings it was built with."""
 
+    def __init__(self, settings: ToneDetectorSettings) -> None:
+        self._settings = settings
+
     async def process(self, pcm: bytes) -> ToneReading:
         return ToneReading(samples=(), magnitudes=[])
 
