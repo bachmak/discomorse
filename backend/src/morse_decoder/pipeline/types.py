@@ -14,7 +14,7 @@ class ToneReading:
         ts: datetime.datetime
         on: bool
 
-    samples: list[Sample]
+    samples: tuple[Sample, ...]
     magnitudes: list[float]
 
 

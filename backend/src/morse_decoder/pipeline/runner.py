@@ -41,7 +41,7 @@ class PipelineRunner:
             yield event
 
     async def _decode(
-        self, samples: list[ToneReading.Sample]
+        self, samples: tuple[ToneReading.Sample, ...]
     ) -> AsyncIterator[OutboundEvent]:
         events = await self._timing_decoder.process(samples)
         if not events:
