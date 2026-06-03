@@ -16,15 +16,15 @@
 | `src/morse_decoder/audio/pcm_normalizer.py` | Done — `PcmNormalizer` (numpy/scipy mono + resample_poly + Int16) |
 | `src/morse_decoder/audio/file_source.py` | Done — `FileSource` (soundfile decode → PcmNormalizer → chunked PCM; injectable decoder) |
 | `src/morse_decoder/plugins/base.py` | Done — `ToneDetector`, `TimingDecoder`, `Interpreter` ABCs |
-| `src/morse_decoder/plugins/factory.py` | Done — decorator registry + `create_*` factory functions |
+| `src/morse_decoder/plugins/factory.py` | Done — explicit name→class tables + `create_pipeline_runner`; plugins wired by editing the tables (no decorator registration) |
 | `src/morse_decoder/pipeline/types.py` | Done — `MorseElement` hierarchy (`Signal` → `Dit`/`Dah`; `Space` → `IntraCharSpace`/`InterCharSpace`/`WordSpace`) + `Token` hierarchy (`Letter`/`Digit`/`Prosign`/`Unknown`) |
 | `src/morse_decoder/pipeline/events.py` | Done — `OutboundEvent` hierarchy (Template Method `to_payload`): `MagnitudeFrame` → `WaterfallFrame`/`FFTFrame`, `DecodedText` |
 | `src/morse_decoder/pipeline/letter_decoder.py` | Done — full ITU table, `decode_sequence` via `CodeClassifier` chain of responsibility |
 | `src/morse_decoder/pipeline/runner.py` | Done — `PipelineRunner` streams source → detector → decoder → interpreter, yields `OutboundEvent`s (async generator) |
 | `src/morse_decoder/api/routes.py` | Stub — `/health` done; `/upload` stub (no pipeline wired yet) |
 | `src/morse_decoder/api/websocket.py` | Done — `handle_mic_stream` runs duplex pumps under `TaskGroup`; `BrowserMicSource` ↔ `PipelineRunner` |
-| **`STFTDetector`** | **Not implemented** — `ToneDetector` plugin, register with `@register_tone_detector("STFTDetector")` |
-| **`AdaptiveThresholdDecoder`** | **Not implemented** — `TimingDecoder` plugin, register with `@register_timing_decoder("AdaptiveThresholdDecoder")` |
+| **`STFTDetector`** | **Not implemented** — `ToneDetector` plugin; wire by adding `"STFTDetector": STFTDetector` to `_TONE_DETECTORS` in `factory.py` |
+| **`AdaptiveThresholdDecoder`** | **Not implemented** — `TimingDecoder` plugin; wire by adding `"AdaptiveThresholdDecoder": AdaptiveThresholdDecoder` to `_TIMING_DECODERS` in `factory.py` |
 | **`NoisyChannelInterpreter`** (or HuggingFace) | **Not implemented** — `Interpreter` plugin, decision still open (see architecture.md) |
 | Tests | In progress — pytest wired (`asyncio_mode=auto`); `test_smoke`, `test_file_source` (decode/resample/chunk) |
 
