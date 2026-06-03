@@ -12,20 +12,16 @@ class AudioSettings(BaseSettings):
     chunk_size: int = 2048
 
 
-# Per-plugin parameters get their own dedicated, strongly typed settings so the
-# rest of the code receives validated objects instead of raw dicts. `extra=
-# "forbid"` rejects unknown keys (typos) at load time. Concrete plugins declare
-# the fields they need here and accept the matching type in their __init__.
 class ToneDetectorSettings(BaseSettings):
-    model_config = SettingsConfigDict(extra="forbid")
+    pass
 
 
 class TimingDecoderSettings(BaseSettings):
-    model_config = SettingsConfigDict(extra="forbid")
+    pass
 
 
 class InterpreterSettings(BaseSettings):
-    model_config = SettingsConfigDict(extra="forbid")
+    pass
 
 
 class PipelineSettings(BaseSettings):
@@ -53,6 +49,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         toml_file=["config.toml", "config.local.toml"],
         env_nested_delimiter="__",
+        extra="forbid",
     )
 
     server: ServerSettings = Field(default_factory=ServerSettings)
