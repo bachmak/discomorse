@@ -13,7 +13,7 @@ class ToneDetector(Plugin, ABC):
 
 class TimingDecoder(Plugin, ABC):
     @abstractmethod
-    async def process(self, tone_on: bool, timestamp: float) -> list[MorseElement]:
+    async def process(self, samples: tuple[ToneSample, ...]) -> list[MorseElement]:
         """Return the timing elements (dits, dahs, spaces) decoded at this instant."""
         ...
 

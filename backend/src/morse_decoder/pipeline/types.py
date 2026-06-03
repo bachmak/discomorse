@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class ToneReading:
-    """A tone detector's verdict for one PCM chunk: tone state plus its spectrum."""
+class ToneSample:
+    ts: datetime.datetime
+    on: bool
 
-    tone_on: bool
+@dataclass(frozen=True)
+class ToneReading:
+    """A tone detector's verdict for one PCM chunk."""
+
+    samples: tuple[ToneSample, ...]
     magnitudes: list[float]
 
 
