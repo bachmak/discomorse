@@ -1,4 +1,3 @@
-import time
 from collections.abc import AsyncIterator
 
 from morse_decoder.audio.base import AudioSource
