@@ -4,8 +4,12 @@
 
 import pytest
 
-from morse_decoder.plugins.base import Plugin, PluginConfig
-from morse_decoder.plugins.factory import PluginConfigError, _build
+from morse_decoder.plugins.configurable import (
+    Plugin,
+    PluginConfig,
+    PluginConfigError,
+)
+from morse_decoder.plugins.factory import _build
 
 
 class _WidgetConfig(PluginConfig):
@@ -47,8 +51,8 @@ def test_build_validates_and_injects_config(
 @pytest.mark.parametrize(
     ("config", "match"),
     [
-        pytest.param({"bogus": 1}, "invalid config for widget", id="unknown-key"),
-        pytest.param({"gain": "abc"}, "invalid config for widget", id="wrong-type"),
+        pytest.param({"bogus": 1}, "invalid config for _Widget", id="unknown-key"),
+        pytest.param({"gain": "abc"}, "invalid config for _Widget", id="wrong-type"),
     ],
 )
 def test_build_rejects_bad_config(config: dict[str, object], match: str) -> None:

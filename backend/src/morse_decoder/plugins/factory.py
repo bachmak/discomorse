@@ -1,20 +1,8 @@
-from pydantic import ValidationError
-
 from morse_decoder.audio.base import AudioSource
 from morse_decoder.config import PipelineSettings
 from morse_decoder.pipeline.runner import PipelineRunner
-from morse_decoder.plugins.base import (
-    Interpreter,
-    Plugin,
-    PluginConfig,
-    TimingDecoder,
-    ToneDetector,
-)
-
-
-class PluginConfigError(ValueError):
-    """Raised when a plugin's config section fails validation."""
-
+from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
+from morse_decoder.plugins.configurable import Plugin
 
 # Concrete plugins are wired here explicitly.
 # To add one: implement the class, import it above, and add a single entry to
@@ -42,25 +30,11 @@ def _resolve[T: Plugin](
         raise KeyError(f"Unknown {kind}: {name!r} (known: {known})") from exc
 
 
-def _validate(
-    cls: type[Plugin], name: str, kind: str, config: dict[str, object]
-) -> PluginConfig:
-    """Validate the raw settings against the plugin's `Config`.
-
-    This is where typos and wrong types in the config file are caught,
-    before the plugin is ever constructed.
-    """
-    try:
-        return cls.Config.model_validate(config)
-    except ValidationError as exc:
-        raise PluginConfigError(f"invalid config for {kind} {name!r}: {exc}") from exc
-
-
 def _build[T: Plugin](
     catalog: dict[str, type[T]], name: str, kind: str, config: dict[str, object]
 ) -> T:
-    cls = _resolve(catalog, name, kind)
-    return cls(_validate(cls, name, kind, config))
+    # The factory only selects the plugin; the plugin parses its own config.
+    return _resolve(catalog, name, kind).from_config(config)
 
 
 def _build_tone_detector(settings: PipelineSettings) -> ToneDetector:
