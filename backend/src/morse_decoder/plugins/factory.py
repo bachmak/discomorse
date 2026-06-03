@@ -15,6 +15,7 @@ from morse_decoder.plugins.base import (
 class PluginConfigError(ValueError):
     """Raised when a plugin's config section fails validation."""
 
+
 # Concrete plugins are wired here explicitly.
 # To add one: implement the class, import it above, and add a single entry to
 # the matching table below. No decorators and no import-order rules — the
@@ -40,10 +41,15 @@ def _resolve[T: Plugin](
         known = ", ".join(sorted(catalog)) or "none"
         raise KeyError(f"Unknown {kind}: {name!r} (known: {known})") from exc
 
-# Validate the config for the selected plugin. Important because it catches typos and mistakes in the config file..
+
 def _validate(
     cls: type[Plugin], name: str, kind: str, config: dict[str, object]
 ) -> PluginConfig:
+    """Validate the raw settings against the plugin's `Config`.
+
+    This is where typos and wrong types in the config file are caught,
+    before the plugin is ever constructed.
+    """
     try:
         return cls.Config.model_validate(config)
     except ValidationError as exc:

@@ -17,12 +17,13 @@ class PluginConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
-class Plugin(ABC):
+class Plugin:
     """A pipeline component built from a typed, validated config object.
 
     A concrete plugin overrides `Config` with its own `PluginConfig` subclass
     and accepts an instance of it. Plugins that need no parameters inherit the
-    empty default and are constructed from `{}`.
+    empty default and are constructed from `{}`. The per-stage protocols below
+    mix in `ABC` to enforce their abstract methods.
     """
 
     Config: ClassVar[type[PluginConfig]] = PluginConfig
@@ -31,21 +32,21 @@ class Plugin(ABC):
         self._config = config
 
 
-class ToneDetector(Plugin):
+class ToneDetector(Plugin, ABC):
     @abstractmethod
     async def process(self, pcm: bytes) -> ToneReading:
         """Analyze one PCM chunk into a tone reading."""
         ...
 
 
-class TimingDecoder(Plugin):
+class TimingDecoder(Plugin, ABC):
     @abstractmethod
     async def process(self, tone_on: bool, timestamp: float) -> list[MorseElement]:
         """Return the timing elements (dits, dahs, spaces) decoded at this instant."""
         ...
 
 
-class Interpreter(Plugin):
+class Interpreter(Plugin, ABC):
     @abstractmethod
     async def interpret(self, elements: list[MorseElement]) -> str:
         """Render decoded elements into corrected, readable text."""
