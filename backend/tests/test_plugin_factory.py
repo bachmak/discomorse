@@ -17,7 +17,7 @@ class _FakeDetector(ToneDetector):
         self._settings = settings
 
     async def process(self, chunk: PcmChunk) -> ToneReading:
-        return ToneReading(samples=(), magnitudes=[])
+        return ToneReading(samples=(), magnitudes=())
 
 
 def test_resolve_returns_registered_class() -> None:
