@@ -12,17 +12,36 @@ class AudioSettings(BaseSettings):
     chunk_size: int = 2048
 
 
+# Per-plugin parameters get their own dedicated, strongly typed settings so the
+# rest of the code receives validated objects instead of raw dicts. `extra=
+# "forbid"` rejects unknown keys (typos) at load time. Concrete plugins declare
+# the fields they need here and accept the matching type in their __init__.
+class ToneDetectorSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="forbid")
+
+
+class TimingDecoderSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="forbid")
+
+
+class InterpreterSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="forbid")
+
+
 class PipelineSettings(BaseSettings):
     tone_detector: str = "STFTDetector"
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "NoisyChannelInterpreter"
     language: str = "en"
-    # Per-plugin parameters, keyed by stage. Each dict is validated against the
-    # selected plugin's `Config` model before construction, so its keys must
-    # match that model's fields; unknown keys or wrong types are rejected. IMMPROTANT
-    tone_detector_config: dict[str, object] = Field(default_factory=dict)
-    timing_decoder_config: dict[str, object] = Field(default_factory=dict)
-    interpreter_config: dict[str, object] = Field(default_factory=dict)
+    tone_detector_settings: ToneDetectorSettings = Field(
+        default_factory=ToneDetectorSettings
+    )
+    timing_decoder_settings: TimingDecoderSettings = Field(
+        default_factory=TimingDecoderSettings
+    )
+    interpreter_settings: InterpreterSettings = Field(
+        default_factory=InterpreterSettings
+    )
 
 
 class FFTSettings(BaseSettings):

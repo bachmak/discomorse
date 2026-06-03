@@ -2,7 +2,6 @@ from morse_decoder.audio.base import AudioSource
 from morse_decoder.config import PipelineSettings
 from morse_decoder.pipeline.runner import PipelineRunner
 from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
-from morse_decoder.plugins.configurable import Plugin
 
 # Concrete plugins are wired here explicitly.
 # To add one: implement the class, import it above, and add a single entry to
@@ -20,9 +19,7 @@ _INTERPRETERS: dict[str, type[Interpreter]] = {
 }
 
 
-def _resolve[T: Plugin](
-    catalog: dict[str, type[T]], name: str, kind: str
-) -> type[T]:
+def _resolve[T](catalog: dict[str, type[T]], name: str, kind: str) -> type[T]:
     try:
         return catalog[name]
     except KeyError as exc:
@@ -30,38 +27,19 @@ def _resolve[T: Plugin](
         raise KeyError(f"Unknown {kind}: {name!r} (known: {known})") from exc
 
 
-def _build[T: Plugin](
-    catalog: dict[str, type[T]], name: str, kind: str, config: dict[str, object]
-) -> T:
-    # The factory only selects the plugin; the plugin parses its own config.
-    return _resolve(catalog, name, kind).from_config(config)
-
-
 def _build_tone_detector(settings: PipelineSettings) -> ToneDetector:
-    return _build(
-        _TONE_DETECTORS,
-        settings.tone_detector,
-        "tone detector",
-        settings.tone_detector_config,
-    )
+    detector = _resolve(_TONE_DETECTORS, settings.tone_detector, "tone detector")
+    return detector(settings.tone_detector_settings)
 
 
 def _build_timing_decoder(settings: PipelineSettings) -> TimingDecoder:
-    return _build(
-        _TIMING_DECODERS,
-        settings.timing_decoder,
-        "timing decoder",
-        settings.timing_decoder_config,
-    )
+    decoder = _resolve(_TIMING_DECODERS, settings.timing_decoder, "timing decoder")
+    return decoder(settings.timing_decoder_settings)
 
 
 def _build_interpreter(settings: PipelineSettings) -> Interpreter:
-    return _build(
-        _INTERPRETERS,
-        settings.interpreter,
-        "interpreter",
-        settings.interpreter_config,
-    )
+    interpreter = _resolve(_INTERPRETERS, settings.interpreter, "interpreter")
+    return interpreter(settings.interpreter_settings)
 
 
 def create_pipeline_runner(

@@ -4,62 +4,47 @@
 
 import pytest
 
-from morse_decoder.plugins.configurable import (
-    Plugin,
-    PluginConfig,
-    PluginConfigError,
-)
-from morse_decoder.plugins.factory import _build
+from morse_decoder.config import PipelineSettings, ToneDetectorSettings
+from morse_decoder.pipeline.types import ToneReading
+from morse_decoder.plugins import factory
+from morse_decoder.plugins.base import ToneDetector
 
 
-class _WidgetConfig(PluginConfig):
-    gain: float = 1.0
-    label: str = "default"
+class _FakeDetector(ToneDetector):
+    """Stand-in tone detector that records the settings it was built with."""
+
+    async def process(self, pcm: bytes) -> ToneReading:
+        return ToneReading(tone_on=False, magnitudes=[])
 
 
-class _Widget(Plugin):
-    """Stand-in plugin that exposes the config it was built with."""
+def test_resolve_returns_registered_class() -> None:
+    catalog: dict[str, type[ToneDetector]] = {"fake": _FakeDetector}
 
-    Config = _WidgetConfig
-
-    def __init__(self, config: _WidgetConfig) -> None:
-        super().__init__(config)
-        self.config = config
-
-
-_CATALOG: dict[str, type[_Widget]] = {"widget": _Widget}
+    assert factory._resolve(catalog, "fake", "tone detector") is _FakeDetector
 
 
 @pytest.mark.parametrize(
-    ("config", "want_gain", "want_label"),
+    "catalog",
     [
-        pytest.param({}, 1.0, "default", id="empty-uses-defaults"),
-        pytest.param({"gain": 2.5}, 2.5, "default", id="partial-override"),
-        pytest.param({"gain": 3.0, "label": "x"}, 3.0, "x", id="full-override"),
-        pytest.param({"gain": "4.5"}, 4.5, "default", id="coerces-numeric-string"),
+        pytest.param({}, id="empty-catalog"),
+        pytest.param({"other": _FakeDetector}, id="non-empty-catalog"),
     ],
 )
-def test_build_validates_and_injects_config(
-    config: dict[str, object], want_gain: float, want_label: str
+def test_resolve_unknown_name_raises(catalog: dict[str, type[ToneDetector]]) -> None:
+    with pytest.raises(KeyError, match="Unknown tone detector: 'missing'"):
+        factory._resolve(catalog, "missing", "tone detector")
+
+
+def test_build_passes_typed_settings_to_plugin(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    widget = _build(_CATALOG, "widget", "widget", config)
+    monkeypatch.setitem(factory._TONE_DETECTORS, "fake", _FakeDetector)
+    tone_settings = ToneDetectorSettings()
+    settings = PipelineSettings(
+        tone_detector="fake", tone_detector_settings=tone_settings
+    )
 
-    assert widget.config.gain == want_gain
-    assert widget.config.label == want_label
+    detector = factory._build_tone_detector(settings)
 
-
-@pytest.mark.parametrize(
-    ("config", "match"),
-    [
-        pytest.param({"bogus": 1}, "invalid config for _Widget", id="unknown-key"),
-        pytest.param({"gain": "abc"}, "invalid config for _Widget", id="wrong-type"),
-    ],
-)
-def test_build_rejects_bad_config(config: dict[str, object], match: str) -> None:
-    with pytest.raises(PluginConfigError, match=match):
-        _build(_CATALOG, "widget", "widget", config)
-
-
-def test_build_raises_for_unknown_name() -> None:
-    with pytest.raises(KeyError, match="Unknown widget: 'missing'"):
-        _build(_CATALOG, "missing", "widget", {})
+    assert isinstance(detector, _FakeDetector)
+    assert detector._settings is tone_settings
