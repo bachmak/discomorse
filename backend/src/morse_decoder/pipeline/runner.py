@@ -8,6 +8,7 @@ from morse_decoder.pipeline.events import (
     OutboundEvent,
     WaterfallFrame,
 )
+from morse_decoder.pipeline.types import ToneSample
 from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
 
 
@@ -36,11 +37,13 @@ class PipelineRunner:
         ts = time.monotonic()
         yield FFTFrame(magnitudes=reading.magnitudes, timestamp=ts)
         yield WaterfallFrame(magnitudes=reading.magnitudes, timestamp=ts)
-        async for event in self._decode(reading.tone_on, ts):
+        async for event in self._decode(reading.samples):
             yield event
 
-    async def _decode(self, tone_on: bool, ts: float) -> AsyncIterator[OutboundEvent]:
-        events = await self._timing_decoder.process(tone_on, ts)
+    async def _decode(
+        self, samples: tuple[ToneSample, ...]
+    ) -> AsyncIterator[OutboundEvent]:
+        events = await self._timing_decoder.process(samples)
         if not events:
             return
         text = await self._interpreter.interpret(events)
