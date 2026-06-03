@@ -6,15 +6,15 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class ToneSample:
+    ts: datetime.datetime
+    on: bool
+
+@dataclass(frozen=True)
 class ToneReading:
     """A tone detector's verdict for one PCM chunk."""
 
-    @dataclass(frozen=True)
-    class Sample:
-        ts: datetime.datetime
-        on: bool
-
-    samples: tuple[Sample, ...]
+    samples: tuple[ToneSample, ...]
     magnitudes: list[float]
 
 

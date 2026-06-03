@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from morse_decoder.pipeline.types import MorseElement, ToneReading
+from morse_decoder.pipeline.types import MorseElement, ToneReading, ToneSample
 
 
 class ToneDetector(ABC):
@@ -12,9 +12,7 @@ class ToneDetector(ABC):
 
 class TimingDecoder(ABC):
     @abstractmethod
-    async def process(
-        self, samples: tuple[ToneReading.Sample, ...]
-    ) -> list[MorseElement]:
+    async def process(self, samples: tuple[ToneSample, ...]) -> list[MorseElement]:
         """Return the timing elements (dits, dahs, spaces) decoded at this instant."""
         ...
 

@@ -8,7 +8,7 @@ from morse_decoder.pipeline.events import (
     OutboundEvent,
     WaterfallFrame,
 )
-from morse_decoder.pipeline.types import ToneReading
+from morse_decoder.pipeline.types import ToneSample
 from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
 
 
@@ -41,7 +41,7 @@ class PipelineRunner:
             yield event
 
     async def _decode(
-        self, samples: tuple[ToneReading.Sample, ...]
+        self, samples: tuple[ToneSample, ...]
     ) -> AsyncIterator[OutboundEvent]:
         events = await self._timing_decoder.process(samples)
         if not events:
