@@ -24,7 +24,7 @@ class ToneMagnitude:
 
 
 @dataclass(frozen=True)
-class ToneMagnitudes:
+class ToneSpectrum:
     ts: datetime.datetime
     magnitudes: tuple[ToneMagnitude, ...]
 
@@ -32,7 +32,7 @@ class ToneMagnitudes:
 @dataclass(frozen=True)
 class ToneReading:
     samples: tuple[ToneSample, ...]
-    magnitudes: tuple[ToneMagnitudes, ...]
+    spectrums: tuple[ToneSpectrum, ...]
 
 
 @dataclass(frozen=True)

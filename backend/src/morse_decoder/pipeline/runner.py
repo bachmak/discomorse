@@ -34,8 +34,8 @@ class PipelineRunner:
 
     async def _process_chunk(self, chunk: PcmChunk) -> AsyncIterator[OutboundEvent]:
         reading = await self._tone_detector.process(chunk)
-        yield FFTFrame(magnitudes=reading.magnitudes)
-        yield WaterfallFrame(magnitudes=reading.magnitudes)
+        yield FFTFrame(spectrums=reading.spectrums)
+        yield WaterfallFrame(spectrums=reading.spectrums)
         async for event in self._decode(reading):
             yield event
 
