@@ -1,38 +1,31 @@
-from collections.abc import Callable
-
 from morse_decoder.audio.base import AudioSource
 from morse_decoder.config import PipelineSettings
 from morse_decoder.pipeline.runner import PipelineRunner
 from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
 
+# Concrete plugins are wired here explicitly. 
 
-class Registry[T]:
-    """Maps plugin names to classes: `register` is the decorator, `create` builds."""
+## To add one: implement the class, import it above, and add a single entry to the matching table below. 
+# No decorators and no import-order rules. The factory simply knows its options.
 
-    def __init__(self, kind: str) -> None:
-        self._kind = kind
-        self._classes: dict[str, type[T]] = {}
-
-    def register(self, name: str) -> Callable[[type[T]], type[T]]:
-        def decorator(cls: type[T]) -> type[T]:
-            self._classes[name] = cls
-            return cls
-
-        return decorator
-
-    def create(self, name: str) -> T:
-        if name not in self._classes:
-            raise KeyError(f"Unknown {self._kind}: {name!r}")
-        return self._classes[name]()
+_TONE_DETECTORS: dict[str, type[ToneDetector]] = {
+    # "STFTDetector": STFTDetector,
+}
+_TIMING_DECODERS: dict[str, type[TimingDecoder]] = {
+    # "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
+}
+_INTERPRETERS: dict[str, type[Interpreter]] = {
+    # "NoisyChannelInterpreter": NoisyChannelInterpreter,
+}
 
 
-_tone_detectors = Registry[ToneDetector]("tone detector")
-_timing_decoders = Registry[TimingDecoder]("timing decoder")
-_interpreters = Registry[Interpreter]("interpreter")
-
-register_tone_detector = _tone_detectors.register
-register_timing_decoder = _timing_decoders.register
-register_interpreter = _interpreters.register
+def _build[T](catalog: dict[str, type[T]], name: str, kind: str) -> T:
+    try:
+        cls = catalog[name]
+    except KeyError as exc:
+        known = ", ".join(sorted(catalog)) or "none"
+        raise KeyError(f"Unknown {kind}: {name!r} (known: {known})") from exc
+    return cls()
 
 
 def create_pipeline_runner(
@@ -40,7 +33,13 @@ def create_pipeline_runner(
 ) -> PipelineRunner:
     return PipelineRunner(
         source=source,
-        tone_detector=_tone_detectors.create(pipeline_settings.tone_detector),
-        timing_decoder=_timing_decoders.create(pipeline_settings.timing_decoder),
-        interpreter=_interpreters.create(pipeline_settings.interpreter),
+        tone_detector=_build(
+            _TONE_DETECTORS, pipeline_settings.tone_detector, "tone detector"
+        ),
+        timing_decoder=_build(
+            _TIMING_DECODERS, pipeline_settings.timing_decoder, "timing decoder"
+        ),
+        interpreter=_build(
+            _INTERPRETERS, pipeline_settings.interpreter, "interpreter"
+        ),
     )
