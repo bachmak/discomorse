@@ -5,7 +5,7 @@
 import pytest
 
 from morse_decoder.config import PipelineSettings, ToneDetectorSettings
-from morse_decoder.pipeline.types import ToneReading
+from morse_decoder.pipeline.dto import PcmChunk, ToneReading
 from morse_decoder.plugins import factory
 from morse_decoder.plugins.base import ToneDetector
 
@@ -16,7 +16,7 @@ class _FakeDetector(ToneDetector):
     def __init__(self, settings: ToneDetectorSettings) -> None:
         self._settings = settings
 
-    async def process(self, pcm: bytes) -> ToneReading:
+    async def process(self, chunk: PcmChunk) -> ToneReading:
         return ToneReading(samples=(), magnitudes=[])
 
 

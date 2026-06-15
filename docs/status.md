@@ -15,9 +15,10 @@
 | `src/morse_decoder/audio/decoder.py` | Done — `AudioDecoder` ABC + `SoundFileDecoder` (libsndfile via soundfile) |
 | `src/morse_decoder/audio/pcm_normalizer.py` | Done — `PcmNormalizer` (numpy/scipy mono + resample_poly + Int16) |
 | `src/morse_decoder/audio/file_source.py` | Done — `FileSource` (soundfile decode → PcmNormalizer → chunked PCM; injectable decoder) |
-| `src/morse_decoder/plugins/base.py` | Done — `ToneDetector`, `TimingDecoder`, `Interpreter` ABCs |
+| `src/morse_decoder/plugins/base.py` | Done — `ToneDetector`, `TimingDecoder`, `Interpreter` ABCs (typed DTO in/out, see `pipeline/dto.py`) |
 | `src/morse_decoder/plugins/factory.py` | Done — explicit name→class tables + `create_pipeline_runner`; plugins wired by editing the tables (no decorator registration) |
 | `src/morse_decoder/pipeline/types.py` | Done — `MorseElement` hierarchy (`Signal` → `Dit`/`Dah`; `Space` → `IntraCharSpace`/`InterCharSpace`/`WordSpace`) + `Token` hierarchy (`Letter`/`Digit`/`Prosign`/`Unknown`) |
+| `src/morse_decoder/pipeline/dto.py` | Done — per-stage I/O DTOs piped through the runner: `PcmChunk` → `ToneReading` → `TimingReading` → `Transcription` (+ `ToneSample`) |
 | `src/morse_decoder/pipeline/events.py` | Done — `OutboundEvent` hierarchy (Template Method `to_payload`): `MagnitudeFrame` → `WaterfallFrame`/`FFTFrame`, `DecodedText` |
 | `src/morse_decoder/pipeline/letter_decoder.py` | Done — full ITU table, `decode_sequence` via `CodeClassifier` chain of responsibility |
 | `src/morse_decoder/pipeline/runner.py` | Done — `PipelineRunner` streams source → detector → decoder → interpreter, yields `OutboundEvent`s (async generator) |
