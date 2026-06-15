@@ -1,4 +1,3 @@
-import time
 from collections.abc import AsyncIterator
 
 from morse_decoder.audio.base import AudioSource
@@ -34,9 +33,8 @@ class PipelineRunner:
 
     async def _process_chunk(self, chunk: PcmChunk) -> AsyncIterator[OutboundEvent]:
         reading = await self._tone_detector.process(chunk)
-        ts = time.monotonic()
-        yield FFTFrame(magnitudes=reading.magnitudes, timestamp=ts)
-        yield WaterfallFrame(magnitudes=reading.magnitudes, timestamp=ts)
+        yield FFTFrame(spectrums=reading.spectrums)
+        yield WaterfallFrame(spectrums=reading.spectrums)
         async for event in self._decode(reading):
             yield event
 

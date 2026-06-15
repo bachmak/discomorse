@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
+from morse_decoder.pipeline.dto import ToneSpectrum
+
 
 class OutboundEvent(ABC):
     """Base for everything the pipeline emits toward the client.
@@ -25,11 +27,10 @@ class OutboundEvent(ABC):
 class MagnitudeFrame(OutboundEvent):
     """A spectrum frame; subclasses differ only by their wire tag."""
 
-    magnitudes: list[float]
-    timestamp: float
+    spectrums: tuple[ToneSpectrum, ...]
 
     def _body(self) -> dict[str, object]:
-        return {"data": self.magnitudes, "ts": self.timestamp}
+        return {"data": self.spectrums}
 
 
 @dataclass(frozen=True)

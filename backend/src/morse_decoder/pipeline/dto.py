@@ -18,9 +18,21 @@ class ToneSample:
 
 
 @dataclass(frozen=True)
+class ToneMagnitude:
+    frequency: float
+    magnitude: float
+
+
+@dataclass(frozen=True)
+class ToneSpectrum:
+    ts: datetime.datetime
+    magnitudes: tuple[ToneMagnitude, ...]
+
+
+@dataclass(frozen=True)
 class ToneReading:
     samples: tuple[ToneSample, ...]
-    magnitudes: list[float]
+    spectrums: tuple[ToneSpectrum, ...]
 
 
 @dataclass(frozen=True)
