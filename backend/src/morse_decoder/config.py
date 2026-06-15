@@ -12,11 +12,32 @@ class AudioSettings(BaseSettings):
     chunk_size: int = 2048
 
 
+class ToneDetectorSettings(BaseSettings):
+    pass
+
+
+class TimingDecoderSettings(BaseSettings):
+    pass
+
+
+class InterpreterSettings(BaseSettings):
+    pass
+
+
 class PipelineSettings(BaseSettings):
     tone_detector: str = "STFTDetector"
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "NoisyChannelInterpreter"
     language: str = "en"
+    tone_detector_settings: ToneDetectorSettings = Field(
+        default_factory=ToneDetectorSettings
+    )
+    timing_decoder_settings: TimingDecoderSettings = Field(
+        default_factory=TimingDecoderSettings
+    )
+    interpreter_settings: InterpreterSettings = Field(
+        default_factory=InterpreterSettings
+    )
 
 
 class FFTSettings(BaseSettings):
@@ -28,6 +49,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         toml_file=["config.toml", "config.local.toml"],
         env_nested_delimiter="__",
+        extra="forbid",
     )
 
     server: ServerSettings = Field(default_factory=ServerSettings)
