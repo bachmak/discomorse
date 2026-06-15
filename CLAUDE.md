@@ -9,6 +9,7 @@ Aggressively and proactively follow and enforce these guidelines when writing co
 - if a function/method is more than 15 lines, refactor
 - if a class is more than 100 lines, refactor
 - if a file is more than 300 lines, refactor
+- no comments unless they explain non-obvious logic
 
 Write code like Robert C. Martin.
 
