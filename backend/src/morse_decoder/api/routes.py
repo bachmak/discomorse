@@ -1,6 +1,8 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from morse_decoder.api.websocket import handle_mic_stream
+
 app = FastAPI(title="Morse Decoder")
 
 app.add_middleware(
@@ -9,6 +11,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_api_websocket_route("/ws/mic", handle_mic_stream)
 
 
 @app.get("/health")
