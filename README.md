@@ -2,8 +2,6 @@
 
 Real-time Morse code decoder. Browser captures or uploads audio; a Python backend detects the carrier, decodes timing, and streams corrected text back over WebSocket. A waterfall and FFT spectrum are rendered live in the browser.
 
-See `docs/architecture.md` for design decisions and `docs/status.md` for what is and isn't implemented yet.
-
 ---
 
 ## Prerequisites
