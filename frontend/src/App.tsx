@@ -5,7 +5,8 @@ import { FFTSpectrum } from "./components/FFTSpectrum";
 import { Waterfall } from "./components/Waterfall";
 
 export function App() {
-  const { send } = useWebSocket(`ws://${window.location.host}/ws/mic`);
+  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const { send } = useWebSocket(`${wsProtocol}//${window.location.host}/ws/mic`);
   const { start, stop } = useAudioCapture(send);
 
   return (
