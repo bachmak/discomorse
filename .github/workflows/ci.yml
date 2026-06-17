@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
   schedule:
     - cron: "0 6 * * 1" # weekly Monday 06:00 UTC — security scans
@@ -188,3 +188,18 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm audit --audit-level=high
+
+  deploy:
+    needs: [ backend-test, frontend-build, backend-docker, frontend-docker ]
+    if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && !contains(needs.*.result, 'failure')}}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ~/dev/discomorse
+            git pull --ff-only
+            docker compose up -d --build --remove-orphans
