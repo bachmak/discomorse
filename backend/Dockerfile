@@ -1,9 +1,36 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
-COPY pyproject.toml config.toml ./
+
+# compile python to bytecode once at image building, not at each container start
+ENV UV_COMPILE_BYTECODE=1
+
+# build only dependencies in a separate cached layer
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+# build our project on top of the dependency layer for faster rebuilds
+COPY config.toml ./
 COPY src/ src/
+RUN uv sync --frozen --no-dev --no-editable
 
-RUN uv pip install --system -e .
+# change user to avoid running as root
+RUN useradd -r app-user
+USER app-user
 
-CMD ["uvicorn", "morse_decoder.api.routes:app", "--host", "0.0.0.0", "--port", "8000"]
+# to immediately see the logs instead of buffering
+ENV PYTHONUNBUFFERED=1
+# to call python directly instead of through uv
+ENV PATH=/app/.venv/bin:$PATH
+
+# define a healthcheck for docker compose
+HEALTHCHECK --start-period=10s CMD [ \
+    "python", "-m", \
+    "morse_decoder.healthcheck" \
+]
+
+# run the app
+CMD [ \
+    "python", "-m", \
+    "morse_decoder" \
+]
