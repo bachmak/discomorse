@@ -1,33 +1,36 @@
 import { useRef, useState, type ChangeEvent } from "react";
-import { useAudioEngine } from "../audio/AudioEngineContext";
+
+const UPLOAD_URL = "/upload";
 
 export function FilePicker() {
-  const engine = useAudioEngine();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const onSelect = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setStatus(`Sending ${file.name}…`);
+    const body = new FormData();
+    body.append("file", file);
     try {
-      setError(null);
-      await engine.load(file);
+      const response = await fetch(UPLOAD_URL, { method: "POST", body });
+      setStatus(response.ok ? `Sent ${file.name}` : `Upload failed (${response.status})`);
     } catch {
-      setError(`Could not decode "${file.name}"`);
+      setStatus(`Upload failed for ${file.name}`);
     }
   };
 
   return (
     <div>
-      <button onClick={() => inputRef.current?.click()}>Browse MP3…</button>
+      <button onClick={() => inputRef.current?.click()}>Browse audio…</button>
       <input
         ref={inputRef}
         type="file"
-        accept="audio/mpeg,audio/*"
+        accept="audio/*"
         hidden
         onChange={(event) => void onSelect(event)}
       />
-      {error && <span role="alert">{error}</span>}
+      {status && <span role="status">{status}</span>}
     </div>
   );
 }
