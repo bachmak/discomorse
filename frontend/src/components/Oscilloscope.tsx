@@ -55,16 +55,16 @@ function drawHint(ctx: CanvasRenderingContext2D): void {
 
 export function Oscilloscope() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const frame = useStore((s) => s.oscilloscopeFrame);
+  const samples = useStore((s) => s.scopeSamples);
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     drawBaseline(ctx);
-    if (frame && frame.data.length > 0) drawWaveform(ctx, frame.data);
+    if (samples.length > 0) drawWaveform(ctx, samples);
     else drawHint(ctx);
-  }, [frame]);
+  }, [samples]);
 
   return <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} style={{ width: "100%" }} />;
 }

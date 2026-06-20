@@ -1,29 +1,26 @@
 import { useEffect } from "react";
-import { useStore } from "../store";
-import { demoOscilloscopeFrames } from "../fixtures/oscilloscope";
+import { useStore, MAX_SCOPE_SAMPLES } from "../store";
+import { demoScopeChunk, demoSignalLength } from "../fixtures/oscilloscope";
 
-const FRAME_INTERVAL_MS = 1000 / 30;
+const CHUNK_SAMPLES = 12;
 
 export function useDemoSignal(enabled: boolean): void {
-  const pushOscilloscope = useStore((s) => s.pushOscilloscope);
+  const appendScope = useStore((s) => s.appendScope);
+  const setScope = useStore((s) => s.setScope);
 
   useEffect(() => {
     if (!enabled) return;
-    const frames = demoOscilloscopeFrames();
+    setScope(demoScopeChunk(0, MAX_SCOPE_SAMPLES));
+    let cursor = MAX_SCOPE_SAMPLES;
     let handle = 0;
-    let index = 0;
-    let lastAt = 0;
 
-    const tick = (now: number): void => {
-      if (now - lastAt >= FRAME_INTERVAL_MS) {
-        pushOscilloscope(frames[index % frames.length]);
-        index += 1;
-        lastAt = now;
-      }
+    const tick = (): void => {
+      appendScope(demoScopeChunk(cursor, CHUNK_SAMPLES));
+      cursor = (cursor + CHUNK_SAMPLES) % demoSignalLength;
       handle = requestAnimationFrame(tick);
     };
 
     handle = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(handle);
-  }, [enabled, pushOscilloscope]);
+  }, [enabled, appendScope, setScope]);
 }

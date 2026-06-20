@@ -13,6 +13,7 @@ export interface FFTMessage {
 export interface OscilloscopeMessage {
   type: "oscilloscope";
   data: number[];
+  mode?: "append" | "replace";
   ts: number;
 }
 
