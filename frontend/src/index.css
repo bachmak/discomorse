@@ -10,7 +10,6 @@
   --muted: #8b9bb4;
   --accent: #22d3ee;
   --accent-dim: #0e7490;
-  --accent-soft: rgba(34, 211, 238, 0.14);
   --screen: #060a10;
   --radius: 14px;
   --radius-sm: 9px;
@@ -198,35 +197,6 @@ button:focus-visible {
   margin-top: 12px;
 }
 
-.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  text-align: center;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: radial-gradient(120% 120% at 50% 0%, var(--accent-soft), transparent 55%), var(--screen);
-}
-
-.placeholder::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  margin-right: 10px;
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow: 0 0 12px 1px var(--accent);
-  animation: pulse 1.8s ease-in-out infinite;
-}
-
-.placeholder-note {
-  max-width: 38ch;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -265,16 +235,6 @@ button:focus-visible {
   color: var(--muted);
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 @keyframes shimmer {
   0% {
     background-position: 200% 0;
@@ -291,7 +251,6 @@ button:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .placeholder::before,
   .metric-value {
     animation: none;
   }

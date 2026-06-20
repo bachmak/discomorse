@@ -1,11 +1,12 @@
 import { useAudioCapture } from "./hooks/useAudioCapture";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { useDemoSignal } from "./hooks/useDemoSignal";
 import { AppHeader } from "./components/AppHeader";
 import { Panel } from "./components/Panel";
 import { SourceControls } from "./components/SourceControls";
 import { SignalMetrics } from "./components/SignalMetrics";
-import { Placeholder } from "./components/Placeholder";
 import { DecodedText } from "./components/DecodedText";
+import { Oscilloscope } from "./components/Oscilloscope";
 import { FFTSpectrum } from "./components/FFTSpectrum";
 import { Waterfall } from "./components/Waterfall";
 
@@ -22,6 +23,7 @@ export function App() {
   const demo = demoRequested();
   const { send } = useWebSocket(micWsUrl());
   const { start, stop } = useAudioCapture(send);
+  useDemoSignal(demo);
 
   return (
     <div className="app">
@@ -52,7 +54,7 @@ export function App() {
           title="Oscilloscope"
           hint="Time-domain keying. Short dits, longer dahs, and the gaps between them."
         >
-          <Placeholder note="Waveform trace appears here once a signal arrives." />
+          <Oscilloscope />
         </Panel>
 
         <Panel title="Spectrum" hint="Instantaneous frequency content. The pitch of the CW tone.">
