@@ -10,9 +10,20 @@ export interface FFTMessage {
   ts: number;
 }
 
+export interface OscilloscopeMessage {
+  type: "oscilloscope";
+  data: number[];
+  mode?: "append" | "replace";
+  ts: number;
+}
+
 export interface TextMessage {
   type: "text";
   data: string;
 }
 
-export type ServerMessage = WaterfallMessage | FFTMessage | TextMessage;
+export type ServerMessage =
+  | WaterfallMessage
+  | FFTMessage
+  | OscilloscopeMessage
+  | TextMessage;
