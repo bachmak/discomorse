@@ -189,8 +189,32 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=high
 
+  # ── Wire contract ─────────────────────────────────────────────────────────────
+
+  wire-contract:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: uv sync --project backend
+      - working-directory: frontend
+        run: npm ci
+      - working-directory: frontend
+        run: npm run gen:ws-types
+      - name: Fail if frontend types drifted from backend models
+        run: git diff --exit-code frontend/src/types/ws.ts
+
   deploy:
-    needs: [ backend-test, frontend-build, backend-docker, frontend-docker ]
+    needs: [ backend-test, frontend-build, backend-docker, frontend-docker, wire-contract ]
     if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && !contains(needs.*.result, 'failure')}}
     runs-on: ubuntu-latest
     steps:

@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 
 from morse_decoder.audio.base import AudioSource
 from morse_decoder.pipeline.dto import PcmChunk, ToneReading
@@ -33,10 +33,16 @@ class PipelineRunner:
 
     async def _process_chunk(self, chunk: PcmChunk) -> AsyncIterator[OutboundEvent]:
         reading = await self._tone_detector.process(chunk)
-        yield FFTFrame(spectrums=reading.spectrums)
-        yield WaterfallFrame(spectrums=reading.spectrums)
+        for event in self._spectrum_events(reading):
+            yield event
         async for event in self._decode(reading):
             yield event
+
+    def _spectrum_events(self, reading: ToneReading) -> Iterator[OutboundEvent]:
+        for spectrum in reading.spectrums:
+            yield WaterfallFrame(spectrum)
+        if reading.spectrums:
+            yield FFTFrame(reading.spectrums[-1])
 
     async def _decode(self, reading: ToneReading) -> AsyncIterator[OutboundEvent]:
         timing = await self._timing_decoder.process(reading)

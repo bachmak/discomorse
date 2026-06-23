@@ -1,5 +1,4 @@
 import asyncio
-import json
 from abc import ABC, abstractmethod
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -63,4 +62,4 @@ class EventOutboundPump(Pump):
 
     async def run(self) -> None:
         async for event in self._runner.run():
-            await self._ws.send_text(json.dumps(event.to_payload()))
+            await self._ws.send_text(event.to_message().model_dump_json())
