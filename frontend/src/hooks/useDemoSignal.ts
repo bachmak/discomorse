@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { useStore, MAX_SCOPE_SAMPLES } from "../store";
 import { demoScopeChunk, demoSignalLength } from "../fixtures/oscilloscope";
+import { demoWaterfallFrame } from "../fixtures/waterfall";
 
 const CHUNK_SAMPLES = 12;
 
 export function useDemoSignal(enabled: boolean): void {
   const appendScope = useStore((s) => s.appendScope);
   const setScope = useStore((s) => s.setScope);
+  const pushWaterfall = useStore((s) => s.pushWaterfall);
 
   useEffect(() => {
     if (!enabled) return;
@@ -16,11 +18,12 @@ export function useDemoSignal(enabled: boolean): void {
 
     const tick = (): void => {
       appendScope(demoScopeChunk(cursor, CHUNK_SAMPLES));
+      pushWaterfall(demoWaterfallFrame(cursor));
       cursor = (cursor + CHUNK_SAMPLES) % demoSignalLength;
       handle = requestAnimationFrame(tick);
     };
 
     handle = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(handle);
-  }, [enabled, appendScope, setScope]);
+  }, [enabled, appendScope, setScope, pushWaterfall]);
 }
