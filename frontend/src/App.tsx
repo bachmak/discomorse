@@ -1,10 +1,10 @@
-import { useAudioCapture } from "./hooks/useAudioCapture";
-import { useWebSocket } from "./hooks/useWebSocket";
 import { useDemoSignal } from "./hooks/useDemoSignal";
-import { FilePicker } from "./components/FilePicker";
+import { AppHeader } from "./components/AppHeader";
+import { Panel } from "./components/Panel";
+import { SourceControls } from "./components/SourceControls";
 import { DecodedText } from "./components/DecodedText";
-import { FFTSpectrum } from "./components/FFTSpectrum";
 import { Oscilloscope } from "./components/Oscilloscope";
+import { FFTSpectrum } from "./components/FFTSpectrum";
 import { Waterfall } from "./components/Waterfall";
 
 function demoRequested(): boolean {
@@ -12,23 +12,49 @@ function demoRequested(): boolean {
 }
 
 export function App() {
-  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const { send } = useWebSocket(`${wsProtocol}//${window.location.host}/ws/mic`);
-  const { start, stop } = useAudioCapture(send);
-  useDemoSignal(demoRequested());
+  const demo = demoRequested();
+  useDemoSignal(demo);
 
   return (
-    <main>
-      <h1>Morse Decoder</h1>
-      <FilePicker />
-      <div>
-        <button onClick={() => { void start(); }}>Start mic</button>
-        <button onClick={stop}>Stop mic</button>
+    <div className="app">
+      <AppHeader demo={demo} />
+
+      <Panel
+        className="source"
+        title="Source"
+        hint="Upload a recording or decode live from the mic. Audio is processed on the server."
+      >
+        <SourceControls />
+      </Panel>
+
+      <Panel
+        className="decoded"
+        title="Decoded text"
+        hint="Characters the decoder recovers from the keying."
+      >
+        <DecodedText />
+      </Panel>
+
+      <div className="signal-grid">
+        <Panel
+          title="Oscilloscope"
+          hint="Time-domain keying. Short dits, longer dahs, and the gaps between them."
+        >
+          <Oscilloscope />
+        </Panel>
+
+        <Panel title="Spectrum" hint="Instantaneous frequency content. The pitch of the CW tone.">
+          <FFTSpectrum />
+        </Panel>
+
+        <Panel
+          className="span-full"
+          title="Waterfall"
+          hint="Frequency over time. Locate the carrier and watch it drift or fade."
+        >
+          <Waterfall />
+        </Panel>
       </div>
-      <Oscilloscope />
-      <FFTSpectrum />
-      <Waterfall />
-      <DecodedText />
-    </main>
+    </div>
   );
 }
