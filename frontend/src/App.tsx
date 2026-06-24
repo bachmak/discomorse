@@ -1,10 +1,7 @@
-import { useAudioCapture } from "./hooks/useAudioCapture";
-import { useWebSocket } from "./hooks/useWebSocket";
 import { useDemoSignal } from "./hooks/useDemoSignal";
 import { AppHeader } from "./components/AppHeader";
 import { Panel } from "./components/Panel";
 import { SourceControls } from "./components/SourceControls";
-import { SignalMetrics } from "./components/SignalMetrics";
 import { DecodedText } from "./components/DecodedText";
 import { Oscilloscope } from "./components/Oscilloscope";
 import { FFTSpectrum } from "./components/FFTSpectrum";
@@ -14,15 +11,8 @@ function demoRequested(): boolean {
   return import.meta.env.DEV && new URLSearchParams(window.location.search).has("demo");
 }
 
-function micWsUrl(): string {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws/mic`;
-}
-
 export function App() {
   const demo = demoRequested();
-  const { send } = useWebSocket(micWsUrl());
-  const { start, stop } = useAudioCapture(send);
   useDemoSignal(demo);
 
   return (
@@ -34,7 +24,7 @@ export function App() {
         title="Source"
         hint="Upload a recording or decode live from the mic. Audio is processed on the server."
       >
-        <SourceControls onStart={start} onStop={stop} />
+        <SourceControls />
       </Panel>
 
       <Panel
@@ -43,10 +33,6 @@ export function App() {
         hint="Characters the decoder recovers from the keying."
       >
         <DecodedText />
-      </Panel>
-
-      <Panel title="Signal" hint="Live readouts once the decoder locks onto a signal.">
-        <SignalMetrics />
       </Panel>
 
       <div className="signal-grid">
