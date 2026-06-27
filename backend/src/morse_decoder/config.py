@@ -17,7 +17,11 @@ class ToneDetectorSettings(BaseSettings):
 
 
 class TimingDecoderSettings(BaseSettings):
-    pass
+    seed_wpm: float = Field(default=20.0, gt=0)
+    alpha: float = Field(default=0.2, gt=0, le=1)
+    dah_threshold: float = Field(default=2.0, gt=1)
+    inter_char_threshold: float = Field(default=2.0, gt=1)
+    word_threshold: float = Field(default=5.0, gt=1)
 
 
 class InterpreterSettings(BaseSettings):

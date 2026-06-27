@@ -7,6 +7,7 @@ from morse_decoder.config import (
     TimingDecoderSettings,
     ToneDetectorSettings,
 )
+from morse_decoder.pipeline.adaptive_threshold_decoder import AdaptiveThresholdDecoder
 from morse_decoder.pipeline.runner import PipelineRunner
 from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
 
@@ -30,7 +31,7 @@ _TONE_DETECTORS: dict[str, _ToneDetectorConstructor] = {
     # "STFTDetector": STFTDetector,
 }
 _TIMING_DECODERS: dict[str, _TimingDecoderConstructor] = {
-    # "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
+    "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
 }
 _INTERPRETERS: dict[str, _InterpreterConstructor] = {
     # "NoisyChannelInterpreter": NoisyChannelInterpreter,
