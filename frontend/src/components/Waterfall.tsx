@@ -1,10 +1,27 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "../store";
 import type { WaterfallMessage } from "../types/ws";
+import { NYQUIST_HZ } from "../audioFormat";
+import { AXIS_HEIGHT, FrequencyAxis, axisCaption } from "./chartAxis";
+import { useCanvasSize, prepareContext } from "./canvas";
 
-const WIDTH = 800;
 const HEIGHT = 300;
+const PLOT_HEIGHT = HEIGHT - AXIS_HEIGHT;
+const TICK_HZ = 1000;
 const HINT_COLOR = "rgba(148, 163, 184, 0.75)";
+
+const FREQUENCY_AXIS = new FrequencyAxis(NYQUIST_HZ, TICK_HZ);
+
+function drawAxis(ctx: CanvasRenderingContext2D, width: number): void {
+  FREQUENCY_AXIS.draw(ctx, {
+    width,
+    tickTop: PLOT_HEIGHT,
+    tickBottom: PLOT_HEIGHT + 4,
+    labelY: HEIGHT - 6,
+    labelInset: 12,
+  });
+  axisCaption(ctx, "Time (newer ↓)");
+}
 
 type Rgb = readonly [number, number, number];
 
@@ -53,40 +70,47 @@ function buildSpectrogram(frames: WaterfallMessage[]): ImageData | null {
   return image;
 }
 
-function scaleOnto(ctx: CanvasRenderingContext2D, image: ImageData, buffer: HTMLCanvasElement): void {
+function scaleOnto(
+  ctx: CanvasRenderingContext2D,
+  image: ImageData,
+  buffer: HTMLCanvasElement,
+  width: number,
+): void {
   buffer.width = image.width;
   buffer.height = image.height;
   const bufferCtx = buffer.getContext("2d");
   if (!bufferCtx) return;
   bufferCtx.putImageData(image, 0, 0);
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(buffer, 0, 0, WIDTH, HEIGHT);
+  ctx.drawImage(buffer, 0, 0, width, PLOT_HEIGHT);
 }
 
-function drawHint(ctx: CanvasRenderingContext2D): void {
+function drawHint(ctx: CanvasRenderingContext2D, width: number): void {
   ctx.fillStyle = HINT_COLOR;
   ctx.font = "13px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText("Waiting for signal…", WIDTH / 2, HEIGHT / 2);
+  ctx.fillText("Waiting for signal…", width / 2, PLOT_HEIGHT / 2);
 }
 
 export function Waterfall() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref, size } = useCanvasSize(HEIGHT);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
   const frames = useStore((s) => s.waterfallFrames);
 
   useEffect(() => {
-    const ctx = canvasRef.current?.getContext("2d");
+    const canvas = ref.current;
+    if (!canvas || size.width === 0) return;
+    const ctx = prepareContext(canvas, size);
     if (!ctx) return;
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
     const image = buildSpectrogram(frames);
-    if (!image) {
-      drawHint(ctx);
-      return;
+    if (image) {
+      if (!bufferRef.current) bufferRef.current = document.createElement("canvas");
+      scaleOnto(ctx, image, bufferRef.current, size.width);
+    } else {
+      drawHint(ctx, size.width);
     }
-    if (!bufferRef.current) bufferRef.current = document.createElement("canvas");
-    scaleOnto(ctx, image, bufferRef.current);
-  }, [frames]);
+    drawAxis(ctx, size.width);
+  }, [ref, frames, size.width, size.height]);
 
-  return <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} style={{ width: "100%" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: HEIGHT, display: "block" }} />;
 }
