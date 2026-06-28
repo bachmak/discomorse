@@ -9,10 +9,12 @@ export function AppHeader({ demo }: AppHeaderProps) {
     <header className="app-header">
       <h1>Discomorse</h1>
       <span className="tagline">Morse and CW audio, decoded to text.</span>
-      <div className="header-actions">
-        <SlowModeToggle />
-        {demo && <span className="demo-badge">DEMO</span>}
-      </div>
+      {demo && (
+        <div className="header-actions">
+          <SlowModeToggle />
+          <span className="demo-badge">DEMO</span>
+        </div>
+      )}
     </header>
   );
 }
