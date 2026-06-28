@@ -1,22 +1,39 @@
-import { useEffect, useRef } from "react";
-import { useStore } from "../store";
+import { useEffect } from "react";
+import { useStore, MAX_SCOPE_SAMPLES } from "../store";
+import { WS_SAMPLE_RATE_HZ } from "../audioFormat";
+import { AXIS_HEIGHT, TimeAxis, axisCaption } from "./chartAxis";
+import { useCanvasSize, prepareContext } from "./canvas";
 
-const WIDTH = 900;
-const HEIGHT = 160;
-const MID = HEIGHT / 2;
+const HEIGHT = 150;
+const PLOT_HEIGHT = HEIGHT - AXIS_HEIGHT;
+const MID = PLOT_HEIGHT / 2;
 const AMPLITUDE = MID * 0.9;
+const WINDOW_MS = (MAX_SCOPE_SAMPLES / WS_SAMPLE_RATE_HZ) * 1000;
+const TICK_MS = WINDOW_MS / 4;
 const TRACE_COLOR = "#22d3ee";
 const FILL_COLOR = "rgba(34, 211, 238, 0.22)";
 const GUIDE_COLOR = "rgba(34, 211, 238, 0.16)";
 const HINT_COLOR = "rgba(148, 163, 184, 0.75)";
 
-function drawBaseline(ctx: CanvasRenderingContext2D): void {
+const TIME_AXIS = new TimeAxis(WINDOW_MS, TICK_MS);
+
+function drawBaseline(ctx: CanvasRenderingContext2D, width: number): void {
   ctx.strokeStyle = GUIDE_COLOR;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, MID);
-  ctx.lineTo(WIDTH, MID);
+  ctx.lineTo(width, MID);
   ctx.stroke();
+}
+
+function drawAxis(ctx: CanvasRenderingContext2D, width: number): void {
+  TIME_AXIS.draw(ctx, {
+    width,
+    tickTop: PLOT_HEIGHT,
+    tickBottom: PLOT_HEIGHT + 4,
+    labelY: HEIGHT - 6,
+    labelInset: 14,
+  });
 }
 
 function columnPeak(samples: number[], from: number, to: number): number {
@@ -30,14 +47,18 @@ function columnPeak(samples: number[], from: number, to: number): number {
   return peak;
 }
 
-function drawWaveform(ctx: CanvasRenderingContext2D, samples: number[]): void {
-  const perColumn = samples.length / WIDTH;
-  const peaks = Array.from({ length: WIDTH }, (_u, x) =>
+function columnPeaks(samples: number[], columns: number): number[] {
+  const perColumn = samples.length / columns;
+  return Array.from({ length: columns }, (_unused, x) =>
     columnPeak(samples, x * perColumn, (x + 1) * perColumn),
   );
+}
+
+function drawWaveform(ctx: CanvasRenderingContext2D, samples: number[], width: number): void {
+  const peaks = columnPeaks(samples, Math.round(width));
   ctx.beginPath();
   peaks.forEach((peak, x) => ctx.lineTo(x, MID - peak * AMPLITUDE));
-  for (let x = WIDTH - 1; x >= 0; x--) ctx.lineTo(x, MID + peaks[x] * AMPLITUDE);
+  for (let x = peaks.length - 1; x >= 0; x--) ctx.lineTo(x, MID + peaks[x] * AMPLITUDE);
   ctx.closePath();
   ctx.fillStyle = FILL_COLOR;
   ctx.fill();
@@ -46,25 +67,28 @@ function drawWaveform(ctx: CanvasRenderingContext2D, samples: number[]): void {
   ctx.stroke();
 }
 
-function drawHint(ctx: CanvasRenderingContext2D): void {
+function drawHint(ctx: CanvasRenderingContext2D, width: number): void {
   ctx.fillStyle = HINT_COLOR;
   ctx.font = "13px ui-monospace, monospace";
   ctx.textAlign = "center";
-  ctx.fillText("Waiting for signal…", WIDTH / 2, MID - 8);
+  ctx.fillText("Waiting for signal…", width / 2, MID - 8);
 }
 
 export function Oscilloscope() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { ref, size } = useCanvasSize(HEIGHT);
   const samples = useStore((s) => s.scopeSamples);
 
   useEffect(() => {
-    const ctx = canvasRef.current?.getContext("2d");
+    const canvas = ref.current;
+    if (!canvas || size.width === 0) return;
+    const ctx = prepareContext(canvas, size);
     if (!ctx) return;
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
-    drawBaseline(ctx);
-    if (samples.length > 0) drawWaveform(ctx, samples);
-    else drawHint(ctx);
-  }, [samples]);
+    drawBaseline(ctx, size.width);
+    drawAxis(ctx, size.width);
+    if (samples.length > 0) drawWaveform(ctx, samples, size.width);
+    else drawHint(ctx, size.width);
+    axisCaption(ctx, "Amplitude");
+  }, [ref, samples, size.width, size.height]);
 
-  return <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} style={{ width: "100%" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: HEIGHT, display: "block" }} />;
 }
