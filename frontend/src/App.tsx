@@ -8,7 +8,7 @@ import { FFTSpectrum } from "./components/FFTSpectrum";
 import { Waterfall } from "./components/Waterfall";
 
 function demoRequested(): boolean {
-  return import.meta.env.DEV && new URLSearchParams(window.location.search).has("demo");
+  return new URLSearchParams(window.location.search).has("demo");
 }
 
 export function App() {
