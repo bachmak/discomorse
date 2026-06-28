@@ -7,8 +7,8 @@ import type { FFTMessage } from "../types/ws";
 
 const CHUNK_SAMPLES = 12;
 
-function demoFftFrame(seed: number): FFTMessage {
-  return { type: "fft", data: demoSpectrumFrame(seed), ts: performance.now() };
+function demoFftFrame(cursor: number): FFTMessage {
+  return { type: "fft", data: demoSpectrumFrame(cursor), ts: performance.now() };
 }
 
 export function useDemoSignal(enabled: boolean): void {
@@ -20,7 +20,7 @@ export function useDemoSignal(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
     setScope(demoScopeChunk(0, MAX_SCOPE_SAMPLES));
-    pushFFT(demoFftFrame(0));
+    pushFFT(demoFftFrame(MAX_SCOPE_SAMPLES - 1));
     let cursor = MAX_SCOPE_SAMPLES;
     let handle = 0;
 
