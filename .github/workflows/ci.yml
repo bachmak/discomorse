@@ -201,5 +201,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ~/dev/discomorse
-            git pull --ff-only
+            git fetch --prune origin
+            git checkout -f main
+            git reset --hard origin/main
             docker compose up -d --build --remove-orphans
