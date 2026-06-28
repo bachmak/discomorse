@@ -9,6 +9,7 @@ dependencies = [
     "numpy>=2.0",
     "scipy>=1.14",
     "soundfile>=0.13",
+    "pydantic>=2.11",
     "pydantic-settings>=2.6",
     "tomli>=2.0",
 ]

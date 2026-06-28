@@ -1,52 +1,52 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import ClassVar
 
+from morse_decoder.api.wire import (
+    FFTMessage,
+    ServerMessage,
+    TextMessage,
+    WaterfallMessage,
+)
 from morse_decoder.pipeline.dto import ToneSpectrum
 
 
 class OutboundEvent(ABC):
-    """Base for everything the pipeline emits toward the client.
-
-    `to_payload` is the template: every event is wrapped in a `{"type": ...}`
-    envelope. Subclasses supply only the tag and their own body.
-    """
-
-    wire_type: ClassVar[str]
-
-    def to_payload(self) -> dict[str, object]:
-        return {"type": self.wire_type, **self._body()}
+    """Base for everything the pipeline emits toward the client."""
 
     @abstractmethod
-    def _body(self) -> dict[str, object]:
-        """Event-specific fields, excluding the wire tag."""
+    def to_message(self) -> ServerMessage:
+        """The wire DTO this event serializes to."""
         ...
 
 
 @dataclass(frozen=True)
-class MagnitudeFrame(OutboundEvent):
-    """A spectrum frame; subclasses differ only by their wire tag."""
+class MagnitudeFrame(OutboundEvent, ABC):
+    """One spectrum column; subclasses differ only by their wire DTO."""
 
-    spectrums: tuple[ToneSpectrum, ...]
+    spectrum: ToneSpectrum
 
-    def _body(self) -> dict[str, object]:
-        return {"data": self.spectrums}
+    def _data(self) -> list[float]:
+        return [tone.magnitude for tone in self.spectrum.magnitudes]
+
+    def _ts(self) -> float:
+        return self.spectrum.ts.timestamp()
 
 
-@dataclass(frozen=True)
 class WaterfallFrame(MagnitudeFrame):
-    wire_type: ClassVar[str] = "waterfall"
+    def to_message(self) -> WaterfallMessage:
+        return WaterfallMessage(data=self._data(), ts=self._ts())
 
 
-@dataclass(frozen=True)
 class FFTFrame(MagnitudeFrame):
-    wire_type: ClassVar[str] = "fft"
+    def to_message(self) -> FFTMessage:
+        return FFTMessage(data=self._data(), ts=self._ts())
 
 
 @dataclass(frozen=True)
 class DecodedText(OutboundEvent):
-    wire_type: ClassVar[str] = "text"
     text: str
 
-    def _body(self) -> dict[str, object]:
-        return {"data": self.text}
+    def to_message(self) -> TextMessage:
+        return TextMessage(data=self.text)
