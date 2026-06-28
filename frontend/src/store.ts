@@ -9,12 +9,14 @@ interface State {
   fftFrame: FFTMessage | null;
   scopeSamples: number[];
   decodedText: string;
+  slowMode: boolean;
   pushWaterfall: (frame: WaterfallMessage) => void;
   pushFFT: (frame: FFTMessage) => void;
   appendScope: (samples: number[]) => void;
   setScope: (samples: number[]) => void;
   appendText: (text: string) => void;
   clearText: () => void;
+  setSlowMode: (on: boolean) => void;
 }
 
 export const useStore = create<State>((set) => ({
@@ -22,6 +24,7 @@ export const useStore = create<State>((set) => ({
   fftFrame: null,
   scopeSamples: [],
   decodedText: "",
+  slowMode: false,
 
   pushWaterfall: (frame) =>
     set((s) => ({
@@ -38,4 +41,6 @@ export const useStore = create<State>((set) => ({
   appendText: (text) => set((s) => ({ decodedText: s.decodedText + text })),
 
   clearText: () => set({ decodedText: "" }),
+
+  setSlowMode: (on) => set({ slowMode: on }),
 }));
