@@ -24,7 +24,7 @@ _EPOCH = datetime.datetime(2024, 1, 1)
 
 def _reading(runs: list[tuple[bool, float]], unit: float = _UNIT) -> ToneReading:
     if not runs:
-        return ToneReading(samples=(), spectrums=())
+        return ToneReading(samples=())
     samples: list[ToneSample] = []
     elapsed = 0.0
     for on, length in runs:
@@ -33,7 +33,7 @@ def _reading(runs: list[tuple[bool, float]], unit: float = _UNIT) -> ToneReading
         elapsed += length * unit
     closing = _EPOCH + datetime.timedelta(seconds=elapsed)
     samples.append(ToneSample(ts=closing, on=not runs[-1][0]))
-    return ToneReading(samples=tuple(samples), spectrums=())
+    return ToneReading(samples=tuple(samples))
 
 
 def _decoder() -> AdaptiveThresholdDecoder:
@@ -78,9 +78,9 @@ async def test_process_classifies_runs(
 
 async def test_process_carries_run_across_chunks() -> None:
     decoder = _decoder()
-    opening = ToneReading(samples=(ToneSample(ts=_EPOCH, on=True),), spectrums=())
+    opening = ToneReading(samples=(ToneSample(ts=_EPOCH, on=True),))
     closing_ts = _EPOCH + datetime.timedelta(seconds=_UNIT)
-    closing = ToneReading(samples=(ToneSample(ts=closing_ts, on=False),), spectrums=())
+    closing = ToneReading(samples=(ToneSample(ts=closing_ts, on=False),))
 
     assert (await decoder.process(opening)).elements == []
     assert (await decoder.process(closing)).elements == [Dit()]
