@@ -3,10 +3,10 @@ from abc import ABC, abstractmethod
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from morse_decoder.audio.browser_mic import BrowserMicSource, EndOfStream
+from morse_decoder.audio.mic_source import EndOfStream, MicSource
 from morse_decoder.config import PipelineSettings, settings
+from morse_decoder.pipeline.factory import create_pipeline_runner
 from morse_decoder.pipeline.runner import PipelineRunner
-from morse_decoder.plugins.factory import create_pipeline_runner
 
 
 async def handle_mic_stream(ws: WebSocket) -> None:
@@ -25,7 +25,7 @@ class MicStreamSession:
     """Drives a mic stream: audio in, decoded events out, over one socket."""
 
     def __init__(self, ws: WebSocket, pipeline_settings: PipelineSettings) -> None:
-        source = BrowserMicSource()
+        source = MicSource()
         self._pumps: tuple[Pump, Pump] = (
             AudioInboundPump(ws, source),
             EventOutboundPump(ws, create_pipeline_runner(source, pipeline_settings)),
@@ -43,7 +43,7 @@ class MicStreamSession:
 class AudioInboundPump(Pump):
     """Forwards inbound socket bytes into the audio source, then closes it."""
 
-    def __init__(self, ws: WebSocket, source: BrowserMicSource) -> None:
+    def __init__(self, ws: WebSocket, source: MicSource) -> None:
         self._ws = ws
         self._source = source
 

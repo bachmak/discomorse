@@ -3,20 +3,21 @@ import datetime
 import pytest
 
 from morse_decoder.config import PipelineSettings, TimingDecoderSettings
-from morse_decoder.pipeline.adaptive_threshold_decoder import (
-    AdaptiveThresholdDecoder,
-    DitEstimator,
-)
-from morse_decoder.pipeline.dto import ToneReading, ToneSample
-from morse_decoder.pipeline.types import (
+from morse_decoder.pipeline.dto import (
     Dah,
     Dit,
     InterCharSpace,
     IntraCharSpace,
     MorseElement,
+    ToneReading,
+    ToneSample,
     WordSpace,
 )
-from morse_decoder.plugins.factory import _build_timing_decoder
+from morse_decoder.pipeline.factory import _build_timing_decoder
+from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder import (
+    AdaptiveThresholdDecoder,
+    DitEstimator,
+)
 
 _UNIT = 0.06  # seconds; matches the 20 WPM default seed
 _EPOCH = datetime.datetime(2024, 1, 1)

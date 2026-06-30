@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 from scipy.signal import resample_poly  # type: ignore[import-untyped]  # no stubs
 
-from morse_decoder.audio.decoded import DecodedAudio
+from morse_decoder.audio.impl.decoder import DecodedAudio
 
 _INT16_PEAK = 32767
 

@@ -1,8 +1,8 @@
 from collections.abc import AsyncIterator
 
-from morse_decoder.audio.base import AudioSource
-from morse_decoder.audio.decoder import AudioDecoder, SoundFileDecoder
-from morse_decoder.audio.pcm_normalizer import PcmNormalizer
+from morse_decoder.audio.impl.decoder import AudioDecoder, SoundFileDecoder
+from morse_decoder.audio.impl.pcm_normalizer import PcmNormalizer
+from morse_decoder.audio.source import AudioSource
 from morse_decoder.config import AudioSettings
 
 _BYTES_PER_SAMPLE = 2  # Int16
