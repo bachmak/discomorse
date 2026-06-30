@@ -12,6 +12,10 @@ class AudioSettings(BaseSettings):
     chunk_size: int = 2048
 
 
+class SpectrumAnalyzerSettings(BaseSettings):
+    pass
+
+
 class ToneDetectorSettings(BaseSettings):
     pass
 
@@ -29,10 +33,14 @@ class InterpreterSettings(BaseSettings):
 
 
 class PipelineSettings(BaseSettings):
-    tone_detector: str = "STFTDetector"
+    spectrum_analyzer: str = "STFTAnalyzer"
+    tone_detector: str = "ThresholdToneDetector"
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "NoisyChannelInterpreter"
     language: str = "en"
+    spectrum_analyzer_settings: SpectrumAnalyzerSettings = Field(
+        default_factory=SpectrumAnalyzerSettings
+    )
     tone_detector_settings: ToneDetectorSettings = Field(
         default_factory=ToneDetectorSettings
     )

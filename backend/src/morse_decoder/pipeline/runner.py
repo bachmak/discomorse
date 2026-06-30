@@ -1,27 +1,34 @@
 from collections.abc import AsyncIterator, Iterator
 
 from morse_decoder.audio.base import AudioSource
-from morse_decoder.pipeline.dto import PcmChunk, ToneReading
+from morse_decoder.pipeline.dto import PcmChunk, SpectrumReading, ToneReading
 from morse_decoder.pipeline.events import (
     DecodedText,
     FFTFrame,
     OutboundEvent,
     WaterfallFrame,
 )
-from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
+from morse_decoder.plugins.base import (
+    Interpreter,
+    SpectrumAnalyzer,
+    TimingDecoder,
+    ToneDetector,
+)
 
 
 class PipelineRunner:
-    """Streams audio through detector → decoder → interpreter, yielding events."""
+    """Streams audio through analyzer → detector → decoder → interpreter."""
 
     def __init__(
         self,
         source: AudioSource,
+        spectrum_analyzer: SpectrumAnalyzer,
         tone_detector: ToneDetector,
         timing_decoder: TimingDecoder,
         interpreter: Interpreter,
     ) -> None:
         self._source = source
+        self._spectrum_analyzer = spectrum_analyzer
         self._tone_detector = tone_detector
         self._timing_decoder = timing_decoder
         self._interpreter = interpreter
@@ -32,13 +39,14 @@ class PipelineRunner:
                 yield event
 
     async def _process_chunk(self, chunk: PcmChunk) -> AsyncIterator[OutboundEvent]:
-        reading = await self._tone_detector.process(chunk)
-        for event in self._spectrum_events(reading):
+        spectrums = await self._spectrum_analyzer.process(chunk)
+        for event in self._spectrum_events(spectrums):
             yield event
+        reading = await self._tone_detector.process(spectrums)
         async for event in self._decode(reading):
             yield event
 
-    def _spectrum_events(self, reading: ToneReading) -> Iterator[OutboundEvent]:
+    def _spectrum_events(self, reading: SpectrumReading) -> Iterator[OutboundEvent]:
         for spectrum in reading.spectrums:
             yield WaterfallFrame(spectrum)
         if reading.spectrums:

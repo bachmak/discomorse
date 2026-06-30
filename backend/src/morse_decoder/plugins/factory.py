@@ -4,12 +4,22 @@ from morse_decoder.audio.base import AudioSource
 from morse_decoder.config import (
     InterpreterSettings,
     PipelineSettings,
+    SpectrumAnalyzerSettings,
     TimingDecoderSettings,
     ToneDetectorSettings,
 )
 from morse_decoder.pipeline.adaptive_threshold_decoder import AdaptiveThresholdDecoder
 from morse_decoder.pipeline.runner import PipelineRunner
-from morse_decoder.plugins.base import Interpreter, TimingDecoder, ToneDetector
+from morse_decoder.plugins.base import (
+    Interpreter,
+    SpectrumAnalyzer,
+    TimingDecoder,
+    ToneDetector,
+)
+
+
+class _SpectrumAnalyzerConstructor(Protocol):
+    def __call__(self, settings: SpectrumAnalyzerSettings) -> SpectrumAnalyzer: ...
 
 
 class _ToneDetectorConstructor(Protocol):
@@ -27,8 +37,11 @@ class _InterpreterConstructor(Protocol):
 # We can't do mapping dict[str -> ToneDetector/TimingDecoder/etc] directly, because
 # calling a constructor of an abstract class doesn't work and triggers type checks.
 # That's why we introduced these proxy constructors.
+_SPECTRUM_ANALYZERS: dict[str, _SpectrumAnalyzerConstructor] = {
+    # "STFTAnalyzer": STFTAnalyzer,
+}
 _TONE_DETECTORS: dict[str, _ToneDetectorConstructor] = {
-    # "STFTDetector": STFTDetector,
+    # "ThresholdToneDetector": ThresholdToneDetector,
 }
 _TIMING_DECODERS: dict[str, _TimingDecoderConstructor] = {
     "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
@@ -44,6 +57,13 @@ def _resolve[T](catalog: dict[str, T], name: str, kind: str) -> T:
     except KeyError as exc:
         known = ", ".join(sorted(catalog)) or "none"
         raise KeyError(f"Unknown {kind}: {name!r} (known: {known})") from exc
+
+
+def _build_spectrum_analyzer(settings: PipelineSettings) -> SpectrumAnalyzer:
+    analyzer = _resolve(
+        _SPECTRUM_ANALYZERS, settings.spectrum_analyzer, "spectrum analyzer"
+    )
+    return analyzer(settings.spectrum_analyzer_settings)
 
 
 def _build_tone_detector(settings: PipelineSettings) -> ToneDetector:
@@ -66,6 +86,7 @@ def create_pipeline_runner(
 ) -> PipelineRunner:
     return PipelineRunner(
         source=source,
+        spectrum_analyzer=_build_spectrum_analyzer(pipeline_settings),
         tone_detector=_build_tone_detector(pipeline_settings),
         timing_decoder=_build_timing_decoder(pipeline_settings),
         interpreter=_build_interpreter(pipeline_settings),

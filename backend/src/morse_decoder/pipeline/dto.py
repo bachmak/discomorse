@@ -30,9 +30,13 @@ class ToneSpectrum:
 
 
 @dataclass(frozen=True)
+class SpectrumReading:
+    spectrums: tuple[ToneSpectrum, ...]
+
+
+@dataclass(frozen=True)
 class ToneReading:
     samples: tuple[ToneSample, ...]
-    spectrums: tuple[ToneSpectrum, ...]
 
 
 @dataclass(frozen=True)

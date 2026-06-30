@@ -4,10 +4,24 @@
 
 import pytest
 
-from morse_decoder.config import PipelineSettings, ToneDetectorSettings
-from morse_decoder.pipeline.dto import PcmChunk, ToneReading
+from morse_decoder.config import (
+    PipelineSettings,
+    SpectrumAnalyzerSettings,
+    ToneDetectorSettings,
+)
+from morse_decoder.pipeline.dto import PcmChunk, SpectrumReading, ToneReading
 from morse_decoder.plugins import factory
-from morse_decoder.plugins.base import ToneDetector
+from morse_decoder.plugins.base import SpectrumAnalyzer, ToneDetector
+
+
+class _FakeAnalyzer(SpectrumAnalyzer):
+    """Stand-in spectrum analyzer that records the settings it was built with."""
+
+    def __init__(self, settings: SpectrumAnalyzerSettings) -> None:
+        self._settings = settings
+
+    async def process(self, chunk: PcmChunk) -> SpectrumReading:
+        return SpectrumReading(spectrums=())
 
 
 class _FakeDetector(ToneDetector):
@@ -16,8 +30,8 @@ class _FakeDetector(ToneDetector):
     def __init__(self, settings: ToneDetectorSettings) -> None:
         self._settings = settings
 
-    async def process(self, chunk: PcmChunk) -> ToneReading:
-        return ToneReading(samples=(), spectrums=())
+    async def process(self, reading: SpectrumReading) -> ToneReading:
+        return ToneReading(samples=())
 
 
 def test_resolve_returns_registered_class() -> None:
@@ -51,3 +65,18 @@ def test_build_passes_typed_settings_to_plugin(
 
     assert isinstance(detector, _FakeDetector)
     assert detector._settings is tone_settings
+
+
+def test_build_passes_typed_settings_to_analyzer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(factory._SPECTRUM_ANALYZERS, "fake", _FakeAnalyzer)
+    analyzer_settings = SpectrumAnalyzerSettings()
+    settings = PipelineSettings(
+        spectrum_analyzer="fake", spectrum_analyzer_settings=analyzer_settings
+    )
+
+    analyzer = factory._build_spectrum_analyzer(settings)
+
+    assert isinstance(analyzer, _FakeAnalyzer)
+    assert analyzer._settings is analyzer_settings
