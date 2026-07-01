@@ -1,6 +1,8 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
+from morse_decoder.api.upload import handle_file_upload
 from morse_decoder.api.websocket import handle_mic_stream
 
 app = FastAPI(title="Morse Decoder")
@@ -21,6 +23,5 @@ async def health() -> dict[str, str]:
 
 
 @app.post("/upload")
-async def upload_audio(file: UploadFile = File(...)) -> dict[str, str]:  # noqa: B008
-    # TODO: pipe through FileSource → PipelineRunner
-    return {"filename": file.filename or ""}
+async def upload_audio(file: UploadFile) -> StreamingResponse:
+    return await handle_file_upload(file)
