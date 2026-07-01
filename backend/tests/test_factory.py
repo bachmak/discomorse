@@ -9,9 +9,10 @@ from morse_decoder.config import (
     SpectrumAnalyzerSettings,
     ToneDetectorSettings,
 )
+from morse_decoder.pipeline import factory
 from morse_decoder.pipeline.dto import PcmChunk, SpectrumReading, ToneReading
-from morse_decoder.plugins import factory
-from morse_decoder.plugins.base import SpectrumAnalyzer, ToneDetector
+from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
+from morse_decoder.pipeline.stages.tone_detector.interface import ToneDetector
 
 
 class _FakeAnalyzer(SpectrumAnalyzer):

@@ -5,57 +5,6 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class MorseElement:
-    """One unit the timing decoder reads from the tone stream: a signal or a space."""
-
-
-class Signal(MorseElement, ABC):
-    """A keyed element that contributes to a character's code: a dit or a dah.
-
-    `code_symbol` is its mark in the dot/dash string the letter decoder
-    concatenates and looks up. Spaces carry no symbol, so they don't have it.
-    """
-
-    @property
-    @abstractmethod
-    def code_symbol(self) -> str:
-        """This element's mark in a character's code: '.' or '-'."""
-        ...
-
-
-class Dit(Signal):
-    """A short signal, written '.' in a character's code."""
-
-    @property
-    def code_symbol(self) -> str:
-        return "."
-
-
-class Dah(Signal):
-    """A long signal, written '-' in a character's code."""
-
-    @property
-    def code_symbol(self) -> str:
-        return "-"
-
-
-class Space(MorseElement):
-    """A boundary between signals; it carries no code symbol."""
-
-
-class IntraCharSpace(Space):
-    """Gap between the dits and dahs of a single character."""
-
-
-class InterCharSpace(Space):
-    """Gap that ends one character and begins the next."""
-
-
-class WordSpace(Space):
-    """Gap that ends one word and begins the next."""
-
-
-@dataclass(frozen=True)
 class Token(ABC):
     """A decoded morse symbol; the subclass is its kind, `value` its text.
 

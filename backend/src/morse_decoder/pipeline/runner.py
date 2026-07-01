@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator, Iterator
 
-from morse_decoder.audio.base import AudioSource
+from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import PcmChunk, SpectrumReading, ToneReading
 from morse_decoder.pipeline.events import (
     DecodedText,
@@ -8,12 +8,10 @@ from morse_decoder.pipeline.events import (
     OutboundEvent,
     WaterfallFrame,
 )
-from morse_decoder.plugins.base import (
-    Interpreter,
-    SpectrumAnalyzer,
-    TimingDecoder,
-    ToneDetector,
-)
+from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
+from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
+from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
+from morse_decoder.pipeline.stages.tone_detector.interface import ToneDetector
 
 
 class PipelineRunner:

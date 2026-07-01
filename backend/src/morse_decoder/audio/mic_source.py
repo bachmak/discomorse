@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 
-from morse_decoder.audio.base import AudioSource
+from morse_decoder.audio.source import AudioSource
 
 
 class EndOfStream:
@@ -11,7 +11,7 @@ class EndOfStream:
 MicInput = bytes | EndOfStream
 
 
-class BrowserMicSource(AudioSource):
+class MicSource(AudioSource):
     """Receives Int16 PCM chunks pushed over a WebSocket."""
 
     def __init__(self) -> None:

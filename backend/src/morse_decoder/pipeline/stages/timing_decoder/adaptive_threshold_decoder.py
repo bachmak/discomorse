@@ -6,16 +6,18 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from morse_decoder.config import TimingDecoderSettings
-from morse_decoder.pipeline.dto import TimingReading, ToneReading, ToneSample
-from morse_decoder.pipeline.types import (
+from morse_decoder.pipeline.dto import (
     Dah,
     Dit,
     InterCharSpace,
     IntraCharSpace,
     MorseElement,
+    TimingReading,
+    ToneReading,
+    ToneSample,
     WordSpace,
 )
-from morse_decoder.plugins.base import TimingDecoder
+from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
 
 _PARIS_DIT_SECONDS = 1.2
 _DAH_DITS = 3.0

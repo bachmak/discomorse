@@ -1,9 +1,18 @@
 import io
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
+import numpy as np
+import numpy.typing as npt
 import soundfile as sf  # type: ignore[import-untyped]  # no stubs
 
-from morse_decoder.audio.decoded import DecodedAudio
+
+@dataclass(frozen=True)
+class DecodedAudio:
+    """Float32 PCM in [-1, 1], shaped (frames, channels), at the native rate."""
+
+    samples: npt.NDArray[np.float32]
+    sample_rate: int
 
 
 class AudioDecoder(ABC):

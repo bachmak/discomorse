@@ -1,9 +1,8 @@
-from morse_decoder.pipeline.types import (
+from morse_decoder.pipeline.dto import MorseElement, Signal
+from morse_decoder.pipeline.stages.interpreter.tokens import (
     Digit,
     Letter,
-    MorseElement,
     Prosign,
-    Signal,
     Token,
     Unknown,
 )
