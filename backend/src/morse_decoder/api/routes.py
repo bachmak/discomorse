@@ -2,8 +2,8 @@ from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from morse_decoder.api.upload import handle_file_upload
-from morse_decoder.api.websocket import handle_mic_stream
+from morse_decoder.api.file_session import handle_file_upload
+from morse_decoder.api.mic_session import handle_mic_stream
 
 app = FastAPI(title="Morse Decoder")
 

@@ -1,7 +1,7 @@
 import json
 from collections.abc import AsyncIterator
 
-from morse_decoder.api.upload import FileUploadSession
+from morse_decoder.api.file_session import FileSession
 from morse_decoder.pipeline.events import DecodedText, OutboundEvent
 from morse_decoder.pipeline.runner import PipelineRunner
 
@@ -16,8 +16,8 @@ class _StubRunner(PipelineRunner):
 
 
 async def _lines(events: list[OutboundEvent]) -> list[str]:
-    session = FileUploadSession(_StubRunner(events))
-    return [line async for line in session.stream()]
+    session = FileSession(_StubRunner(events))
+    return [line async for line in session.run()]
 
 
 async def test_stream_emits_one_ndjson_line_per_event() -> None:

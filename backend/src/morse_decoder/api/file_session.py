@@ -14,17 +14,15 @@ _NDJSON_MEDIA_TYPE = "application/x-ndjson"
 async def handle_file_upload(file: UploadFile) -> StreamingResponse:
     source = FileSource(await file.read(), settings.audio)
     runner = create_pipeline_runner(source, settings.pipeline)
-    return StreamingResponse(
-        FileUploadSession(runner).stream(), media_type=_NDJSON_MEDIA_TYPE
-    )
+    return StreamingResponse(FileSession(runner).run(), media_type=_NDJSON_MEDIA_TYPE)
 
 
-class FileUploadSession:
+class FileSession:
     """Streams a decoded file's events out as newline-delimited JSON."""
 
     def __init__(self, runner: PipelineRunner) -> None:
         self._runner = runner
 
-    async def stream(self) -> AsyncIterator[str]:
+    async def run(self) -> AsyncIterator[str]:
         async for event in self._runner.run():
             yield f"{event.to_message().model_dump_json()}\n"

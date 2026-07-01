@@ -11,7 +11,7 @@ from morse_decoder.pipeline.runner import PipelineRunner
 
 async def handle_mic_stream(ws: WebSocket) -> None:
     await ws.accept()
-    await MicStreamSession(ws, settings.pipeline).run()
+    await MicSession(ws, settings.pipeline).run()
 
 
 class Pump(ABC):
@@ -21,7 +21,7 @@ class Pump(ABC):
     async def run(self) -> None: ...
 
 
-class MicStreamSession:
+class MicSession:
     """Drives a mic stream: audio in, decoded events out, over one socket."""
 
     def __init__(self, ws: WebSocket, pipeline_settings: PipelineSettings) -> None:
