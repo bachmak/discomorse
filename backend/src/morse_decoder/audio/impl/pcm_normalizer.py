@@ -5,8 +5,7 @@ import numpy.typing as npt
 from scipy.signal import resample_poly  # type: ignore[import-untyped]  # no stubs
 
 from morse_decoder.audio.impl.decoder import DecodedAudio
-
-_INT16_PEAK = 32767
+from morse_decoder.audio.pcm16 import PCM16
 
 
 class PcmNormalizer:
@@ -37,6 +36,6 @@ class PcmNormalizer:
         resampled: npt.NDArray[np.float64] = resample_poly(mono, up, down)
         return resampled
 
-    def _to_int16(self, samples: npt.NDArray[np.float64]) -> npt.NDArray[np.int16]:
+    def _to_int16(self, samples: npt.NDArray[np.float64]) -> npt.NDArray[PCM16.IntType]:
         clipped = np.clip(samples, -1.0, 1.0)
-        return (clipped * _INT16_PEAK).astype(np.int16)
+        return (clipped * PCM16.INT_PEAK).astype(PCM16.IntType)

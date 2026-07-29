@@ -4,6 +4,7 @@ import pytest
 from audio_fixtures import sine_pcm
 
 from morse_decoder.audio.impl.resampler import Resampler
+from morse_decoder.audio.pcm16 import PCM16
 
 _TARGET_RATE = 8_000
 _PUSH_BYTES = 2048
@@ -21,13 +22,13 @@ def _push_all(resampler: Resampler, pcm: bytes) -> bytes:
 
 def _resample_tone(
     source_rate: int, freq_hz: float, duration_s: float = 1.0
-) -> npt.NDArray[np.int16]:
+) -> npt.NDArray[PCM16.IntType]:
     resampler = Resampler(source_rate=source_rate, target_rate=_TARGET_RATE)
     pcm = sine_pcm(freq_hz, duration_s, source_rate).tobytes()
-    return np.frombuffer(_push_all(resampler, pcm), dtype=np.int16)
+    return np.frombuffer(_push_all(resampler, pcm), dtype=PCM16.IntType)
 
 
-def _dominant_frequency(samples: npt.NDArray[np.int16]) -> float:
+def _dominant_frequency(samples: npt.NDArray[PCM16.IntType]) -> float:
     spectrum = np.abs(np.fft.rfft(samples.astype(np.float64)))
     bins = np.fft.rfftfreq(len(samples), 1 / _TARGET_RATE)
     return float(bins[int(np.argmax(spectrum))])
@@ -45,7 +46,7 @@ _SOURCE_RATES = [
 def test_resampler_emits_one_second_of_target_rate_int16(source_rate: int) -> None:
     samples = _resample_tone(source_rate, freq_hz=440)
 
-    assert samples.dtype == np.int16
+    assert samples.dtype == PCM16.IntType
     assert abs(len(samples) - _TARGET_RATE) <= 1
 
 
@@ -69,7 +70,7 @@ def test_resampler_flush_drains_the_filter_tail() -> None:
     tail = resampler.flush()
 
     assert tail
-    assert abs(len(pushed + tail) // 2 - _TARGET_RATE) <= 1
+    assert abs(len(pushed + tail) // PCM16.BYTES_PER_SAMPLE - _TARGET_RATE) <= 1
 
 
 def test_resampler_flush_is_empty_without_input() -> None:

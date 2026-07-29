@@ -4,14 +4,15 @@ import pytest
 from audio_fixtures import sine_wav
 
 from morse_decoder.audio.file_source import FileSource
+from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import AudioSettings
 
 _TARGET_RATE = 8_000
 
 
-async def _drain(source: FileSource) -> npt.NDArray[np.int16]:
+async def _drain(source: FileSource) -> npt.NDArray[PCM16.IntType]:
     chunks = [chunk async for chunk in source.stream()]
-    return np.frombuffer(b"".join(chunks), dtype=np.int16)
+    return np.frombuffer(b"".join(chunks), dtype=PCM16.IntType)
 
 
 @pytest.mark.parametrize(
@@ -34,7 +35,7 @@ async def test_file_source_normalizes_to_mono_int16_target_rate(
 
     samples = await _drain(FileSource(data, audio))
 
-    assert samples.dtype == np.int16
+    assert samples.dtype == PCM16.IntType
     # 1 s normalized to the target rate lands near `sample_rate` (polyphase edges)
     assert abs(len(samples) - audio.sample_rate) < 100
 
@@ -46,6 +47,6 @@ async def test_file_source_chunks_respect_chunk_size(chunk_size: int) -> None:
 
     chunks = [chunk async for chunk in FileSource(data, audio).stream()]
 
-    chunk_bytes = audio.chunk_size * 2
+    chunk_bytes = audio.chunk_size * PCM16.BYTES_PER_SAMPLE
     assert all(len(chunk) == chunk_bytes for chunk in chunks[:-1])
     assert all(len(chunk) <= chunk_bytes for chunk in chunks)

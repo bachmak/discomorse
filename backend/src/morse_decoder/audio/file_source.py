@@ -2,10 +2,9 @@ from collections.abc import AsyncIterator
 
 from morse_decoder.audio.impl.decoder import AudioDecoder, SoundFileDecoder
 from morse_decoder.audio.impl.pcm_normalizer import PcmNormalizer
+from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.config import AudioSettings
-
-_BYTES_PER_SAMPLE = 2  # Int16
 
 
 class FileSource(AudioSource):
@@ -24,7 +23,7 @@ class FileSource(AudioSource):
         normalized = normalizer.normalize(decoded)
 
         self._raw = normalized
-        self._chunk = audio.chunk_size * _BYTES_PER_SAMPLE
+        self._chunk = audio.chunk_size * PCM16.BYTES_PER_SAMPLE
 
     async def stream(self) -> AsyncIterator[bytes]:
         for i in range(0, len(self._raw), self._chunk):
