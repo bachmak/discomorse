@@ -44,11 +44,20 @@ type ServerMessage = Annotated[
     Field(discriminator="type"),
 ]
 
+type ClientMessage = MicHandshake
+
 server_message_adapter: TypeAdapter[ServerMessage] = TypeAdapter(ServerMessage)
+client_message_adapter: TypeAdapter[ClientMessage] = TypeAdapter(ClientMessage)
 
 
 def server_message_json_schema() -> dict[str, object]:
     """The JSON schema of every message the server can send, for TS codegen."""
     schema = server_message_adapter.json_schema(ref_template="#/$defs/{model}")
     schema["title"] = "ServerMessage"
+    return schema
+
+
+def client_message_json_schema() -> dict[str, object]:
+    """The JSON schema of every message the client can send, for TS codegen."""
+    schema = client_message_adapter.json_schema(ref_template="#/$defs/{model}")
     return schema
