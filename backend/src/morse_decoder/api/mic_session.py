@@ -2,16 +2,24 @@ import asyncio
 from abc import ABC, abstractmethod
 
 from fastapi import WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
 
-from morse_decoder.audio.mic_source import EndOfStream, MicSource
-from morse_decoder.config import PipelineSettings, settings
+from morse_decoder.api.wire import MicHandshake
+from morse_decoder.audio.mic_source import EndOfStream, MicSource, Resampler
+from morse_decoder.config import Settings, global_settings
 from morse_decoder.pipeline.factory import create_pipeline_runner
 from morse_decoder.pipeline.runner import PipelineRunner
 
 
 async def handle_mic_stream(ws: WebSocket) -> None:
     await ws.accept()
-    await MicSession(ws, settings.pipeline).run()
+    try:
+        handshake = MicHandshake.model_validate_json(await ws.receive_text())
+    except ValidationError:
+        await ws.close()
+        return
+
+    await MicSession(ws, handshake.sample_rate, global_settings).run()
 
 
 class Pump(ABC):
@@ -24,11 +32,15 @@ class Pump(ABC):
 class MicSession:
     """Drives a mic stream: audio in, decoded events out, over one socket."""
 
-    def __init__(self, ws: WebSocket, pipeline_settings: PipelineSettings) -> None:
-        source = MicSource()
+    def __init__(self, ws: WebSocket, source_rate: int, settings: Settings) -> None:
+        source = MicSource(
+            resampler=Resampler(
+                source_rate=source_rate, target_rate=settings.audio.sample_rate
+            )
+        )
         self._pumps: tuple[Pump, Pump] = (
             AudioInboundPump(ws, source),
-            EventOutboundPump(ws, create_pipeline_runner(source, pipeline_settings)),
+            EventOutboundPump(ws, create_pipeline_runner(source, settings.pipeline)),
         )
 
     async def run(self) -> None:
