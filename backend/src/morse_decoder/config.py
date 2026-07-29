@@ -70,4 +70,4 @@ class Settings(BaseSettings):
     fft: FFTSettings = Field(default_factory=FFTSettings)
 
 
-settings = Settings()
+global_settings = Settings()

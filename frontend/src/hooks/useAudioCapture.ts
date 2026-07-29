@@ -1,13 +1,16 @@
 import { useRef } from "react";
+import type { MicHandshake } from "../types/ws";
 
 const CHUNK_SAMPLES = 2048;
 
-export function useAudioCapture(onChunk: (pcm: ArrayBuffer) => void) {
+export function useAudioCapture(onData: (data: ArrayBuffer | string) => void) {
   const streamRef = useRef<MediaStream | null>(null);
 
   const start = async () => {
     streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
     const ctx = new AudioContext();
+    const handshake: MicHandshake = {sample_rate: ctx.sampleRate};
+    onData(JSON.stringify(handshake))
     const source = ctx.createMediaStreamSource(streamRef.current);
 
     source.connect(ctx.destination);
@@ -19,7 +22,7 @@ export function useAudioCapture(onChunk: (pcm: ArrayBuffer) => void) {
       for (let i = 0; i < float32.length; i++) {
         int16[i] = Math.max(-32768, Math.min(32767, float32[i] * 32768));
       }
-      onChunk(int16.buffer);
+      onData(int16.buffer);
     };
     source.connect(processor);
     processor.connect(ctx.destination);
