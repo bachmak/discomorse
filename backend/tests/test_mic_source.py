@@ -4,6 +4,7 @@ from audio_fixtures import sine_pcm
 
 from morse_decoder.audio.impl.resampler import Resampler
 from morse_decoder.audio.mic_source import EndOfStream, MicSource
+from morse_decoder.audio.pcm16 import PCM16
 
 _TARGET_RATE = 8_000
 _SOURCE_RATE = 48_000
@@ -83,6 +84,6 @@ async def test_mic_source_converts_a_browser_stream_to_the_pipeline_rate() -> No
         await source.push(pcm[offset : offset + 4096])
     await source.push(EndOfStream())
 
-    samples = np.frombuffer(b"".join(await _drain(source)), dtype=np.int16)
+    samples = np.frombuffer(b"".join(await _drain(source)), dtype=PCM16.IntType)
 
     assert abs(len(samples) - _TARGET_RATE) <= 1
