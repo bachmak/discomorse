@@ -22,7 +22,7 @@ export function useWebSocket(url: string) {
     return () => ws.current?.close();
   }, [url]);
 
-  const send = (chunk: ArrayBuffer) => ws.current?.send(chunk);
+  const send = (data: ArrayBuffer | string) => ws.current?.send(data);
 
   return { send };
 }
