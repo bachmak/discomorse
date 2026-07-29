@@ -1,5 +1,5 @@
 import pytest
-from fastapi import WebSocketDisconnect
+from fastapi import WebSocketDisconnect, status
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -54,5 +54,23 @@ def test_mic_socket_closes_when_the_handshake_is_invalid() -> None:
     with TestClient(app).websocket_connect("/ws/mic") as ws:
         ws.send_text('{"sample_rate": 0}')
 
-        with pytest.raises(WebSocketDisconnect):
+        with pytest.raises(WebSocketDisconnect) as disconnect:
             ws.receive_text()
+
+    assert disconnect.value.code == status.WS_1008_POLICY_VIOLATION
+
+
+def test_mic_socket_closes_when_the_first_frame_is_not_text() -> None:
+    with TestClient(app).websocket_connect("/ws/mic") as ws:
+        ws.send_bytes(b"\x00\x01")
+
+        with pytest.raises(WebSocketDisconnect) as disconnect:
+            ws.receive_text()
+
+    assert disconnect.value.code == status.WS_1008_POLICY_VIOLATION
+
+
+def test_mic_socket_tolerates_a_disconnect_before_the_handshake() -> None:
+    """TestClient re-raises server-side errors on exit, so a clean exit is the check."""
+    with TestClient(app).websocket_connect("/ws/mic") as ws:
+        ws.close()

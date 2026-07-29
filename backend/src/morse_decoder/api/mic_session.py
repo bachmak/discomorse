@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
 
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect, status
 from pydantic import ValidationError
 
 from morse_decoder.api.wire import MicHandshake
@@ -16,8 +16,10 @@ async def handle_mic_stream(ws: WebSocket) -> None:
     await ws.accept()
     try:
         handshake = MicHandshake.model_validate_json(await ws.receive_text())
-    except ValidationError:
-        await ws.close()
+    except WebSocketDisconnect:
+        return
+    except (ValidationError, KeyError):  # KeyError: first frame was binary, not text
+        await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await MicSession(ws, handshake.sample_rate, global_settings).run()
