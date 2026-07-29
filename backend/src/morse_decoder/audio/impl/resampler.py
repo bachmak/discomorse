@@ -1,5 +1,6 @@
 import numpy as np
-import soxr
+import numpy.typing as npt
+import soxr  # type: ignore[import-untyped]  # no stubs
 
 
 class Resampler:
@@ -14,5 +15,8 @@ class Resampler:
     def flush(self) -> bytes:
         return self._resample(np.empty(0, dtype=np.int16), last=True)
 
-    def _resample(self, samples: np.ndarray, last: bool) -> bytes:
-        return self._stream.resample_chunk(samples, last=last).tobytes()
+    def _resample(self, samples: npt.NDArray[np.int16], last: bool) -> bytes:
+        resampled: npt.NDArray[np.int16] = self._stream.resample_chunk(
+            samples, last=last
+        )
+        return resampled.tobytes()

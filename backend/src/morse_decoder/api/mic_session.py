@@ -5,7 +5,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
 from morse_decoder.api.wire import MicHandshake
-from morse_decoder.audio.mic_source import EndOfStream, MicSource, Resampler
+from morse_decoder.audio.impl.resampler import Resampler
+from morse_decoder.audio.mic_source import EndOfStream, MicSource
 from morse_decoder.config import Settings, global_settings
 from morse_decoder.pipeline.factory import create_pipeline_runner
 from morse_decoder.pipeline.runner import PipelineRunner
