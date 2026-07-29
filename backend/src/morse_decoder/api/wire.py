@@ -11,6 +11,10 @@ class _WireModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MicHandshake(_WireModel):
+    sample_rate: int = Field(gt=0)
+
+
 class WaterfallMessage(_WireModel):
     type: Literal["waterfall"] = "waterfall"
     data: list[float]
