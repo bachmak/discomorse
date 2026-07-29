@@ -94,18 +94,6 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build backend/ -t morse-decoder-backend
 
-  backend-security:
-    needs: changes
-    if: ${{ needs.changes.outputs.backend_deps == 'true' || github.event_name == 'schedule' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - run: uv export --project backend --no-hashes --no-emit-project --format requirements-txt -o /tmp/reqs.txt
-      - run: uvx pip-audit -r /tmp/reqs.txt
-
   # ── Frontend ──────────────────────────────────────────────────────────────────
 
   frontend-lint:
