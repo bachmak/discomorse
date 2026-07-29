@@ -1,18 +1,35 @@
+import datetime
+
 import numpy as np
 import numpy.typing as npt
 import pytest
-from audio_fixtures import sine_wav
+from audio_fixtures import EPOCH, epoch_clock, sine_wav
 
 from morse_decoder.audio.file_source import FileSource
+from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import AudioSettings
+from morse_decoder.pipeline.dto import PcmChunk
 
 _TARGET_RATE = 8_000
 
 
-async def _drain(source: FileSource) -> npt.NDArray[PCM16.IntType]:
-    chunks = [chunk async for chunk in source.stream()]
-    return np.frombuffer(b"".join(chunks), dtype=PCM16.IntType)
+def _file_source(data: bytes, audio: AudioSettings) -> FileSource:
+    return FileSource(
+        data,
+        audio=audio,
+        decoder=SoundFileDecoder(),
+        sample_clock=epoch_clock(audio.sample_rate),
+    )
+
+
+async def _drain(source: FileSource) -> list[PcmChunk]:
+    return [chunk async for chunk in source.stream()]
+
+
+async def _drain_samples(source: FileSource) -> npt.NDArray[PCM16.IntType]:
+    chunks = await _drain(source)
+    return np.frombuffer(b"".join(chunk.data for chunk in chunks), dtype=PCM16.IntType)
 
 
 @pytest.mark.parametrize(
@@ -33,7 +50,7 @@ async def test_file_source_normalizes_to_mono_int16_target_rate(
         freq_hz=440, duration_s=1.0, sample_rate=source_rate, channels=channels
     )
 
-    samples = await _drain(FileSource(data, audio))
+    samples = await _drain_samples(_file_source(data, audio))
 
     assert samples.dtype == PCM16.IntType
     # 1 s normalized to the target rate lands near `sample_rate` (polyphase edges)
@@ -45,8 +62,18 @@ async def test_file_source_chunks_respect_chunk_size(chunk_size: int) -> None:
     audio = AudioSettings(sample_rate=_TARGET_RATE, chunk_size=chunk_size)
     data = sine_wav(freq_hz=440, duration_s=1.0, sample_rate=_TARGET_RATE)
 
-    chunks = [chunk async for chunk in FileSource(data, audio).stream()]
+    chunks = await _drain(_file_source(data, audio))
 
     chunk_bytes = audio.chunk_size * PCM16.BYTES_PER_SAMPLE
-    assert all(len(chunk) == chunk_bytes for chunk in chunks[:-1])
-    assert all(len(chunk) <= chunk_bytes for chunk in chunks)
+    assert all(len(chunk.data) == chunk_bytes for chunk in chunks[:-1])
+    assert all(len(chunk.data) <= chunk_bytes for chunk in chunks)
+
+
+async def test_file_source_timestamps_chunks_at_their_playback_offset() -> None:
+    audio = AudioSettings(sample_rate=_TARGET_RATE, chunk_size=1024)
+    data = sine_wav(freq_hz=440, duration_s=1.0, sample_rate=_TARGET_RATE)
+
+    stamps = [chunk.ts for chunk in await _drain(_file_source(data, audio))]
+
+    step = datetime.timedelta(seconds=audio.chunk_size / audio.sample_rate)
+    assert stamps == [EPOCH + index * step for index in range(len(stamps))]

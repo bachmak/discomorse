@@ -33,7 +33,7 @@ class PipelineRunner:
 
     async def run(self) -> AsyncIterator[OutboundEvent]:
         async for chunk in self._source.stream():
-            async for event in self._process_chunk(PcmChunk(chunk)):
+            async for event in self._process_chunk(chunk):
                 yield event
 
     async def _process_chunk(self, chunk: PcmChunk) -> AsyncIterator[OutboundEvent]:

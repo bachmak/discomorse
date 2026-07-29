@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 from abc import ABC, abstractmethod
 
 from fastapi import WebSocket, WebSocketDisconnect, status
@@ -6,6 +7,7 @@ from pydantic import ValidationError
 
 from morse_decoder.api.wire import MicHandshake
 from morse_decoder.audio.impl.resampler import Resampler
+from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.mic_source import EndOfStream, MicSource
 from morse_decoder.config import Settings, global_settings
 from morse_decoder.pipeline.factory import create_pipeline_runner
@@ -39,7 +41,11 @@ class MicSession:
         source = MicSource(
             resampler=Resampler(
                 source_rate=source_rate, target_rate=settings.audio.sample_rate
-            )
+            ),
+            sample_clock=SampleClock(
+                sample_rate=settings.audio.sample_rate,
+                started_at=datetime.datetime.now(tz=datetime.UTC),
+            ),
         )
         self._pumps: tuple[Pump, Pump] = (
             AudioInboundPump(ws, source),

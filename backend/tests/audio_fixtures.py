@@ -1,17 +1,21 @@
-"""In-memory audio synthesis for tests.
+"""In-memory audio synthesis and clocks for tests.
 
 No binary fixtures are committed: each test builds a known signal (a pure
 tone) and encodes it as WAV bytes — the input shape ``FileSource`` accepts.
 WAV keeps decoding deterministic.
 """
 
+import datetime
 import io
 
 import numpy as np
 import numpy.typing as npt
 import soundfile as sf  # type: ignore[import-untyped]  # no stubs
 
+from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.pcm16 import PCM16
+
+EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
 
 
 def sine_pcm(
@@ -39,3 +43,8 @@ def sine_wav(
 ) -> bytes:
     """WAV bytes of a pure tone — ``sine_pcm`` composed with ``wav_bytes``."""
     return wav_bytes(sine_pcm(freq_hz, duration_s, sample_rate), sample_rate, channels)
+
+
+def epoch_clock(sample_rate: int) -> SampleClock:
+    """A clock anchored at the epoch, so stamps are absolute and reproducible."""
+    return SampleClock(sample_rate=sample_rate, started_at=EPOCH)

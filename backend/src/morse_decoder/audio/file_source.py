@@ -1,10 +1,12 @@
 from collections.abc import AsyncIterator
 
-from morse_decoder.audio.impl.decoder import AudioDecoder, SoundFileDecoder
+from morse_decoder.audio.impl.decoder import AudioDecoder
 from morse_decoder.audio.impl.pcm_normalizer import PcmNormalizer
+from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.config import AudioSettings
+from morse_decoder.pipeline.dto import PcmChunk
 
 
 class FileSource(AudioSource):
@@ -14,9 +16,9 @@ class FileSource(AudioSource):
         self,
         data: bytes,
         audio: AudioSettings,
-        decoder: AudioDecoder | None = None,
+        decoder: AudioDecoder,
+        sample_clock: SampleClock,
     ) -> None:
-        decoder = decoder or SoundFileDecoder()
         normalizer = PcmNormalizer(audio.sample_rate)
 
         decoded = decoder.decode(data)
@@ -24,7 +26,9 @@ class FileSource(AudioSource):
 
         self._raw = normalized
         self._chunk = audio.chunk_size * PCM16.BYTES_PER_SAMPLE
+        self._sample_clock = sample_clock
 
-    async def stream(self) -> AsyncIterator[bytes]:
+    async def stream(self) -> AsyncIterator[PcmChunk]:
         for i in range(0, len(self._raw), self._chunk):
-            yield self._raw[i : i + self._chunk]
+            chunk = self._raw[i : i + self._chunk]
+            yield self._sample_clock.stamp(chunk)

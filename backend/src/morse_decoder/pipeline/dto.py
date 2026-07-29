@@ -58,6 +58,7 @@ class WordSpace(Space):
 
 @dataclass(frozen=True)
 class PcmChunk:
+    ts: datetime.datetime  # first sample
     data: bytes
 
 
