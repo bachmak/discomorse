@@ -1,5 +1,6 @@
 import librosa
 import numpy as np
+import numpy.typing as npt
 
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import SpectrumAnalyzerSettings
@@ -29,13 +30,13 @@ class STFTSpectrumAnalyzer(SpectrumAnalyzer):
         self._frequencies = librosa.fft_frequencies(
             sr=settings.sample_rate, n_fft=settings.n_fft
         )
-        self._window = librosa.filters.get_window(
+        self._window: npt.NDArray[np.float64] = librosa.filters.get_window(
             window="hann",
             Nx=settings.n_fft,
         )
         # The window has gain sum(w) and splits a tone in two halves (-f/2, +f/2)
         # so 2/sum(w) maps a full-scale tone onto a magnitude of 1.0
-        self._amplitude_scale = 2.0 / self._window.sum()
+        self._amplitude_scale = float(2.0 / self._window.sum())
         self._frame_stream = FrameStream(
             frame_length=settings.n_fft,
             hop_length=settings.hop_length,
@@ -57,15 +58,17 @@ class STFTSpectrumAnalyzer(SpectrumAnalyzer):
             for ts, column in zip(batch.timestamps, magnitudes.T, strict=True)
         )
 
-    def _samples_to_magnitudes(self, samples: np.ndarray) -> np.ndarray:
-        matrix = librosa.stft(
+    def _samples_to_magnitudes(
+        self, samples: npt.NDArray[PCM16.FloatType]
+    ) -> npt.NDArray[PCM16.FloatType]:
+        matrix: npt.NDArray[np.complex64] = librosa.stft(
             samples,
             n_fft=self._settings.n_fft,
             hop_length=self._settings.hop_length,
             window=self._window,
             center=False,
         )
-        raw_magnitudes = np.abs(matrix)
+        raw_magnitudes: npt.NDArray[PCM16.FloatType] = np.abs(matrix)
         normalized_magnitudes = raw_magnitudes * self._amplitude_scale
         return normalized_magnitudes
 
