@@ -51,8 +51,10 @@ Starts backend, frontend (nginx), and Caddy reverse proxy. The app is served at 
 
 ```bash
 # Backend
-uv run ruff check src
-uv run mypy --strict src
+uv run ruff check src scripts
+uv run mypy --strict src scripts
+uv run pytest tests
+uv run python scripts/smoke_pipeline.py  # end-to-end pipeline smoke test
 
 # Frontend
 npm run lint

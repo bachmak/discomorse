@@ -8,14 +8,11 @@ repos:
       - id: ruff-format
         files: ^backend/
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+  - repo: local
     hooks:
       - id: mypy
-        args: [--strict]
-        files: ^backend/src/
-        additional_dependencies:
-          - pydantic>=2
-          - pydantic-settings>=2
-          - fastapi>=0.115
-          - numpy>=2
+        name: mypy
+        entry: uv run --project backend mypy --strict backend/src backend/scripts
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
