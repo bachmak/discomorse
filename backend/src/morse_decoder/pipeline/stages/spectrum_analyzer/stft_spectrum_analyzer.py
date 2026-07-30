@@ -1,5 +1,3 @@
-import datetime
-
 import librosa
 import numpy as np
 
@@ -10,6 +8,10 @@ from morse_decoder.pipeline.dto import (
     SpectrumReading,
     ToneMagnitude,
     ToneSpectrum,
+)
+from morse_decoder.pipeline.stages.spectrum_analyzer.frame_stream import (
+    FrameBatch,
+    FrameStream,
 )
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
 
@@ -34,20 +36,25 @@ class STFTSpectrumAnalyzer(SpectrumAnalyzer):
         # The window has gain sum(w) and splits a tone in two halves (-f/2, +f/2)
         # so 2/sum(w) maps a full-scale tone onto a magnitude of 1.0
         self._amplitude_scale = 2.0 / self._window.sum()
+        self._frame_stream = FrameStream(
+            frame_length=settings.n_fft,
+            hop_length=settings.hop_length,
+            sample_rate=settings.sample_rate,
+        )
 
     async def process(self, chunk: PcmChunk) -> SpectrumReading:
-        samples = _chunk_to_samples(chunk)
-        magnitudes = self._samples_to_magnitudes(samples)
-        dt = self._single_step_dt()
+        batch = self._frame_stream.push(_chunk_to_samples(chunk), chunk.ts)
+        if not batch.timestamps:
+            return SpectrumReading(spectrums=())
+        return SpectrumReading(spectrums=self._to_spectrums(batch))
 
-        return SpectrumReading(
-            spectrums=tuple(
-                ToneSpectrum(
-                    ts=chunk.ts + dt * i,
-                    magnitudes=self._construct_magnitudes_with_freqs(magnitudes[:, i]),
-                )
-                for i in range(magnitudes.shape[1])
+    def _to_spectrums(self, batch: FrameBatch) -> tuple[ToneSpectrum, ...]:
+        magnitudes = self._samples_to_magnitudes(batch.samples)
+        return tuple(
+            ToneSpectrum(
+                ts=ts, magnitudes=self._construct_magnitudes_with_freqs(column)
             )
+            for ts, column in zip(batch.timestamps, magnitudes.T, strict=True)
         )
 
     def _samples_to_magnitudes(self, samples: np.ndarray) -> np.ndarray:
@@ -56,15 +63,11 @@ class STFTSpectrumAnalyzer(SpectrumAnalyzer):
             n_fft=self._settings.n_fft,
             hop_length=self._settings.hop_length,
             window=self._window,
+            center=False,
         )
         raw_magnitudes = np.abs(matrix)
         normalized_magnitudes = raw_magnitudes * self._amplitude_scale
         return normalized_magnitudes
-
-    def _single_step_dt(self) -> datetime.timedelta:
-        return datetime.timedelta(
-            seconds=self._settings.hop_length / self._settings.sample_rate
-        )
 
     def _construct_magnitudes_with_freqs(
         self, magnitudes: np.ndarray
