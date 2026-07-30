@@ -58,7 +58,7 @@ class STFTSpectrumAnalyzer(SpectrumAnalyzer):
             window=self._window,
         )
         raw_magnitudes = np.abs(matrix)
-        normalized_magnitudes = raw_magnitudes / self._amplitude_scale
+        normalized_magnitudes = raw_magnitudes * self._amplitude_scale
         return normalized_magnitudes
 
     def _single_step_dt(self) -> datetime.timedelta:
