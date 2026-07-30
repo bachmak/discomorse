@@ -12,6 +12,9 @@ from morse_decoder.config import (
 from morse_decoder.pipeline import factory
 from morse_decoder.pipeline.dto import PcmChunk, SpectrumReading, ToneReading
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
+from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer import (
+    STFTSpectrumAnalyzer,
+)
 from morse_decoder.pipeline.stages.tone_detector.interface import ToneDetector
 
 
@@ -81,3 +84,13 @@ def test_build_passes_typed_settings_to_analyzer(
 
     assert isinstance(analyzer, _FakeAnalyzer)
     assert analyzer._settings is analyzer_settings
+
+
+def test_stft_analyzer_is_registered_under_its_class_name() -> None:
+    assert factory._SPECTRUM_ANALYZERS["STFTSpectrumAnalyzer"] is STFTSpectrumAnalyzer
+
+
+def test_default_settings_build_the_stft_analyzer() -> None:
+    analyzer = factory._build_spectrum_analyzer(PipelineSettings())
+
+    assert isinstance(analyzer, STFTSpectrumAnalyzer)

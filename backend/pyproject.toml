@@ -13,6 +13,7 @@ dependencies = [
     "pydantic-settings>=2.6",
     "tomli>=2.0",
     "soxr>=1.1.0",
+    "librosa>=0.11.0",
 ]
 
 [project.optional-dependencies]

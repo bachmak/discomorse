@@ -13,7 +13,9 @@ class AudioSettings(BaseSettings):
 
 
 class SpectrumAnalyzerSettings(BaseSettings):
-    pass
+    sample_rate: int = 8000
+    n_fft: int = 128
+    hop_length: int = 16
 
 
 class ToneDetectorSettings(BaseSettings):
@@ -33,7 +35,7 @@ class InterpreterSettings(BaseSettings):
 
 
 class PipelineSettings(BaseSettings):
-    spectrum_analyzer: str = "STFTAnalyzer"
+    spectrum_analyzer: str = "STFTSpectrumAnalyzer"
     tone_detector: str = "ThresholdToneDetector"
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "NoisyChannelInterpreter"
@@ -50,11 +52,6 @@ class PipelineSettings(BaseSettings):
     interpreter_settings: InterpreterSettings = Field(
         default_factory=InterpreterSettings
     )
-
-
-class FFTSettings(BaseSettings):
-    window_size: int = 512
-    overlap: float = 0.5
 
 
 class Settings(BaseSettings):
