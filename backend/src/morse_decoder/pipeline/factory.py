@@ -11,6 +11,9 @@ from morse_decoder.config import (
 from morse_decoder.pipeline.runner import PipelineRunner
 from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
+from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer import (
+    STFTSpectrumAnalyzer,
+)
 from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder import (
     AdaptiveThresholdDecoder,
 )
@@ -38,7 +41,7 @@ class _InterpreterConstructor(Protocol):
 # calling a constructor of an abstract class doesn't work and triggers type checks.
 # That's why we introduced these proxy constructors.
 _SPECTRUM_ANALYZERS: dict[str, _SpectrumAnalyzerConstructor] = {
-    # "STFTAnalyzer": STFTAnalyzer,
+    "STFTSpectrumAnalyzer": STFTSpectrumAnalyzer,
 }
 _TONE_DETECTORS: dict[str, _ToneDetectorConstructor] = {
     # "ThresholdToneDetector": ThresholdToneDetector,

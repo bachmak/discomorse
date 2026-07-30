@@ -19,11 +19,11 @@ EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
 
 
 def sine_pcm(
-    freq_hz: float, duration_s: float, sample_rate: int
+    freq_hz: float, duration_s: float, sample_rate: int, amplitude: float = 0.5
 ) -> npt.NDArray[PCM16.IntType]:
-    """Mono Int16 samples of a half-amplitude pure tone."""
+    """Mono Int16 samples of a pure tone; ``amplitude`` 1.0 is full scale."""
     t = np.arange(int(sample_rate * duration_s)) / sample_rate
-    return (0.5 * np.sin(2 * np.pi * freq_hz * t) * PCM16.INT_PEAK).astype(
+    return (amplitude * np.sin(2 * np.pi * freq_hz * t) * PCM16.INT_PEAK).astype(
         PCM16.IntType
     )
 
