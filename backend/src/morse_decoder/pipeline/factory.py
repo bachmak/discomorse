@@ -9,6 +9,7 @@ from morse_decoder.config import (
     ToneDetectorSettings,
 )
 from morse_decoder.pipeline.runner import PipelineRunner
+from morse_decoder.pipeline.stages.interpreter.dummy_interpreter import DummyInterpreter
 from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
 from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer import (
@@ -18,6 +19,9 @@ from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder imp
     AdaptiveThresholdDecoder,
 )
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
+from morse_decoder.pipeline.stages.tone_detector.dummy_tone_detector import (
+    DummyToneDetector,
+)
 from morse_decoder.pipeline.stages.tone_detector.interface import ToneDetector
 
 
@@ -44,13 +48,13 @@ _SPECTRUM_ANALYZERS: dict[str, _SpectrumAnalyzerConstructor] = {
     "STFTSpectrumAnalyzer": STFTSpectrumAnalyzer,
 }
 _TONE_DETECTORS: dict[str, _ToneDetectorConstructor] = {
-    # "ThresholdToneDetector": ThresholdToneDetector,
+    "DummyToneDetector": DummyToneDetector,
 }
 _TIMING_DECODERS: dict[str, _TimingDecoderConstructor] = {
     "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
 }
 _INTERPRETERS: dict[str, _InterpreterConstructor] = {
-    # "NoisyChannelInterpreter": NoisyChannelInterpreter,
+    "DummyInterpreter": DummyInterpreter,
 }
 
 

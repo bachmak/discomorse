@@ -11,7 +11,7 @@ from morse_decoder.pipeline.events import (
     WaterfallFrame,
 )
 
-_TS = datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+_TS = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
 _SPECTRUM = ToneSpectrum(
     ts=_TS,
     magnitudes=(

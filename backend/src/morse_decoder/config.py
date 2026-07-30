@@ -38,9 +38,9 @@ class InterpreterSettings(BaseSettings):
 
 class PipelineSettings(BaseSettings):
     spectrum_analyzer: str = "STFTSpectrumAnalyzer"
-    tone_detector: str = "ThresholdToneDetector"
+    tone_detector: str = "DummyToneDetector"
     timing_decoder: str = "AdaptiveThresholdDecoder"
-    interpreter: str = "NoisyChannelInterpreter"
+    interpreter: str = "DummyInterpreter"
     language: str = "en"
     spectrum_analyzer_settings: SpectrumAnalyzerSettings = Field(
         default_factory=SpectrumAnalyzerSettings

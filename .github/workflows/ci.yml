@@ -59,7 +59,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --project backend
-      - run: uv run --project backend ruff check backend/src
+      - run: uv run --project backend ruff check backend/src backend/scripts
 
   backend-typecheck:
     needs: changes
@@ -71,7 +71,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --project backend --extra server-audio
-      - run: uv run --project backend mypy --strict backend/src
+      - run: uv run --project backend mypy --strict backend/src backend/scripts
 
   backend-test:
     needs: changes
@@ -85,6 +85,22 @@ jobs:
           enable-cache: true
       - run: uv sync --project backend
       - run: uv run --project backend pytest backend/tests
+
+  backend-smoke:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync
+      - name: Drive a generated morse file through the whole pipeline
+        run: uv run python scripts/smoke_pipeline.py
 
   backend-docker:
     needs: changes
@@ -202,7 +218,7 @@ jobs:
         run: git diff --exit-code frontend/src/types/ws.ts
 
   deploy:
-    needs: [ backend-test, frontend-build, backend-docker, frontend-docker, wire-contract ]
+    needs: [ backend-test, backend-smoke, frontend-build, backend-docker, frontend-docker, wire-contract ]
     if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && !contains(needs.*.result, 'failure')}}
     runs-on: ubuntu-latest
     steps:
