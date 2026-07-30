@@ -16,10 +16,10 @@ from morse_decoder.pipeline.dto import (
 from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer import (
     STFTSpectrumAnalyzer,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.carrier import CarrierSample
 from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
     PeakCarrierSource,
 )
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample
 
 _SAMPLE_RATE = 8_000
 _N_FFT = 128
@@ -27,6 +27,7 @@ _HOP_LENGTH = 16
 _BIN_WIDTH = _SAMPLE_RATE / _N_FFT
 _MIN_HZ = 400.0
 _MAX_HZ = 1_200.0
+_CONFIRMATIONS = ToneDetectorSettings().carrier_lock_confirmations
 _DRIFT = (600.0, 662.5, 725.0, 787.5)
 _SWEEP_START_HZ = 600.0
 _SWEEP_END_HZ = 900.0
@@ -82,6 +83,11 @@ def _swept_hz(ts: datetime.datetime) -> float:
     return _SWEEP_START_HZ + _SWEEP_HZ_PER_S * (ts - EPOCH).total_seconds()
 
 
+def _is_locked_at(index: int) -> bool:
+    """Whether the spectrum at ``index`` closes a long enough run of sightings."""
+    return index + 1 >= _CONFIRMATIONS
+
+
 @pytest.mark.parametrize(
     "bins, want_frequency, want_magnitude",
     [
@@ -103,7 +109,12 @@ def test_source_reads_the_carrier_off_the_loudest_bin_in_the_window(
     reading = _source().track(SpectrumReading(spectrums=(_spectrum(bins),)))
 
     assert reading.samples == (
-        CarrierSample(ts=EPOCH, frequency=want_frequency, magnitude=want_magnitude),
+        CarrierSample(
+            ts=EPOCH,
+            frequency=want_frequency,
+            magnitude=want_magnitude,
+            is_locked=False,
+        ),
     )
 
 
@@ -124,8 +135,15 @@ def test_source_follows_a_carrier_drifting_inside_the_window(batch_size: int) ->
     samples = _track(spectrums, batch_size)
 
     assert samples == tuple(
-        CarrierSample(ts=spectrum.ts, frequency=frequency, magnitude=0.8)
-        for spectrum, frequency in zip(spectrums, _DRIFT, strict=True)
+        CarrierSample(
+            ts=spectrum.ts,
+            frequency=frequency,
+            magnitude=0.8,
+            is_locked=_is_locked_at(index),
+        )
+        for index, (spectrum, frequency) in enumerate(
+            zip(spectrums, _DRIFT, strict=True)
+        )
     )
 
 
