@@ -28,6 +28,30 @@ def sine_pcm(
     )
 
 
+def chirp_pcm(
+    start_hz: float,
+    end_hz: float,
+    duration_s: float,
+    sample_rate: int,
+    amplitude: float = 0.5,
+) -> npt.NDArray[PCM16.IntType]:
+    """Mono Int16 samples of a tone sweeping linearly ``start_hz`` -> ``end_hz``."""
+    t = np.arange(int(sample_rate * duration_s)) / sample_rate
+    sweep_hz_per_s = (end_hz - start_hz) / duration_s
+    phase = 2 * np.pi * (start_hz * t + sweep_hz_per_s * t * t / 2)
+    return (amplitude * np.sin(phase) * PCM16.INT_PEAK).astype(PCM16.IntType)
+
+
+def noise_pcm(
+    duration_s: float, sample_rate: int, amplitude: float = 0.05, seed: int = 0
+) -> npt.NDArray[PCM16.IntType]:
+    """Mono Int16 samples of white noise; ``amplitude`` is its standard deviation."""
+    wave = np.random.default_rng(seed).normal(
+        0.0, amplitude, int(sample_rate * duration_s)
+    )
+    return (np.clip(wave, -1.0, 1.0) * PCM16.INT_PEAK).astype(PCM16.IntType)
+
+
 def wav_bytes(
     samples: npt.NDArray[PCM16.IntType], sample_rate: int, channels: int = 1
 ) -> bytes:
