@@ -1,4 +1,6 @@
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -64,7 +66,19 @@ class Settings(BaseSettings):
     server: ServerSettings = Field(default_factory=ServerSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
     pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
-    fft: FFTSettings = Field(default_factory=FFTSettings)
+
+    # TODO: not the best way to achieve consistency
+    # consider restructuring settings to only have one source of truth
+    @model_validator(mode="after")
+    def _sample_rates_must_agree(self) -> Self:
+        common_rate = self.audio.sample_rate
+        analyzer_rate = self.pipeline.spectrum_analyzer_settings.sample_rate
+        if common_rate != analyzer_rate:
+            raise ValueError(
+                f"audio.sample_rate ({common_rate}) must equal "
+                f"pipeline.spectrum_analyzer_settings.sample_rate ({analyzer_rate})"
+            )
+        return self
 
 
 global_settings = Settings()
