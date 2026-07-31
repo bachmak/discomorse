@@ -24,6 +24,7 @@ class ToneDetectorSettings(BaseSettings):
     carrier_source: str = "PeakCarrierSource"
     noise_estimator: str = "PercentileNoiseEstimator"
     keying_detector: str = "AdaptiveKeyingDetector"
+    keying_debouncer: str = "TimedKeyingDebouncer"
     carrier_min_hz: float = Field(default=400.0, gt=0)
     carrier_max_hz: float = Field(default=1_200.0, gt=0)
     carrier_lock_magnitude: float = Field(default=0.05, gt=0)
@@ -35,6 +36,8 @@ class ToneDetectorSettings(BaseSettings):
     threshold_fall_alpha: float = Field(default=0.05, gt=0, le=1)
     threshold_on_factor: float = Field(default=3.0, gt=1)
     threshold_off_factor: float = Field(default=1.5, gt=1)
+    debounce_rise_seconds: float = Field(default=0.004, ge=0)
+    debounce_fall_seconds: float = Field(default=0.015, ge=0)
 
     @model_validator(mode="after")
     def _carrier_window_must_rise(self) -> Self:
@@ -51,6 +54,15 @@ class ToneDetectorSettings(BaseSettings):
             raise ValueError(
                 f"threshold_off_factor ({self.threshold_off_factor}) must be below "
                 f"threshold_on_factor ({self.threshold_on_factor})"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _debounce_must_favour_the_key_down(self) -> Self:
+        if self.debounce_rise_seconds > self.debounce_fall_seconds:
+            raise ValueError(
+                f"debounce_rise_seconds ({self.debounce_rise_seconds}) must not "
+                f"exceed debounce_fall_seconds ({self.debounce_fall_seconds})"
             )
         return self
 
