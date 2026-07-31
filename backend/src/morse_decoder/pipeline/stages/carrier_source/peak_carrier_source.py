@@ -1,12 +1,7 @@
 import datetime
 
 from morse_decoder.config import CarrierSourceSettings
-from morse_decoder.pipeline.dto import (
-    CarrierSample,
-    FrequencyWindow,
-    Tone,
-    ToneSpectrum,
-)
+from morse_decoder.pipeline.dto import CarrierSample, Tone, ToneSpectrum
 from morse_decoder.pipeline.stages.carrier_source.impl.fsm import (
     CarrierTrackingState,
     SearchState,
@@ -22,7 +17,6 @@ class PeakCarrierSource(CarrierSource):
     """
 
     def __init__(self, settings: CarrierSourceSettings) -> None:
-        self._window = FrequencyWindow(settings.carrier_min_hz, settings.carrier_max_hz)
         self._state: CarrierTrackingState = SearchState(
             policy=CarrierLockPolicy(
                 min_magnitude=settings.carrier_lock_magnitude,
@@ -34,9 +28,8 @@ class PeakCarrierSource(CarrierSource):
         )
 
     def track(self, spectrum: ToneSpectrum) -> CarrierSample:
-        windowed = self._window.limit(spectrum)
-        peak = _loudest_tone_in_spectrum(windowed)
-        self._state = self._state.update(peak, windowed)
+        peak = _loudest_tone_in_spectrum(spectrum)
+        self._state = self._state.update(peak, spectrum)
         return self._state.get_carrier(peak)
 
 

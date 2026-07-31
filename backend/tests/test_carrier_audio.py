@@ -18,6 +18,7 @@ from carrier_fixtures import (
     lock_flags,
     track,
 )
+from limiter_fixtures import limit
 
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.pipeline.dto import CarrierSample
@@ -60,7 +61,8 @@ def _keyed_pcm(noise_amplitude: float = 0.0) -> npt.NDArray[PCM16.IntType]:
 
 
 async def _tracked(samples: npt.NDArray[PCM16.IntType]) -> tuple[CarrierSample, ...]:
-    return track((await analyze(samples)).spectrums)
+    """The carrier read off real spectrums, cut the way the pipeline cuts them."""
+    return track(limit((await analyze(samples)).spectrums))
 
 
 @pytest.mark.parametrize(
@@ -91,7 +93,7 @@ async def test_a_keyed_carrier_reports_the_level_of_every_phase(phase: _Phase) -
     assert all(phase.holds(sample) for sample in inside)
 
 
-async def test_a_louder_tone_inside_the_window_steals_the_lock() -> None:
+async def test_a_louder_tone_inside_the_band_steals_the_lock() -> None:
     half = _BURST_SECONDS * 1.5
     quiet = sine_pcm(_TONE_HZ, half, SAMPLE_RATE, amplitude=0.15)
     loud = sine_pcm(_INTRUDER_HZ, half, SAMPLE_RATE, amplitude=0.6)

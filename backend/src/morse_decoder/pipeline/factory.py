@@ -9,6 +9,7 @@ from morse_decoder.config import (
     NoiseEstimatorSettings,
     PipelineSettings,
     SpectrumAnalyzerSettings,
+    SpectrumLimiterSettings,
     TimingDecoderSettings,
 )
 from morse_decoder.pipeline.pipeline import Pipeline
@@ -34,6 +35,10 @@ from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAn
 from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer import (
     STFTSpectrumAnalyzer,
 )
+from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLimiter
+from morse_decoder.pipeline.stages.spectrum_limiter.static_spectrum_limiter import (
+    StaticSpectrumLimiter,
+)
 from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder import (
     AdaptiveThresholdDecoder,
 )
@@ -51,6 +56,11 @@ _SPECTRUM_ANALYZERS: dict[
     str, _StageConstructor[SpectrumAnalyzerSettings, SpectrumAnalyzer]
 ] = {
     "STFTSpectrumAnalyzer": STFTSpectrumAnalyzer,
+}
+_SPECTRUM_LIMITERS: dict[
+    str, _StageConstructor[SpectrumLimiterSettings, SpectrumLimiter]
+] = {
+    "StaticSpectrumLimiter": StaticSpectrumLimiter,
 }
 _CARRIER_SOURCES: dict[str, _StageConstructor[CarrierSourceSettings, CarrierSource]] = {
     "PeakCarrierSource": PeakCarrierSource,
@@ -102,6 +112,15 @@ def _build_spectrum_analyzer(settings: PipelineSettings) -> SpectrumAnalyzer:
         settings.spectrum_analyzer,
         "spectrum analyzer",
         settings.spectrum_analyzer_settings,
+    )
+
+
+def _build_spectrum_limiter(settings: PipelineSettings) -> SpectrumLimiter:
+    return _build(
+        _SPECTRUM_LIMITERS,
+        settings.spectrum_limiter,
+        "spectrum limiter",
+        settings.spectrum_limiter_settings,
     )
 
 
@@ -165,6 +184,7 @@ def create_pipeline(
     return Pipeline(
         source=source,
         spectrum_analyzer=_build_spectrum_analyzer(pipeline_settings),
+        spectrum_limiter=_build_spectrum_limiter(pipeline_settings),
         carrier_source=_build_carrier_source(pipeline_settings),
         noise_estimator=_build_noise_estimator(pipeline_settings),
         keying_detector=_build_keying_detector(pipeline_settings),

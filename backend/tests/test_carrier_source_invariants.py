@@ -6,7 +6,6 @@ from carrier_fixtures import (
     KEYED,
     LOCK_SECONDS,
     LOUD,
-    MIN_MAGNITUDE,
     RIVAL_HZ,
     SILENT,
     STEP_S,
@@ -15,7 +14,6 @@ from carrier_fixtures import (
     first_locked_index,
     frequencies,
     locking_timeline,
-    narrow_source,
     source,
     track,
 )
@@ -80,16 +78,6 @@ def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
     tail = track(spectrums[3:], carrier_source=tracked)
 
     assert head + tail == track(spectrums)
-
-
-def test_a_narrow_window_ignores_much_louder_bins_just_outside_it() -> None:
-    bins = {699.0: 1.0, CARRIER_HZ: MIN_MAGNITUDE, 701.0: 1.0}
-    spectrums = SpectrumTimeline().add(bins, count=6).build()
-
-    samples = track(spectrums, carrier_source=narrow_source(699.5, 700.5))
-
-    assert set(frequencies(samples)) == {CARRIER_HZ}
-    assert samples[-1].is_locked
 
 
 def test_bins_tied_for_loudest_do_not_make_the_carrier_flicker() -> None:

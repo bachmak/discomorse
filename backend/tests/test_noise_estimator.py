@@ -1,6 +1,6 @@
 import pytest
-from carrier_fixtures import MAX_HZ, MIN_HZ, spectrum
-from noise_fixtures import estimate, narrow_estimator, noise_of, noises
+from carrier_fixtures import spectrum
+from noise_fixtures import estimate, noise_of, noises
 
 from morse_decoder.pipeline.dto import NoiseSample
 
@@ -23,7 +23,7 @@ _CARRIER_HZ = 700.0
         pytest.param(_FLOOR_BINS | {_CARRIER_HZ: _LOUD}, _QUIET, id="carrier-in-noise"),
     ],
 )
-def test_estimator_reads_the_floor_off_the_windows_bins(
+def test_estimator_reads_the_floor_off_the_bins_it_is_given(
     bins: dict[float, float], want: float
 ) -> None:
     assert noise_of(bins) == pytest.approx(want)
@@ -51,47 +51,6 @@ def test_a_high_enough_percentile_climbs_onto_the_carrier() -> None:
     bins = _FLOOR_BINS | {_CARRIER_HZ: _LOUD}
 
     assert noise_of(bins, percentile=100.0) == pytest.approx(_LOUD)
-
-
-@pytest.mark.parametrize(
-    "bins, want",
-    [
-        pytest.param({MIN_HZ: 0.3, 700.0: 0.1}, 0.2, id="lower-edge-included"),
-        pytest.param({MAX_HZ: 0.3, 700.0: 0.1}, 0.2, id="upper-edge-included"),
-        pytest.param({MIN_HZ - 1: _LOUD, 700.0: 0.1}, 0.1, id="just-below-excluded"),
-        pytest.param({MAX_HZ + 1: _LOUD, 700.0: 0.1}, 0.1, id="just-above-excluded"),
-        pytest.param({1.0: _LOUD, 700.0: 0.1, 3_000.0: _LOUD}, 0.1, id="far-outside"),
-    ],
-)
-def test_estimator_only_reads_bins_inside_the_window(
-    bins: dict[float, float], want: float
-) -> None:
-    assert noise_of(bins) == pytest.approx(want)
-
-
-def test_a_narrow_window_ignores_the_bins_just_outside_it() -> None:
-    bins = {699.0: _LOUD, _CARRIER_HZ: 0.1, 701.0: _LOUD}
-
-    samples = estimate(
-        (spectrum(bins),), noise_estimator=narrow_estimator(699.5, 700.5)
-    )
-
-    assert samples == (NoiseSample(noise=0.1),)
-
-
-@pytest.mark.parametrize(
-    "bins",
-    [
-        pytest.param({100.0: 1.0, 200.0: 0.5}, id="all-bins-below-window"),
-        pytest.param({2_000.0: 1.0, 3_000.0: 0.5}, id="all-bins-above-window"),
-        pytest.param({}, id="no-bins-at-all"),
-    ],
-)
-def test_estimator_rejects_a_spectrum_that_misses_the_window(
-    bins: dict[float, float],
-) -> None:
-    with pytest.raises(ValueError, match="no spectrum bin"):
-        noise_of(bins)
 
 
 def test_estimator_reports_one_sample_per_spectrum() -> None:

@@ -55,7 +55,7 @@ def test_one_estimator_reads_a_stream_as_a_fresh_one_would(
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_the_floor_never_leaves_the_range_of_the_windows_bins(
+def test_the_floor_never_leaves_the_range_of_the_spectrums_bins(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
     for one, noise in zip(spectrums, noises(estimate(spectrums)), strict=True):

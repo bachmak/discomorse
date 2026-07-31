@@ -80,24 +80,6 @@ class SpectrumReading:
 
 
 @dataclass(frozen=True)
-class FrequencyWindow:
-    min_hz: float
-    max_hz: float
-
-    def limit(self, spectrum: ToneSpectrum) -> ToneSpectrum:
-        tones = tuple(
-            tone
-            for tone in spectrum.magnitudes
-            if self.min_hz <= tone.frequency <= self.max_hz
-        )
-
-        if not tones:
-            raise ValueError(f"no spectrum bin in {self.min_hz}..{self.max_hz} Hz")
-
-        return ToneSpectrum(ts=spectrum.ts, magnitudes=tones)
-
-
-@dataclass(frozen=True)
 class Tone:
     frequency: float
     magnitude: float

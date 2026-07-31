@@ -1,7 +1,7 @@
 """Builders for the estimators and spectrums the noise tests drive.
 
-Spectrums come from ``carrier_fixtures`` — both stages read the same window off
-the same readings, so they share one way of writing bins down.
+Spectrums come from ``carrier_fixtures`` — both stages read the same limited
+readings, so they share one way of writing bins down.
 """
 
 from carrier_fixtures import spectrum
@@ -19,13 +19,6 @@ PERCENTILE = SETTINGS.noise_detector_percentile
 def estimator(percentile: float = PERCENTILE) -> PercentileNoiseEstimator:
     return PercentileNoiseEstimator(
         NoiseEstimatorSettings(noise_detector_percentile=percentile)
-    )
-
-
-def narrow_estimator(min_hz: float, max_hz: float) -> PercentileNoiseEstimator:
-    """An estimator that reads a window of its own instead of the default one."""
-    return PercentileNoiseEstimator(
-        NoiseEstimatorSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz)
     )
 
 

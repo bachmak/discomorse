@@ -32,8 +32,12 @@ from morse_decoder.pipeline.stages.keying_detector.adaptive_keying_detector impo
 from morse_decoder.pipeline.stages.noise_estimator.percentile_noise_estimator import (
     PercentileNoiseEstimator,
 )
+from morse_decoder.pipeline.stages.spectrum_limiter.static_spectrum_limiter import (
+    StaticSpectrumLimiter,
+)
 
 _LOUD = 0.9
+_OUT_OF_BAND = {100.0: _LOUD * 2}
 _STREAM = SpectrumTimeline().hold(KEYED, LOCK_SECONDS * 4).build()
 
 
@@ -80,6 +84,7 @@ def _seen_by_reading_stages(
 def test_the_pipeline_builds_the_stages_the_settings_name() -> None:
     detecting = tone_detecting()
 
+    assert detecting.stage("spectrum_limiter", StaticSpectrumLimiter)
     assert detecting.stage("carrier_source", PeakCarrierSource)
     assert detecting.stage("noise_estimator", PercentileNoiseEstimator)
     assert detecting.stage("keying_detector", AdaptiveKeyingDetector)
@@ -89,6 +94,11 @@ def test_the_pipeline_builds_the_stages_the_settings_name() -> None:
 @pytest.mark.parametrize(
     "settings, message",
     [
+        pytest.param(
+            _settings(spectrum_limiter="missing"),
+            "Unknown spectrum limiter: 'missing'",
+            id="spectrum-limiter",
+        ),
         pytest.param(
             _settings(carrier_source="missing"),
             "Unknown carrier source: 'missing'",
@@ -131,23 +141,34 @@ def test_a_reading_without_spectrums_reports_nothing() -> None:
 @pytest.mark.parametrize(
     "bins",
     [
-        pytest.param({100.0: _LOUD}, id="all-bins-below-window"),
-        pytest.param({2_000.0: _LOUD}, id="all-bins-above-window"),
+        pytest.param({100.0: _LOUD}, id="all-bins-below-the-band"),
+        pytest.param({2_000.0: _LOUD}, id="all-bins-above-the-band"),
         pytest.param({}, id="no-bins-at-all"),
     ],
 )
-def test_a_spectrum_missing_the_window_is_rejected(bins: dict[float, float]) -> None:
+def test_a_spectrum_missing_the_band_is_rejected(bins: dict[float, float]) -> None:
     with pytest.raises(ValueError, match="no spectrum bin"):
         detect((spectrum(bins),))
 
 
 def test_both_reading_stages_see_every_spectrum(recording: ToneDetecting) -> None:
-    spectrums = SpectrumTimeline().add({100.0: _LOUD * 2} | KEYED, count=3).build()
+    spectrums = SpectrumTimeline().add(_OUT_OF_BAND | KEYED, count=3).build()
 
     recording.read(spectrums)
 
     for seen in _seen_by_reading_stages(recording):
         assert [one.ts for one in seen] == [one.ts for one in spectrums]
+
+
+def test_both_reading_stages_only_see_the_bins_the_limiter_kept(
+    recording: ToneDetecting,
+) -> None:
+    spectrums = SpectrumTimeline().add(_OUT_OF_BAND | KEYED, count=3).build()
+
+    recording.read(spectrums)
+
+    for seen in _seen_by_reading_stages(recording):
+        assert {tone.frequency for one in seen for tone in one.magnitudes} == set(KEYED)
 
 
 def test_the_stages_keep_their_state_across_readings(recording: ToneDetecting) -> None:

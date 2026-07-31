@@ -3,12 +3,12 @@ from pydantic import ValidationError
 
 from morse_decoder.config import (
     AudioSettings,
-    CarrierWindowSettings,
     KeyingDebouncerSettings,
     KeyingDetectorSettings,
     PipelineSettings,
     Settings,
     SpectrumAnalyzerSettings,
+    SpectrumLimiterSettings,
 )
 
 
@@ -53,15 +53,15 @@ def test_settings_reject_disagreeing_sample_rates(
 @pytest.mark.parametrize(
     "min_hz, max_hz",
     [
-        pytest.param(1_200.0, 400.0, id="window-inverted"),
-        pytest.param(700.0, 700.0, id="window-empty"),
+        pytest.param(1_200.0, 400.0, id="band-inverted"),
+        pytest.param(700.0, 700.0, id="band-empty"),
     ],
 )
-def test_window_settings_reject_a_carrier_window_that_never_opens(
+def test_limiter_settings_reject_a_band_that_never_opens(
     min_hz: float, max_hz: float
 ) -> None:
     with pytest.raises(ValidationError, match="must be below"):
-        CarrierWindowSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz)
+        SpectrumLimiterSettings(min_hz=min_hz, max_hz=max_hz)
 
 
 @pytest.mark.parametrize(

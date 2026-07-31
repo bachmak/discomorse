@@ -5,6 +5,7 @@ import numpy.typing as npt
 import pytest
 from audio_fixtures import noise_pcm, sine_pcm
 from carrier_fixtures import SAMPLE_RATE, analyze
+from limiter_fixtures import limit
 from noise_fixtures import estimate, estimator, noises
 
 from morse_decoder.audio.pcm16 import PCM16
@@ -30,8 +31,9 @@ def _silence() -> npt.NDArray[PCM16.IntType]:
 async def _floors(
     samples: npt.NDArray[PCM16.IntType], percentile: float = 50.0
 ) -> tuple[float, ...]:
-    reading = await analyze(samples)
-    floors = noises(estimate(reading.spectrums, noise_estimator=estimator(percentile)))
+    """The floor read off real spectrums, cut the way the pipeline cuts them."""
+    spectrums = limit((await analyze(samples)).spectrums)
+    floors = noises(estimate(spectrums, noise_estimator=estimator(percentile)))
     assert floors
     return floors
 

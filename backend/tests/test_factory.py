@@ -25,6 +25,7 @@ from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer impo
 
 _CATALOGS = [
     pytest.param(factory._SPECTRUM_ANALYZERS, id="spectrum-analyzers"),
+    pytest.param(factory._SPECTRUM_LIMITERS, id="spectrum-limiters"),
     pytest.param(factory._CARRIER_SOURCES, id="carrier-sources"),
     pytest.param(factory._NOISE_ESTIMATORS, id="noise-estimators"),
     pytest.param(factory._KEYING_DETECTORS, id="keying-detectors"),

@@ -18,6 +18,7 @@ from carrier_fixtures import (
     spectrum,
     track,
 )
+from limiter_fixtures import limit
 
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.pipeline.dto import CarrierSample, Tone, ToneSpectrum
@@ -38,6 +39,19 @@ _SWEEP_TOLERANCE_HZ = BIN_WIDTH_HZ / 2 + _SWEEP_HZ_PER_S * FRAME_SECONDS
 
 def _tone(freq_hz: float, amplitude: float = 0.5) -> npt.NDArray[PCM16.IntType]:
     return sine_pcm(freq_hz, 0.1, SAMPLE_RATE, amplitude)
+
+
+def _sweep() -> npt.NDArray[PCM16.IntType]:
+    return chirp_pcm(_SWEEP_START_HZ, _SWEEP_END_HZ, _SWEEP_SECONDS, SAMPLE_RATE)
+
+
+async def _tracked(
+    samples: npt.NDArray[PCM16.IntType],
+) -> tuple[CarrierSample, ...]:
+    """The carrier read off real spectrums, cut the way the pipeline cuts them."""
+    tracked = track(limit((await analyze(samples)).spectrums))
+    assert tracked
+    return tracked
 
 
 def _swept_hz(ts: datetime.datetime) -> float:
@@ -67,18 +81,12 @@ def _keyed_then_silent_against(
     "bins, want_frequency, want_magnitude",
     [
         pytest.param({500.0: 0.2, 700.0: 0.9, 900.0: 0.3}, 700.0, 0.9, id="loudest"),
-        pytest.param({100.0: 1.0, 700.0: 0.4}, 700.0, 0.4, id="louder-below-window"),
-        pytest.param({700.0: 0.4, 3_000.0: 1.0}, 700.0, 0.4, id="louder-above-window"),
-        pytest.param({399.0: 1.0, 800.0: 0.1}, 800.0, 0.1, id="just-below-window"),
-        pytest.param({1_201.0: 1.0, 800.0: 0.1}, 800.0, 0.1, id="just-above-window"),
-        pytest.param({400.0: 0.7, 1_200.0: 0.6}, 400.0, 0.7, id="lower-edge-included"),
-        pytest.param(
-            {400.0: 0.6, 1_200.0: 0.7}, 1_200.0, 0.7, id="upper-edge-included"
-        ),
+        pytest.param({400.0: 0.7, 1_200.0: 0.6}, 400.0, 0.7, id="lowest-bin-loudest"),
+        pytest.param({400.0: 0.6, 1_200.0: 0.7}, 1_200.0, 0.7, id="top-bin-loudest"),
         pytest.param({700.0: 0.0, 800.0: 0.0}, 700.0, 0.0, id="silence-still-tracked"),
     ],
 )
-def test_source_reads_the_carrier_off_the_loudest_bin_in_the_window(
+def test_source_reads_the_carrier_off_the_loudest_bin_it_is_given(
     bins: dict[float, float], want_frequency: float, want_magnitude: float
 ) -> None:
     samples = track((spectrum(bins),))
@@ -91,7 +99,7 @@ def test_source_reads_the_carrier_off_the_loudest_bin_in_the_window(
     )
 
 
-def test_source_follows_a_carrier_drifting_inside_the_window() -> None:
+def test_source_follows_a_drifting_carrier() -> None:
     spectrums = tuple(
         spectrum(
             {400.0: 0.1, frequency: 0.8, 1_200.0: 0.1},
@@ -147,10 +155,8 @@ def test_source_defends_a_locked_carrier_while_it_is_only_pausing(
 
 
 async def test_source_locks_onto_a_played_tone() -> None:
-    reading = await analyze(_tone(750.0))
+    samples = await _tracked(_tone(750.0))
 
-    samples = track(reading.spectrums)
-    assert samples
     assert all(sample.tone.frequency == 750.0 for sample in samples)
     assert [sample.tone.magnitude for sample in samples] == pytest.approx(
         [0.5] * len(samples), rel=0.02
@@ -158,42 +164,31 @@ async def test_source_locks_onto_a_played_tone() -> None:
 
 
 async def test_source_follows_a_tone_sweeping_through_real_spectrums() -> None:
-    reading = await analyze(
-        chirp_pcm(_SWEEP_START_HZ, _SWEEP_END_HZ, _SWEEP_SECONDS, SAMPLE_RATE)
-    )
+    samples = await _tracked(_sweep())
 
-    samples = track(reading.spectrums)
-    assert samples
     assert [sample.tone.frequency for sample in samples] == pytest.approx(
         [_swept_hz(sample.tone.ts) for sample in samples], abs=_SWEEP_TOLERANCE_HZ
     )
 
 
 async def test_source_reads_a_sweep_as_a_carrier_that_never_falls_silent() -> None:
-    reading = await analyze(
-        chirp_pcm(_SWEEP_START_HZ, _SWEEP_END_HZ, _SWEEP_SECONDS, SAMPLE_RATE)
-    )
+    samples = await _tracked(_sweep())
 
-    samples = track(reading.spectrums)
-    assert samples
     assert all(sample.tone.magnitude > 0.4 for sample in samples)
 
 
 async def test_source_keeps_noise_far_below_the_magnitude_of_a_tone() -> None:
-    noise = track((await analyze(noise_pcm(0.1, SAMPLE_RATE))).spectrums)
-    tone = track((await analyze(_tone(750.0))).spectrums)
+    noise = await _tracked(noise_pcm(0.1, SAMPLE_RATE))
+    tone = await _tracked(_tone(750.0))
 
-    assert noise and tone
     assert max(sample.tone.magnitude for sample in noise) < 0.1 * min(
         sample.tone.magnitude for sample in tone
     )
 
 
-async def test_source_ignores_a_louder_tone_outside_the_window() -> None:
+async def test_source_never_sees_a_louder_tone_the_limiter_cut_away() -> None:
     mixed = _tone(750.0, amplitude=0.2) + _tone(2_000.0, amplitude=0.7)
 
-    reading = await analyze(np.asarray(mixed, dtype=PCM16.IntType))
+    samples = await _tracked(np.asarray(mixed, dtype=PCM16.IntType))
 
-    samples = track(reading.spectrums)
-    assert samples
     assert all(sample.tone.frequency == 750.0 for sample in samples)
