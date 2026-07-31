@@ -6,6 +6,7 @@ from morse_decoder.config import (
     PipelineSettings,
     Settings,
     SpectrumAnalyzerSettings,
+    ToneDetectorSettings,
 )
 
 
@@ -45,6 +46,20 @@ def test_settings_reject_disagreeing_sample_rates(
 ) -> None:
     with pytest.raises(ValidationError, match="must equal"):
         _settings(audio_rate, analyzer_rate)
+
+
+@pytest.mark.parametrize(
+    "min_hz, max_hz",
+    [
+        pytest.param(1_200.0, 400.0, id="window-inverted"),
+        pytest.param(700.0, 700.0, id="window-empty"),
+    ],
+)
+def test_tone_detector_settings_reject_a_carrier_window_that_never_opens(
+    min_hz: float, max_hz: float
+) -> None:
+    with pytest.raises(ValidationError, match="must be below"):
+        ToneDetectorSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz)
 
 
 def test_default_settings_agree_on_the_sample_rate() -> None:

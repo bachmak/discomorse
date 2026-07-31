@@ -21,7 +21,21 @@ class SpectrumAnalyzerSettings(BaseSettings):
 
 
 class ToneDetectorSettings(BaseSettings):
-    pass
+    carrier_min_hz: float = Field(default=400.0, gt=0)
+    carrier_max_hz: float = Field(default=1_200.0, gt=0)
+    carrier_lock_magnitude: float = Field(default=0.05, gt=0)
+    carrier_lock_tolerance_hz: float = Field(default=100.0, gt=0)
+    carrier_lock_seconds: float = Field(default=0.02, gt=0)
+    carrier_hold_seconds: float = Field(default=2.0, gt=0)
+
+    @model_validator(mode="after")
+    def _carrier_window_must_rise(self) -> Self:
+        if self.carrier_min_hz >= self.carrier_max_hz:
+            raise ValueError(
+                f"carrier_min_hz ({self.carrier_min_hz}) must be below "
+                f"carrier_max_hz ({self.carrier_max_hz})"
+            )
+        return self
 
 
 class TimingDecoderSettings(BaseSettings):
