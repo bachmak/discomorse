@@ -78,6 +78,22 @@ def test_tone_detector_settings_reject_a_keying_band_that_never_opens(
         )
 
 
+@pytest.mark.parametrize(
+    "rise_seconds, fall_seconds",
+    [
+        pytest.param(0.02, 0.004, id="delays-swapped"),
+        pytest.param(0.01, 0.009, id="the-key-lifts-sooner-than-it-falls"),
+    ],
+)
+def test_tone_detector_settings_reject_a_debouncer_that_lifts_the_key_too_readily(
+    rise_seconds: float, fall_seconds: float
+) -> None:
+    with pytest.raises(ValidationError, match="must not exceed"):
+        ToneDetectorSettings(
+            debounce_rise_seconds=rise_seconds, debounce_fall_seconds=fall_seconds
+        )
+
+
 def test_default_settings_agree_on_the_sample_rate() -> None:
     settings = Settings()
 
