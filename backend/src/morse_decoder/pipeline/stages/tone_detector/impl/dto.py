@@ -3,6 +3,12 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class FrequencyWindow:
+    min_hz: float
+    max_hz: float
+
+
+@dataclass(frozen=True)
 class Tone:
     frequency: float
     magnitude: float
@@ -37,6 +43,11 @@ class NoiseSample:
 
 
 @dataclass(frozen=True)
-class FrequencyWindow:
-    min_hz: float
-    max_hz: float
+class KeyingSample:
+    is_on: bool
+
+
+@dataclass(frozen=True)
+class KeyingThresholds:
+    on: float
+    off: float
