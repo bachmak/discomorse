@@ -47,7 +47,9 @@ class ToneDetecting:
         limited = await limit(
             spectrums, spectrum_limiter=self._pipeline._spectrum_limiter
         )
-        return tuple(self._pipeline._sample(one) for one in limited)
+        return tuple(
+            [sample for one in limited async for sample in self._pipeline._samples(one)]
+        )
 
     async def feed(self, chunk: PcmChunk) -> tuple[ToneSample, ...]:
         """One chunk of audio, driven through the pipeline the way ``run`` does."""

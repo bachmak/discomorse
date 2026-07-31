@@ -33,8 +33,8 @@ def _keyed(levels: tuple[float, ...]) -> tuple[ToneSpectrum, ...]:
     )
 
 
-def _track(spectrums: tuple[ToneSpectrum, ...]) -> tuple[CarrierSample, ...]:
-    return track(spectrums)
+async def _track(spectrums: tuple[ToneSpectrum, ...]) -> tuple[CarrierSample, ...]:
+    return await track(spectrums)
 
 
 @pytest.mark.parametrize(
@@ -45,30 +45,30 @@ def _track(spectrums: tuple[ToneSpectrum, ...]) -> tuple[CarrierSample, ...]:
         pytest.param(_LOUD, _LOUD, id="carrier-holds-its-level"),
     ],
 )
-def test_locked_carrier_reports_the_current_level(
+async def test_locked_carrier_reports_the_current_level(
     tail: float, want_magnitude: float
 ) -> None:
-    samples = _track(_keyed((_LOUD,) * _SIGHTINGS_TO_LOCK + (tail,)))
+    samples = await _track(_keyed((_LOUD,) * _SIGHTINGS_TO_LOCK + (tail,)))
 
     assert samples[-1].is_locked
     assert samples[-1].tone.magnitude == pytest.approx(want_magnitude)
 
 
-def test_locked_carrier_stamps_every_sample_with_its_own_spectrum_time() -> None:
+async def test_locked_carrier_stamps_every_sample_with_its_own_spectrum_time() -> None:
     spectrums = _keyed((_LOUD,) * _SIGHTINGS_TO_LOCK + (0.0,) * 100)
 
-    samples = _track(spectrums)
+    samples = await _track(spectrums)
 
     assert [sample.tone.ts for sample in samples] == [
         spectrum.ts for spectrum in spectrums
     ]
 
 
-def test_a_pause_is_visible_in_what_the_source_reports() -> None:
+async def test_a_pause_is_visible_in_what_the_source_reports() -> None:
     """Key-down and key-up must not produce identical samples."""
     spectrums = _keyed((_LOUD,) * _SIGHTINGS_TO_LOCK + (0.0,) * 50 + (_LOUD,) * 50)
 
-    samples = _track(spectrums)
+    samples = await _track(spectrums)
 
     keyed_down = samples[_SIGHTINGS_TO_LOCK - 1]
     keyed_up = samples[_SIGHTINGS_TO_LOCK + 25]

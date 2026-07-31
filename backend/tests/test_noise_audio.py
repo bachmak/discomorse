@@ -33,7 +33,7 @@ async def _floors(
 ) -> tuple[float, ...]:
     """The floor read off real spectrums, cut the way the pipeline cuts them."""
     spectrums = await limit(await analyze(samples))
-    floors = noises(estimate(spectrums, noise_estimator=estimator(percentile)))
+    floors = noises(await estimate(spectrums, noise_estimator=estimator(percentile)))
     assert floors
     return floors
 

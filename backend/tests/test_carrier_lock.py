@@ -40,14 +40,14 @@ _DRIFT_START_HZ = 500.0
         pytest.param(LOCK_SECONDS * 3, id="one-spectrum-per-three-lock-times"),
     ],
 )
-def test_the_lock_closes_once_one_frequency_has_held_for_the_lock_time(
+async def test_the_lock_closes_once_one_frequency_has_held_for_the_lock_time(
     step_seconds: float,
 ) -> None:
     spectrums = (
         SpectrumTimeline(step_seconds).add({CARRIER_HZ: LOUD}, _SPECTRUMS).build()
     )
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert lock_flags(samples) == tuple(
         index * datetime.timedelta(seconds=step_seconds)
@@ -65,13 +65,13 @@ def test_the_lock_closes_once_one_frequency_has_held_for_the_lock_time(
         pytest.param(STEP_S * _SPECTRUMS, _SPECTRUMS, id="longer-than-the-stream"),
     ],
 )
-def test_the_first_spectrum_can_never_close_the_lock_on_its_own(
+async def test_the_first_spectrum_can_never_close_the_lock_on_its_own(
     lock_seconds: float, want_first_locked_index: int
 ) -> None:
     settings = CarrierSourceSettings(carrier_lock_seconds=lock_seconds)
     spectrums = SpectrumTimeline().add({CARRIER_HZ: LOUD}, _SPECTRUMS).build()
 
-    samples = track(spectrums, carrier_source=source(settings))
+    samples = await track(spectrums, carrier_source=source(settings))
 
     assert first_locked_index(samples) == want_first_locked_index
 
@@ -86,12 +86,12 @@ def test_the_first_spectrum_can_never_close_the_lock_on_its_own(
         pytest.param(0.0, False, id="silence"),
     ],
 )
-def test_only_a_level_above_the_lock_threshold_can_be_locked(
+async def test_only_a_level_above_the_lock_threshold_can_be_locked(
     magnitude: float, want_locked: bool
 ) -> None:
     spectrums = SpectrumTimeline().add({CARRIER_HZ: magnitude}, _SPECTRUMS).build()
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert any(lock_flags(samples)) == want_locked
     assert magnitudes(samples) == (magnitude,) * _SPECTRUMS
@@ -109,7 +109,7 @@ def test_only_a_level_above_the_lock_threshold_can_be_locked(
         pytest.param(TOLERANCE_HZ + 1.0, _DRIFT_SPECTRUMS, id="hopping-past-the-band"),
     ],
 )
-def test_the_run_survives_only_drift_that_stays_inside_the_tolerance_band(
+async def test_the_run_survives_only_drift_that_stays_inside_the_tolerance_band(
     stride_hz: float, want_first_locked_index: int
 ) -> None:
     """The band is pinned to the first sighting, so drift accumulates against it."""
@@ -117,18 +117,18 @@ def test_the_run_survives_only_drift_that_stays_inside_the_tolerance_band(
     for index in range(_DRIFT_SPECTRUMS):
         timeline.add({_DRIFT_START_HZ + index * stride_hz: LOUD})
 
-    samples = track(timeline.build())
+    samples = await track(timeline.build())
 
     assert first_locked_index(samples) == want_first_locked_index
 
 
-def test_the_lock_lands_where_the_carrier_is_now_not_where_the_run_started() -> None:
+async def test_the_lock_lands_where_the_carrier_is_now_not_where_it_began() -> None:
     drift = tuple(_DRIFT_START_HZ + index * TOLERANCE_HZ / 2 for index in range(4))
     timeline = SpectrumTimeline()
     for frequency in drift:
         timeline.add({frequency: LOUD})
 
-    samples = track(timeline.build())
+    samples = await track(timeline.build())
 
     assert first_locked_index(samples) == 2
     assert frequencies(samples) == drift
@@ -151,12 +151,12 @@ def test_the_lock_lands_where_the_carrier_is_now_not_where_the_run_started() -> 
         ),
     ],
 )
-def test_a_run_broken_every_other_spectrum_never_locks(
+async def test_a_run_broken_every_other_spectrum_never_locks(
     bins: dict[float, float], other_bins: dict[float, float]
 ) -> None:
     spectrums = SpectrumTimeline().alternate(bins, other_bins, cycles=10, run=1).build()
 
-    assert not any(lock_flags(track(spectrums)))
+    assert not any(lock_flags(await track(spectrums)))
 
 
 @pytest.mark.parametrize(
@@ -174,36 +174,36 @@ def test_a_run_broken_every_other_spectrum_never_locks(
         pytest.param((0.0, 60.0), (False, True), id="a-minute-long-gap-in-the-stream"),
     ],
 )
-def test_the_lock_follows_the_stamps_the_spectrums_carry(
+async def test_the_lock_follows_the_stamps_the_spectrums_carry(
     seconds: tuple[float, ...], want_lock_flags: tuple[bool, ...]
 ) -> None:
     spectrums = spectrums_at({CARRIER_HZ: LOUD}, seconds)
 
-    assert lock_flags(track(spectrums)) == want_lock_flags
+    assert lock_flags(await track(spectrums)) == want_lock_flags
 
 
-def test_a_stream_of_silence_never_locks_however_long_it_runs() -> None:
+async def test_a_stream_of_silence_never_locks_however_long_it_runs() -> None:
     spectrums = (
         SpectrumTimeline()
         .hold({CARRIER_HZ: 0.0, RIVAL_HZ: 0.0}, seconds=HOLD_SECONDS * 2)
         .build()
     )
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert not any(lock_flags(samples))
     assert set(frequencies(samples)) == {CARRIER_HZ}
     assert set(magnitudes(samples)) == {0.0}
 
 
-def test_while_searching_the_loudest_window_bin_is_passed_through_unchanged() -> None:
+async def test_while_searching_the_loudest_bin_is_passed_through_unchanged() -> None:
     loud_low = {_DRIFT_START_HZ: LOUD, RIVAL_HZ: 0.2}
     loud_high = {_DRIFT_START_HZ: 0.2, RIVAL_HZ: LOUD}
     spectrums = (
         SpectrumTimeline().alternate(loud_low, loud_high, cycles=5, run=1).build()
     )
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert samples == tuple(
         CarrierSample(

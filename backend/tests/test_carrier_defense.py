@@ -45,7 +45,7 @@ def _after_lock(samples: tuple[float, ...]) -> tuple[float, ...]:
         pytest.param(MIN_MAGNITUDE, id="a-barely-credible-carrier"),
     ],
 )
-def test_a_locked_carrier_follows_steps_inside_the_tolerance(
+async def test_a_locked_carrier_follows_steps_inside_the_tolerance(
     stride_hz: float, magnitude: float
 ) -> None:
     walk = tuple(CARRIER_HZ + step * stride_hz for step in range(1, 6))
@@ -53,7 +53,7 @@ def test_a_locked_carrier_follows_steps_inside_the_tolerance(
     for frequency in walk:
         timeline.add({frequency: magnitude})
 
-    samples = track(timeline.build())
+    samples = await track(timeline.build())
 
     assert _after_lock(frequencies(samples)) == walk
     assert _after_lock(magnitudes(samples)) == (magnitude,) * len(walk)
@@ -80,24 +80,24 @@ def test_a_locked_carrier_follows_steps_inside_the_tolerance(
         ),
     ],
 )
-def test_a_rival_needs_the_lock_time_before_it_can_take_the_carrier(
+async def test_a_rival_needs_the_lock_time_before_it_can_take_the_carrier(
     rival_magnitude: float, want_frequencies: tuple[float, ...]
 ) -> None:
     contested = {CARRIER_HZ: _FADED, RIVAL_HZ: rival_magnitude}
     spectrums = locking_timeline().hold(contested, _CONTEST_SECONDS).build()
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert _after_lock(frequencies(samples)) == want_frequencies
     assert all(lock_flags(samples)[LOCK_PHASE_SPECTRUMS:])
 
 
-def test_a_rival_must_beat_the_loudest_the_carrier_has_ever_been() -> None:
+async def test_a_rival_must_beat_the_loudest_the_carrier_has_ever_been() -> None:
     """The carrier fades below the rival, but never below its own best level."""
     contested = {CARRIER_HZ: _FADED, RIVAL_HZ: _QUIET_RIVAL}
     spectrums = locking_timeline().hold(contested, HOLD_SECONDS / 2).build()
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert set(_after_lock(frequencies(samples))) == {CARRIER_HZ}
     assert set(_after_lock(magnitudes(samples))) == {_FADED}
@@ -119,13 +119,13 @@ def test_a_rival_must_beat_the_loudest_the_carrier_has_ever_been() -> None:
         ),
     ],
 )
-def test_a_quieter_rival_wins_only_once_the_carrier_has_been_off_air(
+async def test_a_quieter_rival_wins_only_once_the_carrier_has_been_off_air(
     contest_seconds: float, want_frequency: float
 ) -> None:
     contested = {CARRIER_HZ: 0.0, RIVAL_HZ: MIN_MAGNITUDE}
     spectrums = locking_timeline().hold(contested, contest_seconds).build()
 
-    assert frequencies(track(spectrums))[-1] == want_frequency
+    assert frequencies(await track(spectrums))[-1] == want_frequency
 
 
 @pytest.mark.parametrize(
@@ -136,42 +136,42 @@ def test_a_quieter_rival_wins_only_once_the_carrier_has_been_off_air(
         pytest.param(3, RIVAL_HZ, id="three-spectrums-make-one-lock-time"),
     ],
 )
-def test_a_rival_that_keeps_dropping_out_never_holds_on_long_enough(
+async def test_a_rival_that_keeps_dropping_out_never_holds_on_long_enough(
     run: int, want_frequency: float
 ) -> None:
     calling = {CARRIER_HZ: 0.0, RIVAL_HZ: _LOUD_RIVAL}
     keyed = {CARRIER_HZ: LOUD, RIVAL_HZ: 0.0}
     spectrums = locking_timeline().alternate(calling, keyed, cycles=5, run=run).build()
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert frequencies(samples)[-1] == want_frequency
     assert all(lock_flags(samples)[LOCK_PHASE_SPECTRUMS:])
 
 
-def test_silence_alone_never_breaks_the_lock() -> None:
+async def test_silence_alone_never_breaks_the_lock() -> None:
     """Only a competing signal can unseat the carrier — a key-up never does."""
     spectrums = locking_timeline().hold(SILENT, HOLD_SECONDS * 2).build()
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert all(lock_flags(samples)[LOCK_PHASE_SPECTRUMS:])
     assert set(frequencies(samples)) == {CARRIER_HZ}
     assert set(_after_lock(magnitudes(samples))) == {0.0}
 
 
-def test_a_locked_carrier_reports_its_own_level_not_the_loudest_bin() -> None:
+async def test_a_locked_carrier_reports_its_own_level_not_the_loudest_bin() -> None:
     contested = {CARRIER_HZ: _FADED, RIVAL_HZ: _QUIET_RIVAL}
     spectrums = locking_timeline().hold(contested, LOCK_SECONDS).build()
 
-    last = track(spectrums)[-1]
+    last = (await track(spectrums))[-1]
 
     assert last.tone.frequency == CARRIER_HZ
     assert last.tone.magnitude == _FADED
     assert last.is_locked
 
 
-def test_each_takeover_resets_the_level_the_next_rival_must_beat() -> None:
+async def test_each_takeover_resets_the_level_the_next_rival_must_beat() -> None:
     spectrums = (
         locking_timeline()
         .hold({CARRIER_HZ: 0.0, RIVAL_HZ: _LOUD_RIVAL}, LOCK_SECONDS * 2)
@@ -180,20 +180,20 @@ def test_each_takeover_resets_the_level_the_next_rival_must_beat() -> None:
         .build()
     )
 
-    tracked = frequencies(track(spectrums))
+    tracked = frequencies(await track(spectrums))
 
     phase_ends = tuple(tracked[LOCK_PHASE_SPECTRUMS * step - 1] for step in range(1, 5))
     assert phase_ends == (CARRIER_HZ, RIVAL_HZ, RIVAL_HZ, CARRIER_HZ)
 
 
-def test_a_gap_in_the_stream_leaves_the_carrier_stale() -> None:
+async def test_a_gap_in_the_stream_leaves_the_carrier_stale() -> None:
     """Nothing is heard for an hour, so the next rival only needs the lock time."""
     calling = {CARRIER_HZ: 0.0, RIVAL_HZ: MIN_MAGNITUDE}
     spectrums = locking_timeline().build() + spectrums_at(
         calling, (3_600.0, 3_600.0 + LOCK_SECONDS)
     )
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert frequencies(samples)[-2] == CARRIER_HZ
     assert frequencies(samples)[-1] == RIVAL_HZ

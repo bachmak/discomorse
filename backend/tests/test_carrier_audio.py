@@ -62,7 +62,7 @@ def _keyed_pcm(noise_amplitude: float = 0.0) -> npt.NDArray[PCM16.IntType]:
 
 async def _tracked(samples: npt.NDArray[PCM16.IntType]) -> tuple[CarrierSample, ...]:
     """The carrier read off real spectrums, cut the way the pipeline cuts them."""
-    return track(await limit(await analyze(samples)))
+    return await track(await limit(await analyze(samples)))
 
 
 @pytest.mark.parametrize(

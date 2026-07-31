@@ -19,11 +19,13 @@ from morse_decoder.pipeline.stages.keying_detector.interface import KeyingDetect
 from morse_decoder.pipeline.stages.noise_estimator.interface import NoiseEstimator
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
 from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLimiter
+from morse_decoder.pipeline.stages.streams import StreamFork, azip
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
 
 
 # TODO(#116): drop once every stage is reactive — the limiter then reads the
-# analyzer's stream, and no stage has to be handed one spectrum at a time.
+# analyzer's stream and the fork the limiter's, and no stage has to be handed
+# one spectrum at a time.
 async def _stream(spectrum: ToneSpectrum) -> AsyncIterator[ToneSpectrum]:
     """The one spectrum in hand, as the stream a reactive stage reads."""
     yield spectrum
@@ -68,15 +70,30 @@ class Pipeline:
         yield FFTFrame(spectrum)
         limited_spectrums = self._spectrum_limiter.process(_stream(spectrum))
         async for limited_spectrum in limited_spectrums:
-            async for event in self._decode(self._sample(limited_spectrum)):
+            async for event in self._process_limited(limited_spectrum):
                 yield event
 
-    def _sample(self, limited: ToneSpectrum) -> ToneSample:
-        carrier = self._carrier_source.track(limited)
-        noise = self._noise_estimator.estimate(limited)
-        keying = self._keying_detector.detect(carrier, noise)
-        debounced = self._keying_debouncer.debounce(keying, limited.ts)
-        return ToneSample(ts=limited.ts, on=debounced.is_on)
+    async def _process_limited(
+        self, limited: ToneSpectrum
+    ) -> AsyncIterator[OutboundEvent]:
+        async for sample in self._samples(limited):
+            async for event in self._decode(sample):
+                yield event
+
+    async def _samples(self, limited: ToneSpectrum) -> AsyncIterator[ToneSample]:
+        """The key the four stages read, one sample per spectrum they are given.
+
+        Carrier and noise are read off the same spectrums, so the stream is
+        forked: each of the two stages reads a branch of it, neither the other.
+        """
+        lhs, rhs = StreamFork(_stream(limited)).branches()
+        async for carrier, noise in azip(
+            self._carrier_source.process(lhs),
+            self._noise_estimator.process(rhs),
+        ):
+            keying = self._keying_detector.detect(carrier, noise)
+            debounced = self._keying_debouncer.debounce(keying, limited.ts)
+            yield ToneSample(ts=limited.ts, on=debounced.is_on)
 
     async def _decode(self, sample: ToneSample) -> AsyncIterator[OutboundEvent]:
         timing = self._timing_decoder.process(ToneReading(samples=(sample,)))

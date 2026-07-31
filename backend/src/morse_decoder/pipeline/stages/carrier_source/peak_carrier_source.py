@@ -27,7 +27,7 @@ class PeakCarrierSource(CarrierSource):
             candidate=Tone.empty(),
         )
 
-    def track(self, spectrum: ToneSpectrum) -> CarrierSample:
+    def transform(self, spectrum: ToneSpectrum) -> CarrierSample:
         peak = _loudest_tone_in_spectrum(spectrum)
         self._state = self._state.update(peak, spectrum)
         return self._state.get_carrier(peak)

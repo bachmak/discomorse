@@ -45,10 +45,10 @@ _STREAMS = [pytest.param(spectrums, id=name) for name, spectrums in _SCENARIOS.i
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_every_spectrum_yields_one_sample_stamped_with_its_own_time(
+async def test_every_spectrum_yields_one_sample_stamped_with_its_own_time(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert [sample.tone.ts for sample in samples] == [
         spectrum.ts for spectrum in spectrums
@@ -56,36 +56,36 @@ def test_every_spectrum_yields_one_sample_stamped_with_its_own_time(
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_the_same_stream_reports_the_same_samples_every_time(
+async def test_the_same_stream_reports_the_same_samples_every_time(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
-    assert track(spectrums) == track(spectrums)
+    assert await track(spectrums) == await track(spectrums)
 
 
-def test_sources_do_not_share_tracking_state() -> None:
+async def test_sources_do_not_share_tracking_state() -> None:
     spectrums = _SCENARIOS["locks-and-holds"]
     tracked = source()
 
-    assert track(spectrums, carrier_source=tracked)[-1].is_locked
-    assert not track(spectrums[:1], carrier_source=source())[0].is_locked
+    assert (await track(spectrums, carrier_source=tracked))[-1].is_locked
+    assert not (await track(spectrums[:1], carrier_source=source()))[0].is_locked
 
 
-def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
+async def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
     spectrums = _SCENARIOS["locks-and-holds"]
     tracked = source()
 
-    head = track(spectrums[:3], carrier_source=tracked)
-    tail = track(spectrums[3:], carrier_source=tracked)
+    head = await track(spectrums[:3], carrier_source=tracked)
+    tail = await track(spectrums[3:], carrier_source=tracked)
 
-    assert head + tail == track(spectrums)
+    assert head + tail == await track(spectrums)
 
 
-def test_bins_tied_for_loudest_do_not_make_the_carrier_flicker() -> None:
+async def test_bins_tied_for_loudest_do_not_make_the_carrier_flicker() -> None:
     spectrums = (
         SpectrumTimeline().add({_LOW_HZ: LOUD, RIVAL_HZ: LOUD}, count=12).build()
     )
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert set(frequencies(samples)) == {_LOW_HZ}
     assert samples[-1].is_locked
@@ -101,7 +101,7 @@ def test_bins_tied_for_loudest_do_not_make_the_carrier_flicker() -> None:
         pytest.param(STEP_S * 100, 1, id="a-grid-far-coarser-than-the-lock"),
     ],
 )
-def test_the_source_reads_the_lock_time_off_any_time_grid(
+async def test_the_source_reads_the_lock_time_off_any_time_grid(
     step_seconds: float, want_first_locked_index: int
 ) -> None:
     spectrums = (
@@ -110,7 +110,7 @@ def test_the_source_reads_the_lock_time_off_any_time_grid(
         .build()
     )
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert len(samples) == _GRID_SPECTRUMS
     assert first_locked_index(samples) == want_first_locked_index

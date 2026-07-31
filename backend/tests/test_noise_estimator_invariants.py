@@ -30,45 +30,45 @@ _STREAMS = [pytest.param(spectrums, id=name) for name, spectrums in _SCENARIOS.i
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_every_spectrum_yields_exactly_one_sample(
+async def test_every_spectrum_yields_exactly_one_sample(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
-    assert len(estimate(spectrums)) == len(spectrums)
+    assert len(await estimate(spectrums)) == len(spectrums)
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_the_same_stream_reports_the_same_samples_every_time(
+async def test_the_same_stream_reports_the_same_samples_every_time(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
-    assert estimate(spectrums) == estimate(spectrums)
+    assert await estimate(spectrums) == await estimate(spectrums)
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_one_estimator_reads_a_stream_as_a_fresh_one_would(
+async def test_one_estimator_reads_a_stream_as_a_fresh_one_would(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
     """The estimator carries no state: a used one still reads the head the same."""
     used = estimator()
-    estimate(spectrums, noise_estimator=used)
+    await estimate(spectrums, noise_estimator=used)
 
-    assert estimate(spectrums, noise_estimator=used) == estimate(spectrums)
+    assert await estimate(spectrums, noise_estimator=used) == await estimate(spectrums)
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_the_floor_never_leaves_the_range_of_the_spectrums_bins(
+async def test_the_floor_never_leaves_the_range_of_the_spectrums_bins(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
-    for one, noise in zip(spectrums, noises(estimate(spectrums)), strict=True):
+    for one, noise in zip(spectrums, noises(await estimate(spectrums)), strict=True):
         levels = [tone.magnitude for tone in one.magnitudes]
         assert min(levels) <= noise <= max(levels)
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
-def test_a_higher_percentile_never_reads_a_lower_floor(
+async def test_a_higher_percentile_never_reads_a_lower_floor(
     spectrums: tuple[ToneSpectrum, ...],
 ) -> None:
     floors = [
-        noises(estimate(spectrums, noise_estimator=estimator(percentile)))
+        noises(await estimate(spectrums, noise_estimator=estimator(percentile)))
         for percentile in _PERCENTILES
     ]
 
@@ -77,19 +77,19 @@ def test_a_higher_percentile_never_reads_a_lower_floor(
 
 
 @pytest.mark.parametrize("gain", [0.5, 2.0, 100.0])
-def test_scaling_every_bin_scales_the_floor_with_it(gain: float) -> None:
+async def test_scaling_every_bin_scales_the_floor_with_it(gain: float) -> None:
     bins = {500.0: 0.01, 700.0: 0.3, 900.0: LOUD}
 
     scaled = {frequency: level * gain for frequency, level in bins.items()}
 
-    assert noise_of(scaled) == pytest.approx(noise_of(bins) * gain)
+    assert await noise_of(scaled) == pytest.approx(await noise_of(bins) * gain)
 
 
-def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
+async def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
     spectrums = _SCENARIOS["keying-in-noise"]
     reader = estimator()
 
-    head = estimate(spectrums[:3], noise_estimator=reader)
-    tail = estimate(spectrums[3:], noise_estimator=reader)
+    head = await estimate(spectrums[:3], noise_estimator=reader)
+    tail = await estimate(spectrums[3:], noise_estimator=reader)
 
-    assert head + tail == estimate(spectrums)
+    assert head + tail == await estimate(spectrums)
