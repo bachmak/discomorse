@@ -13,17 +13,14 @@ from itertools import pairwise
 from typing import Self
 
 from audio_fixtures import EPOCH
-from carrier_fixtures import SETTINGS
-from keying_fixtures import key_off, keys
-from tone_fixtures import detect, flags
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import KeyingSample
-from morse_decoder.pipeline.stages.tone_detector.impl.keying_debouncer import (
+from morse_decoder.config import KeyingDebouncerSettings
+from morse_decoder.pipeline.dto import KeyingSample
+from morse_decoder.pipeline.stages.keying_debouncer.timed_keying_debouncer import (
     TimedKeyingDebouncer,
 )
 
+SETTINGS = KeyingDebouncerSettings()
 RISE_SECONDS = SETTINGS.debounce_rise_seconds
 FALL_SECONDS = SETTINGS.debounce_fall_seconds
 
@@ -84,7 +81,7 @@ def blip(
     )
 
 
-def debouncer(settings: ToneDetectorSettings | None = None) -> TimedKeyingDebouncer:
+def debouncer(settings: KeyingDebouncerSettings | None = None) -> TimedKeyingDebouncer:
     return TimedKeyingDebouncer(settings or SETTINGS)
 
 
@@ -93,7 +90,7 @@ def debounce(
     *,
     keying_debouncer: TimedKeyingDebouncer | None = None,
 ) -> tuple[KeyingSample, ...]:
-    """Feed ``readings`` to one debouncer the way the tone detector would."""
+    """Feed ``readings`` to one debouncer the way the pipeline would."""
     reader = keying_debouncer or debouncer()
     return tuple(reader.debounce(one.sample, one.ts) for one in readings)
 
@@ -118,23 +115,3 @@ def keyed_seconds(readings: tuple[KeyReading, ...]) -> float:
     """How long the debounced key stays down over ``readings`` of one grid."""
     step = (readings[1].ts - readings[0].ts).total_seconds()
     return sum(debounced(readings)) * step
-
-
-@dataclass(frozen=True)
-class ReadKey:
-    """The key one stream of spectrums is read as, on both sides of the debouncer."""
-
-    raw: tuple[bool, ...]
-    debounced: tuple[bool, ...]
-
-
-async def read_key(spectrums: tuple[ToneSpectrum, ...]) -> ReadKey:
-    """What the stage makes of ``spectrums``, and what it would without a debouncer.
-
-    The debounced side comes off the stage itself: the four substages meet there,
-    and nowhere else is the key read the way the pipeline reads it.
-    """
-    return ReadKey(
-        raw=keys(key_off(spectrums)),
-        debounced=flags(await detect(spectrums)),
-    )

@@ -16,7 +16,7 @@ from debounce_fixtures import (
     keyed_seconds,
 )
 
-from morse_decoder.config import ToneDetectorSettings
+from morse_decoder.config import KeyingDebouncerSettings
 
 _DIT_SECONDS = 1.2 / 20  # a dit at the speed the timing stage is seeded with
 _FLAP_CYCLES = 20
@@ -150,7 +150,7 @@ def test_a_mark_comes_out_stretched_by_the_gap_between_the_two_delays() -> None:
 def test_a_debouncer_without_delays_passes_every_change_straight_through() -> None:
     line = KeyTimeline().alternate(_FLAP_CYCLES).build()
     reader = debouncer(
-        ToneDetectorSettings(debounce_rise_seconds=0.0, debounce_fall_seconds=0.0)
+        KeyingDebouncerSettings(debounce_rise_seconds=0.0, debounce_fall_seconds=0.0)
     )
 
     assert debounced(line, keying_debouncer=reader) == tuple(

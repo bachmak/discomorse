@@ -1,26 +1,18 @@
 import datetime
-from abc import ABC, abstractmethod
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
+from morse_decoder.config import CarrierSourceSettings
+from morse_decoder.pipeline.dto import (
     CarrierSample,
+    FrequencyWindow,
     Tone,
+    ToneSpectrum,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.fsm.search_state import (
+from morse_decoder.pipeline.stages.carrier_source.impl.fsm import (
+    CarrierTrackingState,
     SearchState,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.fsm.state import (
-    CarrierTrackingState,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.lock_policy import (
-    CarrierLockPolicy,
-)
-
-
-class CarrierSource(ABC):
-    @abstractmethod
-    def track(self, spectrum: ToneSpectrum) -> CarrierSample: ...
+from morse_decoder.pipeline.stages.carrier_source.impl.policy import CarrierLockPolicy
+from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
 
 
 class PeakCarrierSource(CarrierSource):
@@ -29,7 +21,8 @@ class PeakCarrierSource(CarrierSource):
     Drives the tracking machine: each spectrum moves it into its next state.
     """
 
-    def __init__(self, settings: ToneDetectorSettings) -> None:
+    def __init__(self, settings: CarrierSourceSettings) -> None:
+        self._window = FrequencyWindow(settings.carrier_min_hz, settings.carrier_max_hz)
         self._state: CarrierTrackingState = SearchState(
             policy=CarrierLockPolicy(
                 min_magnitude=settings.carrier_lock_magnitude,
@@ -41,8 +34,9 @@ class PeakCarrierSource(CarrierSource):
         )
 
     def track(self, spectrum: ToneSpectrum) -> CarrierSample:
-        peak = _loudest_tone_in_spectrum(spectrum)
-        self._state = self._state.update(peak, spectrum)
+        windowed = self._window.limit(spectrum)
+        peak = _loudest_tone_in_spectrum(windowed)
+        self._state = self._state.update(peak, windowed)
         return self._state.get_carrier(peak)
 
 

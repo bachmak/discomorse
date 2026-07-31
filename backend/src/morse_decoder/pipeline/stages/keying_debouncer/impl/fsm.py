@@ -3,10 +3,8 @@ from __future__ import annotations
 import datetime
 from abc import ABC, abstractmethod
 
-from morse_decoder.pipeline.stages.tone_detector.impl.debounce_policy import (
-    KeyingDelayPolicy,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import KeyingSample
+from morse_decoder.pipeline.dto import KeyingSample
+from morse_decoder.pipeline.stages.keying_debouncer.impl.policy import KeyingDelayPolicy
 
 
 class DebouncedState(ABC):

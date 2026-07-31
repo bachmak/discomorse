@@ -1,8 +1,6 @@
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    KeyingThresholds,
-    NoiseSample,
-)
+from morse_decoder.config import KeyingDetectorSettings
+from morse_decoder.pipeline.dto import NoiseSample
+from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
 
 
 class AsymmetricEma:
@@ -32,7 +30,7 @@ class ThresholdTracker:
     them back down slowly — the key is harder to fool than it is to lose.
     """
 
-    def __init__(self, settings: ToneDetectorSettings) -> None:
+    def __init__(self, settings: KeyingDetectorSettings) -> None:
         self._floor = AsymmetricEma(
             rise_alpha=settings.threshold_rise_alpha,
             fall_alpha=settings.threshold_fall_alpha,

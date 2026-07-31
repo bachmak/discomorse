@@ -5,7 +5,8 @@ import numpy.typing as npt
 import pytest
 from audio_fixtures import noise_pcm, silence_pcm, sine_pcm
 from carrier_fixtures import SAMPLE_RATE, analyze
-from debounce_fixtures import ReadKey, edges, read_key
+from debounce_fixtures import edges
+from tone_detecting_fixtures import ReadKey, read_key
 from tone_fixtures import DIT_SECONDS, KEY_DOWN_AMPLITUDE, TONE_HZ
 
 from morse_decoder.audio.pcm16 import PCM16
@@ -28,7 +29,7 @@ def _torn_pcm(
 
 async def _read(samples: npt.NDArray[PCM16.IntType]) -> ReadKey:
     """The key as it is read off ``samples``, before and after the debouncer."""
-    return await read_key((await analyze(samples)).spectrums)
+    return read_key((await analyze(samples)).spectrums)
 
 
 @pytest.mark.parametrize(

@@ -20,7 +20,7 @@ from carrier_fixtures import (
 )
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample
+from morse_decoder.pipeline.dto import CarrierSample
 
 _TONE_HZ = 750.0
 _INTRUDER_HZ = 1_000.0

@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    KeyingSample,
-    KeyingThresholds,
-)
+from morse_decoder.pipeline.dto import KeyingSample
+from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
 
 
 class KeyingState(ABC):

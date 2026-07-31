@@ -23,8 +23,8 @@ from carrier_fixtures import (
     track,
 )
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample, Tone
+from morse_decoder.config import CarrierSourceSettings
+from morse_decoder.pipeline.dto import CarrierSample, Tone
 
 _SPECTRUMS = 12
 _DRIFT_SPECTRUMS = 6
@@ -68,7 +68,7 @@ def test_the_lock_closes_once_one_frequency_has_held_for_the_lock_time(
 def test_the_first_spectrum_can_never_close_the_lock_on_its_own(
     lock_seconds: float, want_first_locked_index: int
 ) -> None:
-    settings = ToneDetectorSettings(carrier_lock_seconds=lock_seconds)
+    settings = CarrierSourceSettings(carrier_lock_seconds=lock_seconds)
     spectrums = SpectrumTimeline().add({CARRIER_HZ: LOUD}, _SPECTRUMS).build()
 
     samples = track(spectrums, carrier_source=source(settings))

@@ -3,10 +3,10 @@
 import pytest
 from keying_fixtures import FLOOR, OFF_FACTOR, ON_FACTOR, offs, ons, track, tracker
 
-from morse_decoder.config import ToneDetectorSettings
+from morse_decoder.config import KeyingDetectorSettings
 
-_FAST = ToneDetectorSettings(threshold_rise_alpha=0.5, threshold_fall_alpha=0.1)
-_INSTANT = ToneDetectorSettings(threshold_rise_alpha=1.0, threshold_fall_alpha=1.0)
+_FAST = KeyingDetectorSettings(threshold_rise_alpha=0.5, threshold_fall_alpha=0.1)
+_INSTANT = KeyingDetectorSettings(threshold_rise_alpha=1.0, threshold_fall_alpha=1.0)
 _LOUD_FLOOR = FLOOR * 10
 _RUN = 100
 _SETTLED = 0.1
@@ -24,7 +24,7 @@ _TRACKED = [pytest.param(floors, id=name) for name, floors in _STREAMS.items()]
 
 
 def _floors_read_back(
-    floors: tuple[float, ...], settings: ToneDetectorSettings = _FAST
+    floors: tuple[float, ...], settings: KeyingDetectorSettings = _FAST
 ) -> tuple[float, ...]:
     """The level the tracker holds, read back off the threshold it puts over it."""
     bands = track(floors, threshold_tracker=tracker(settings))
@@ -33,7 +33,7 @@ def _floors_read_back(
 
 def _steps_to_settle(floors: tuple[float, ...], target: float) -> int:
     """How many readings before the level comes within a tenth of ``target``."""
-    levels = _floors_read_back(floors, ToneDetectorSettings())
+    levels = _floors_read_back(floors, KeyingDetectorSettings())
     return next(
         (
             index
@@ -73,7 +73,7 @@ def test_the_floor_is_followed_at_the_rate_its_direction_names(
 def test_both_thresholds_are_the_named_multiples_of_the_same_floor(
     on_factor: float, off_factor: float
 ) -> None:
-    settings = ToneDetectorSettings(
+    settings = KeyingDetectorSettings(
         threshold_on_factor=on_factor, threshold_off_factor=off_factor
     )
 
@@ -146,7 +146,7 @@ def test_the_floor_climbs_to_a_burst_in_fewer_readings_than_it_sinks_back() -> N
 
 def test_a_burst_of_noise_leaves_the_thresholds_over_where_it_found_them() -> None:
     """The lull after a burst is not believed at once: the bar stays raised."""
-    levels = _floors_read_back(_STREAMS["a-burst-of-noise"], ToneDetectorSettings())
+    levels = _floors_read_back(_STREAMS["a-burst-of-noise"], KeyingDetectorSettings())
 
     assert levels[-1] > levels[0]
     assert levels[-1] < _LOUD_FLOOR

@@ -6,8 +6,7 @@ import pytest
 from audio_fixtures import EPOCH
 from carrier_fixtures import track
 
-from morse_decoder.pipeline.dto import ToneMagnitude, ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample
+from morse_decoder.pipeline.dto import CarrierSample, ToneMagnitude, ToneSpectrum
 
 _CARRIER_HZ = 700.0
 _RIVAL_HZ = 1_100.0

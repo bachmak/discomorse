@@ -3,10 +3,12 @@ from pydantic import ValidationError
 
 from morse_decoder.config import (
     AudioSettings,
+    CarrierWindowSettings,
+    KeyingDebouncerSettings,
+    KeyingDetectorSettings,
     PipelineSettings,
     Settings,
     SpectrumAnalyzerSettings,
-    ToneDetectorSettings,
 )
 
 
@@ -55,11 +57,11 @@ def test_settings_reject_disagreeing_sample_rates(
         pytest.param(700.0, 700.0, id="window-empty"),
     ],
 )
-def test_tone_detector_settings_reject_a_carrier_window_that_never_opens(
+def test_window_settings_reject_a_carrier_window_that_never_opens(
     min_hz: float, max_hz: float
 ) -> None:
     with pytest.raises(ValidationError, match="must be below"):
-        ToneDetectorSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz)
+        CarrierWindowSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz)
 
 
 @pytest.mark.parametrize(
@@ -69,11 +71,11 @@ def test_tone_detector_settings_reject_a_carrier_window_that_never_opens(
         pytest.param(3.0, 3.0, id="band-empty"),
     ],
 )
-def test_tone_detector_settings_reject_a_keying_band_that_never_opens(
+def test_keying_detector_settings_reject_a_keying_band_that_never_opens(
     on_factor: float, off_factor: float
 ) -> None:
     with pytest.raises(ValidationError, match="must be below"):
-        ToneDetectorSettings(
+        KeyingDetectorSettings(
             threshold_on_factor=on_factor, threshold_off_factor=off_factor
         )
 
@@ -85,11 +87,11 @@ def test_tone_detector_settings_reject_a_keying_band_that_never_opens(
         pytest.param(0.01, 0.009, id="the-key-lifts-sooner-than-it-falls"),
     ],
 )
-def test_tone_detector_settings_reject_a_debouncer_that_lifts_the_key_too_readily(
+def test_keying_debouncer_settings_reject_a_debouncer_that_lifts_the_key_too_readily(
     rise_seconds: float, fall_seconds: float
 ) -> None:
     with pytest.raises(ValidationError, match="must not exceed"):
-        ToneDetectorSettings(
+        KeyingDebouncerSettings(
             debounce_rise_seconds=rise_seconds, debounce_fall_seconds=fall_seconds
         )
 

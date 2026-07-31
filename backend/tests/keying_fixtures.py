@@ -1,7 +1,7 @@
 """Builders for the carriers, floors and readers the keying tests drive.
 
-The keying substage never sees a spectrum: it reads one carrier level against
-one noise floor, so a test writes a ``Step`` per reading instead of a bin
+The keying stage never sees a spectrum: it reads one carrier level against one
+noise floor, so a test writes a ``Step`` per reading instead of a bin
 dictionary. Levels are named after where they sit relative to the thresholds
 the default settings put over ``FLOOR``.
 """
@@ -9,27 +9,26 @@ the default settings put over ``FLOOR``.
 from dataclasses import dataclass, replace
 
 from audio_fixtures import EPOCH
-from carrier_fixtures import CARRIER_HZ, SETTINGS, WINDOW, source
+from carrier_fixtures import CARRIER_HZ, source
 from noise_fixtures import estimator
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
+from morse_decoder.config import KeyingDetectorSettings
+from morse_decoder.pipeline.dto import (
     CarrierSample,
-    FrequencyWindow,
     KeyingSample,
-    KeyingThresholds,
     NoiseSample,
     Tone,
+    ToneSpectrum,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.helpers import limit_to_window
-from morse_decoder.pipeline.stages.tone_detector.impl.keying_detector import (
+from morse_decoder.pipeline.stages.keying_detector.adaptive_keying_detector import (
     AdaptiveKeyingDetector,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.threshold_tracker import (
+from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
+from morse_decoder.pipeline.stages.keying_detector.impl.threshold_tracker import (
     ThresholdTracker,
 )
 
+SETTINGS = KeyingDetectorSettings()
 RISE_ALPHA = SETTINGS.threshold_rise_alpha
 FALL_ALPHA = SETTINGS.threshold_fall_alpha
 ON_FACTOR = SETTINGS.threshold_on_factor
@@ -77,7 +76,7 @@ def unlocked(readings: tuple[Step, ...]) -> tuple[Step, ...]:
     return tuple(replace(step, is_locked=False) for step in readings)
 
 
-def detector(settings: ToneDetectorSettings | None = None) -> AdaptiveKeyingDetector:
+def detector(settings: KeyingDetectorSettings | None = None) -> AdaptiveKeyingDetector:
     return AdaptiveKeyingDetector(settings or SETTINGS)
 
 
@@ -86,7 +85,7 @@ def detect(
     *,
     keying_detector: AdaptiveKeyingDetector | None = None,
 ) -> tuple[KeyingSample, ...]:
-    """Feed ``readings`` to one detector the way the tone detector would."""
+    """Feed ``readings`` to one detector the way the pipeline would."""
     reader = keying_detector or detector()
     return tuple(reader.detect(step.carrier(), step.noise()) for step in readings)
 
@@ -104,20 +103,18 @@ def keyed(
     return keys(detect(readings, keying_detector=keying_detector))
 
 
-def key_off(
-    spectrums: tuple[ToneSpectrum, ...], window: FrequencyWindow = WINDOW
-) -> tuple[KeyingSample, ...]:
-    """Read the key off spectrums the way the tone detector wires the substages."""
+def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[KeyingSample, ...]:
+    """Read the key off spectrums the way the pipeline wires the three stages."""
     carrier_source, noise_estimator, keying_detector = source(), estimator(), detector()
     return tuple(
         keying_detector.detect(
-            carrier_source.track(windowed), noise_estimator.estimate(windowed)
+            carrier_source.track(spectrum), noise_estimator.estimate(spectrum)
         )
-        for windowed in (limit_to_window(spectrum, window) for spectrum in spectrums)
+        for spectrum in spectrums
     )
 
 
-def tracker(settings: ToneDetectorSettings | None = None) -> ThresholdTracker:
+def tracker(settings: KeyingDetectorSettings | None = None) -> ThresholdTracker:
     return ThresholdTracker(settings or SETTINGS)
 
 

@@ -1,9 +1,8 @@
-"""Builders for the audio the tone stage is driven with, and the key it reads back.
+"""Builders for the audio the keying stages are driven with, and the key they read.
 
-The stage is where the four substages meet, so its tests drive it the way the
-pipeline does: audio in, one keyed sample per spectrum out. A test writes a line
-of marks and gaps in dit units and reads the answer back as runs of the same
-shape, because runs of a keyed line are what the timing stage lives on.
+A test writes a line of marks and gaps in dit units and reads the answer back as
+runs of the same shape, because runs of a keyed line are what the timing stage
+lives on. How the line is fed through the stages is ``tone_detecting_fixtures``.
 
 An edge cannot land where it was keyed: the frame it falls in reads both sides
 of it at once, and the debouncer holds the new side back until it is believed.
@@ -21,34 +20,16 @@ from typing import Self
 import numpy as np
 import numpy.typing as npt
 from audio_fixtures import EPOCH, noise_pcm, silence_pcm, sine_pcm
-from carrier_fixtures import (
-    ANALYZER_SETTINGS,
-    FRAME_SECONDS,
-    HOP_SECONDS,
-    SAMPLE_RATE,
-    SETTINGS,
-    Phase,
-)
+from carrier_fixtures import FRAME_SECONDS, HOP_SECONDS, SAMPLE_RATE, Phase
+from debounce_fixtures import FALL_SECONDS
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import (
-    PcmChunk,
-    SpectrumReading,
-    ToneSample,
-    ToneSpectrum,
-)
-from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer import (
-    STFTSpectrumAnalyzer,
-)
-from morse_decoder.pipeline.stages.tone_detector.tone_detector import (
-    SpectralToneDetector,
-)
+from morse_decoder.pipeline.dto import PcmChunk, ToneSample
 
 TONE_HZ = 750.0
 KEY_DOWN_AMPLITUDE = 0.5
 DIT_SECONDS = 1.2 / 20  # a dit at the speed the timing stage is seeded with
-EDGE_DRIFT_SECONDS = FRAME_SECONDS + SETTINGS.debounce_fall_seconds
+EDGE_DRIFT_SECONDS = FRAME_SECONDS + FALL_SECONDS
 
 
 @dataclass(frozen=True)
@@ -160,7 +141,7 @@ class KeyedLine:
 
 @dataclass(frozen=True)
 class Run:
-    """A stretch the stage read as one side of the key, and how long it lasted."""
+    """A stretch the stages read as one side of the key, and how long it lasted."""
 
     is_on: bool
     seconds: float
@@ -180,46 +161,9 @@ class PcmChunks:
             offset += len(part)
 
 
-class StageRun:
-    """One analyzer and one stage, driven chunk by chunk the way the pipeline does."""
-
-    def __init__(self) -> None:
-        self._analyzer = STFTSpectrumAnalyzer(ANALYZER_SETTINGS)
-        self._detector = detector()
-
-    async def feed(self, chunk: PcmChunk) -> tuple[ToneSample, ...]:
-        reading = await self._analyzer.process(chunk)
-        return await detect(reading.spectrums, tone_detector=self._detector)
-
-
 def morse_line() -> KeyedLine:
     """'AN T': every element length a straight key produces, spaced as morse."""
     return KeyedLine().mark().gap().mark(3).gap(3).mark(3).gap().mark().gap(7).mark(3)
-
-
-def detector(settings: ToneDetectorSettings | None = None) -> SpectralToneDetector:
-    return SpectralToneDetector(settings or SETTINGS)
-
-
-async def detect(
-    spectrums: tuple[ToneSpectrum, ...],
-    *,
-    tone_detector: SpectralToneDetector | None = None,
-) -> tuple[ToneSample, ...]:
-    """Feed ``spectrums`` to one stage the way the pipeline would."""
-    stage = tone_detector or detector()
-    return (await stage.process(SpectrumReading(spectrums=spectrums))).samples
-
-
-async def read_tone(
-    samples: npt.NDArray[PCM16.IntType], chunks: int = 1
-) -> tuple[ToneSample, ...]:
-    """The key one stage reads off ``samples`` handed to it in ``chunks``."""
-    run = StageRun()
-    read: list[ToneSample] = []
-    for chunk in PcmChunks(samples, chunks):
-        read += await run.feed(chunk)
-    return tuple(read)
 
 
 def flags(samples: tuple[ToneSample, ...]) -> tuple[bool, ...]:

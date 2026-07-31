@@ -20,8 +20,7 @@ from carrier_fixtures import (
 )
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.pipeline.dto import ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample, Tone
+from morse_decoder.pipeline.dto import CarrierSample, Tone, ToneSpectrum
 
 _DRIFT = (600.0, 662.5, 725.0, 787.5)
 _DRIFT_STEP_S = 1.0
