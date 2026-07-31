@@ -73,8 +73,8 @@ class RecordingNoiseEstimator(NoiseEstimator):
 class RecordingKeyingDetector(KeyingDetector):
     """Stand-in detector that keeps every pair the detector hands it.
 
-    It always reports a keyed line: the samples leaving the stage must stay
-    key-up all the same, until the substage's output is wired to them.
+    It always reports a keyed line, so the key that leaves the stage can be told
+    apart from the one the substage behind it settled on.
     """
 
     def __init__(self, settings: ToneDetectorSettings) -> None:
@@ -89,15 +89,21 @@ class RecordingKeyingDetector(KeyingDetector):
 
 
 class RecordingKeyingDebouncer(KeyingDebouncer):
-    """Stand-in debouncer that keeps every key the detector hands it, and when."""
+    """Stand-in debouncer that keeps every key the detector hands it, and when.
+
+    It settles on a key of its own that swings from reading to reading, so what
+    leaves the stage can only be read off this substage, the last of the four.
+    """
 
     def __init__(self, settings: ToneDetectorSettings) -> None:
         self._settings = settings
         self.seen: list[tuple[KeyingSample, datetime.datetime]] = []
+        self.reported: list[KeyingSample] = []
 
     def debounce(self, sample: KeyingSample, ts: datetime.datetime) -> KeyingSample:
         self.seen.append((sample, ts))
-        return KeyingSample(is_on=True)
+        self.reported.append(KeyingSample(is_on=len(self.seen) % 2 == 0))
+        return self.reported[-1]
 
 
 def recording_detector(monkeypatch: pytest.MonkeyPatch) -> SpectralToneDetector:

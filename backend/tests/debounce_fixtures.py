@@ -13,15 +13,13 @@ from itertools import pairwise
 from typing import Self
 
 from audio_fixtures import EPOCH
-from carrier_fixtures import SETTINGS, WINDOW
+from carrier_fixtures import SETTINGS
 from keying_fixtures import key_off, keys
+from tone_fixtures import detect, flags
 
 from morse_decoder.config import ToneDetectorSettings
 from morse_decoder.pipeline.dto import ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    FrequencyWindow,
-    KeyingSample,
-)
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import KeyingSample
 from morse_decoder.pipeline.stages.tone_detector.impl.keying_debouncer import (
     TimedKeyingDebouncer,
 )
@@ -122,17 +120,6 @@ def keyed_seconds(readings: tuple[KeyReading, ...]) -> float:
     return sum(debounced(readings)) * step
 
 
-def debounce_off(
-    spectrums: tuple[ToneSpectrum, ...], window: FrequencyWindow = WINDOW
-) -> tuple[KeyingSample, ...]:
-    """Read the debounced key off spectrums, all four substages wired up."""
-    reader = debouncer()
-    return tuple(
-        reader.debounce(sample, spectrum.ts)
-        for sample, spectrum in zip(key_off(spectrums, window), spectrums, strict=True)
-    )
-
-
 @dataclass(frozen=True)
 class ReadKey:
     """The key one stream of spectrums is read as, on both sides of the debouncer."""
@@ -141,11 +128,13 @@ class ReadKey:
     debounced: tuple[bool, ...]
 
 
-def read_key(
-    spectrums: tuple[ToneSpectrum, ...], window: FrequencyWindow = WINDOW
-) -> ReadKey:
-    """What the substages make of ``spectrums``, with the debouncer and without."""
+async def read_key(spectrums: tuple[ToneSpectrum, ...]) -> ReadKey:
+    """What the stage makes of ``spectrums``, and what it would without a debouncer.
+
+    The debounced side comes off the stage itself: the four substages meet there,
+    and nowhere else is the key read the way the pipeline reads it.
+    """
     return ReadKey(
-        raw=keys(key_off(spectrums, window)),
-        debounced=keys(debounce_off(spectrums, window)),
+        raw=keys(key_off(spectrums)),
+        debounced=flags(await detect(spectrums)),
     )
