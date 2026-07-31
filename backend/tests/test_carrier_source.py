@@ -1,4 +1,5 @@
 import datetime
+import math
 
 import numpy as np
 import numpy.typing as npt
@@ -19,7 +20,7 @@ from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer impo
 from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
     PeakCarrierSource,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample, Tone
 
 _SAMPLE_RATE = 8_000
 _N_FFT = 128
@@ -27,8 +28,15 @@ _HOP_LENGTH = 16
 _BIN_WIDTH = _SAMPLE_RATE / _N_FFT
 _MIN_HZ = 400.0
 _MAX_HZ = 1_200.0
-_CONFIRMATIONS = ToneDetectorSettings().carrier_lock_confirmations
+_LOCK_SECONDS = ToneDetectorSettings().carrier_lock_seconds
+_HOLD_SECONDS = ToneDetectorSettings().carrier_hold_seconds
 _DRIFT = (600.0, 662.5, 725.0, 787.5)
+_DRIFT_STEP_S = 1.0
+_CARRIER_HZ = 700.0
+_CARRIER_MAGNITUDE = 1.0
+_RIVAL_HZ = 1_100.0
+_SPECTRUM_STEP_S = 0.01
+_SIGHTINGS_TO_LOCK = math.ceil(_LOCK_SECONDS / _SPECTRUM_STEP_S) + 1
 _SWEEP_START_HZ = 600.0
 _SWEEP_END_HZ = 900.0
 _SWEEP_SECONDS = 0.5
@@ -83,9 +91,23 @@ def _swept_hz(ts: datetime.datetime) -> float:
     return _SWEEP_START_HZ + _SWEEP_HZ_PER_S * (ts - EPOCH).total_seconds()
 
 
-def _is_locked_at(index: int) -> bool:
+def _is_locked_at(index: int, step_seconds: float) -> bool:
     """Whether the spectrum at ``index`` closes a long enough run of sightings."""
-    return index + 1 >= _CONFIRMATIONS
+    return index * step_seconds >= _LOCK_SECONDS
+
+
+def _keyed_then_silent_against(
+    rival_magnitude: float, gap_seconds: float
+) -> tuple[ToneSpectrum, ...]:
+    """The carrier keys long enough to lock, then falls silent while a rival calls."""
+    bins = [{_CARRIER_HZ: _CARRIER_MAGNITUDE, _RIVAL_HZ: 0.0}] * _SIGHTINGS_TO_LOCK
+    bins += [{_CARRIER_HZ: 0.0, _RIVAL_HZ: rival_magnitude}] * int(
+        gap_seconds / _SPECTRUM_STEP_S
+    )
+    return tuple(
+        _spectrum(spectrum_bins, at_second=index * _SPECTRUM_STEP_S)
+        for index, spectrum_bins in enumerate(bins)
+    )
 
 
 @pytest.mark.parametrize(
@@ -110,9 +132,7 @@ def test_source_reads_the_carrier_off_the_loudest_bin_in_the_window(
 
     assert reading.samples == (
         CarrierSample(
-            ts=EPOCH,
-            frequency=want_frequency,
-            magnitude=want_magnitude,
+            tone=Tone(frequency=want_frequency, magnitude=want_magnitude, ts=EPOCH),
             is_locked=False,
         ),
     )
@@ -128,7 +148,10 @@ def test_source_reads_the_carrier_off_the_loudest_bin_in_the_window(
 )
 def test_source_follows_a_carrier_drifting_inside_the_window(batch_size: int) -> None:
     spectrums = tuple(
-        _spectrum({400.0: 0.1, frequency: 0.8, 1_200.0: 0.1}, at_second=index)
+        _spectrum(
+            {400.0: 0.1, frequency: 0.8, 1_200.0: 0.1},
+            at_second=index * _DRIFT_STEP_S,
+        )
         for index, frequency in enumerate(_DRIFT)
     )
 
@@ -136,15 +159,46 @@ def test_source_follows_a_carrier_drifting_inside_the_window(batch_size: int) ->
 
     assert samples == tuple(
         CarrierSample(
-            ts=spectrum.ts,
-            frequency=frequency,
-            magnitude=0.8,
-            is_locked=_is_locked_at(index),
+            tone=Tone(frequency=frequency, magnitude=0.8, ts=spectrum.ts),
+            is_locked=_is_locked_at(index, _DRIFT_STEP_S),
         )
         for index, (spectrum, frequency) in enumerate(
             zip(spectrums, _DRIFT, strict=True)
         )
     )
+
+
+@pytest.mark.parametrize(
+    "rival_magnitude, gap_seconds, want_frequency",
+    [
+        pytest.param(
+            _CARRIER_MAGNITUDE / 2,
+            _HOLD_SECONDS / 2,
+            _CARRIER_HZ,
+            id="quieter-rival-cannot-take-a-pause-for-a-vacancy",
+        ),
+        pytest.param(
+            _CARRIER_MAGNITUDE / 2,
+            _HOLD_SECONDS * 2,
+            _RIVAL_HZ,
+            id="quieter-rival-wins-once-the-carrier-has-left-the-air",
+        ),
+        pytest.param(
+            _CARRIER_MAGNITUDE * 2,
+            _HOLD_SECONDS / 2,
+            _RIVAL_HZ,
+            id="louder-rival-takes-the-lock-straight-away",
+        ),
+    ],
+)
+def test_source_defends_a_locked_carrier_while_it_is_only_pausing(
+    rival_magnitude: float, gap_seconds: float, want_frequency: float
+) -> None:
+    spectrums = _keyed_then_silent_against(rival_magnitude, gap_seconds)
+
+    samples = _track(spectrums, batch_size=1)
+
+    assert samples[-1].tone.frequency == want_frequency
 
 
 def test_source_reports_nothing_for_a_reading_without_spectrums() -> None:
@@ -173,8 +227,8 @@ async def test_source_locks_onto_a_played_tone() -> None:
 
     samples = _source().track(reading).samples
     assert samples
-    assert all(sample.frequency == 750.0 for sample in samples)
-    assert [sample.magnitude for sample in samples] == pytest.approx(
+    assert all(sample.tone.frequency == 750.0 for sample in samples)
+    assert [sample.tone.magnitude for sample in samples] == pytest.approx(
         [0.5] * len(samples), rel=0.02
     )
 
@@ -186,8 +240,8 @@ async def test_source_follows_a_tone_sweeping_through_real_spectrums() -> None:
 
     samples = _source().track(reading).samples
     assert samples
-    assert [sample.frequency for sample in samples] == pytest.approx(
-        [_swept_hz(sample.ts) for sample in samples], abs=_SWEEP_TOLERANCE_HZ
+    assert [sample.tone.frequency for sample in samples] == pytest.approx(
+        [_swept_hz(sample.tone.ts) for sample in samples], abs=_SWEEP_TOLERANCE_HZ
     )
 
 
@@ -198,7 +252,7 @@ async def test_source_reads_a_sweep_as_a_carrier_that_never_falls_silent() -> No
 
     samples = _source().track(reading).samples
     assert samples
-    assert all(sample.magnitude > 0.4 for sample in samples)
+    assert all(sample.tone.magnitude > 0.4 for sample in samples)
 
 
 async def test_source_keeps_noise_far_below_the_magnitude_of_a_tone() -> None:
@@ -206,8 +260,8 @@ async def test_source_keeps_noise_far_below_the_magnitude_of_a_tone() -> None:
     tone = _source().track(await _analyze(_tone(750.0))).samples
 
     assert noise and tone
-    assert max(sample.magnitude for sample in noise) < 0.1 * min(
-        sample.magnitude for sample in tone
+    assert max(sample.tone.magnitude for sample in noise) < 0.1 * min(
+        sample.tone.magnitude for sample in tone
     )
 
 
@@ -218,4 +272,4 @@ async def test_source_ignores_a_louder_tone_outside_the_window() -> None:
 
     samples = _source().track(reading).samples
     assert samples
-    assert all(sample.frequency == 750.0 for sample in samples)
+    assert all(sample.tone.frequency == 750.0 for sample in samples)
