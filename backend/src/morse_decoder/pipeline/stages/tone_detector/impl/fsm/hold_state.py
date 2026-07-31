@@ -20,11 +20,17 @@ class HoldState(CarrierTrackingState):
         self,
         policy: CarrierLockPolicy,
         carrier: Tone,
+        max_carrier_magnitude: float,
         rival: Tone,
     ) -> None:
         self._policy = policy
         self._carrier = carrier
+        self._max_carrier_magnitude = max_carrier_magnitude
         self._rival = rival
+
+    @classmethod
+    def create(cls, policy: CarrierLockPolicy, carrier: Tone) -> HoldState:
+        return HoldState(policy, carrier, carrier.magnitude, Tone.empty())
 
     def update(self, peak: Tone, spectrum: ToneSpectrum) -> CarrierTrackingState:
         carrier = self._updated_carrier(spectrum)
@@ -34,43 +40,42 @@ class HoldState(CarrierTrackingState):
         if self._policy.continues(self._carrier, peak):
             return self._clone(peak, Tone.empty())
 
-        carrier = self._updated_carrier(spectrum)
-        if not self._policy.beats(prev_tone=carrier, new_tone=peak):
+        if not self._policy.beats(
+            prev_tone=self._carrier.with_magnitude(self._max_carrier_magnitude),
+            new_tone=peak,
+        ):
             return self._clone(carrier, Tone.empty())
 
         rival = self._updated_rival(peak)
         if not self._policy.is_persistent(rival, peak.ts):
             return self._clone(carrier, rival)
 
-        return self._clone(peak, Tone.empty())
+        return HoldState(self._policy, peak, peak.magnitude, Tone.empty())
 
     def get_carrier(self, peak: Tone) -> CarrierSample:
         return CarrierSample(
-            tone=self._carrier,
+            tone=self._carrier.with_ts(peak.ts),
             is_locked=True,
         )
 
     def _clone(self, carrier: Tone, rival: Tone) -> HoldState:
-        return HoldState(self._policy, carrier, rival)
+        return HoldState(
+            policy=self._policy,
+            carrier=carrier,
+            max_carrier_magnitude=max(carrier.magnitude, self._max_carrier_magnitude),
+            rival=rival,
+        )
 
     def _updated_carrier(self, spectrum: ToneSpectrum) -> Tone:
         new_carrier_magnitude = _magnitude_at_nearest_freq(
             spectrum, self._carrier.frequency
         )
 
-        return Tone(
-            frequency=self._carrier.frequency,
-            magnitude=new_carrier_magnitude,
-            ts=spectrum.ts,
-        )
+        return self._carrier.with_magnitude(new_carrier_magnitude)
 
     def _updated_rival(self, peak: Tone) -> Tone:
         if self._policy.continues(prev_tone=self._rival, new_tone=peak):
-            return Tone(
-                frequency=peak.frequency,
-                magnitude=peak.magnitude,
-                ts=self._rival.ts,
-            )
+            return peak.with_ts(self._rival.ts)
         return peak
 
 

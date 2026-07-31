@@ -24,7 +24,7 @@ class SearchState(CarrierTrackingState):
     def update(self, peak: Tone, _: ToneSpectrum) -> CarrierTrackingState:
         candidate = self._updated_candidate(peak)
         if self._policy.is_persistent(candidate, peak.ts):
-            return HoldState(self._policy, carrier=peak, rival=Tone.empty())
+            return HoldState.create(self._policy, peak)
         return SearchState(self._policy, candidate)
 
     def _updated_candidate(self, peak: Tone) -> Tone:
