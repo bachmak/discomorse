@@ -29,7 +29,7 @@ def _torn_pcm(
 
 async def _read(samples: npt.NDArray[PCM16.IntType]) -> ReadKey:
     """The key as it is read off ``samples``, before and after the debouncer."""
-    return read_key(await analyze(samples))
+    return await read_key(await analyze(samples))
 
 
 @pytest.mark.parametrize(

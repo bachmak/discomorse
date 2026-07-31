@@ -128,14 +128,14 @@ def test_an_unknown_stage_name_is_rejected(
         tone_detecting(settings)
 
 
-def test_every_spectrum_yields_one_sample_stamped_with_its_own_time() -> None:
-    samples = detect(_STREAM)
+async def test_every_spectrum_yields_one_sample_stamped_with_its_own_time() -> None:
+    samples = await detect(_STREAM)
 
     assert tuple(sample.ts for sample in samples) == tuple(one.ts for one in _STREAM)
 
 
-def test_a_reading_without_spectrums_reports_nothing() -> None:
-    assert detect(()) == ()
+async def test_a_reading_without_spectrums_reports_nothing() -> None:
+    assert await detect(()) == ()
 
 
 @pytest.mark.parametrize(
@@ -146,34 +146,38 @@ def test_a_reading_without_spectrums_reports_nothing() -> None:
         pytest.param({}, id="no-bins-at-all"),
     ],
 )
-def test_a_spectrum_missing_the_band_is_rejected(bins: dict[float, float]) -> None:
+async def test_a_spectrum_missing_the_band_is_rejected(
+    bins: dict[float, float],
+) -> None:
     with pytest.raises(ValueError, match="no spectrum bin"):
-        detect((spectrum(bins),))
+        await detect((spectrum(bins),))
 
 
-def test_both_reading_stages_see_every_spectrum(recording: ToneDetecting) -> None:
+async def test_both_reading_stages_see_every_spectrum(recording: ToneDetecting) -> None:
     spectrums = SpectrumTimeline().add(_OUT_OF_BAND | KEYED, count=3).build()
 
-    recording.read(spectrums)
+    await recording.read(spectrums)
 
     for seen in _seen_by_reading_stages(recording):
         assert [one.ts for one in seen] == [one.ts for one in spectrums]
 
 
-def test_both_reading_stages_only_see_the_bins_the_limiter_kept(
+async def test_both_reading_stages_only_see_the_bins_the_limiter_kept(
     recording: ToneDetecting,
 ) -> None:
     spectrums = SpectrumTimeline().add(_OUT_OF_BAND | KEYED, count=3).build()
 
-    recording.read(spectrums)
+    await recording.read(spectrums)
 
     for seen in _seen_by_reading_stages(recording):
         assert {tone.frequency for one in seen for tone in one.magnitudes} == set(KEYED)
 
 
-def test_the_stages_keep_their_state_across_readings(recording: ToneDetecting) -> None:
-    recording.read(_STREAM[:3])
-    recording.read(_STREAM[3:])
+async def test_the_stages_keep_their_state_across_readings(
+    recording: ToneDetecting,
+) -> None:
+    await recording.read(_STREAM[:3])
+    await recording.read(_STREAM[3:])
 
     for seen in _seen_by_reading_stages(recording):
         assert len(seen) == len(_STREAM)
@@ -182,10 +186,10 @@ def test_the_stages_keep_their_state_across_readings(recording: ToneDetecting) -
     assert len(_debouncing_stage(recording).seen) == len(_STREAM)
 
 
-def test_the_keying_stage_reads_what_the_other_two_reported(
+async def test_the_keying_stage_reads_what_the_other_two_reported(
     recording: ToneDetecting,
 ) -> None:
-    recording.read(_STREAM)
+    await recording.read(_STREAM)
 
     carrier_source, noise_estimator = _reading_stages(recording)
     assert _keying_stage(recording).seen == list(
@@ -193,10 +197,10 @@ def test_the_keying_stage_reads_what_the_other_two_reported(
     )
 
 
-def test_the_debouncing_stage_reads_the_key_stamped_with_its_spectrums_time(
+async def test_the_debouncing_stage_reads_the_key_stamped_with_its_spectrums_time(
     recording: ToneDetecting,
 ) -> None:
-    recording.read(_STREAM)
+    await recording.read(_STREAM)
 
     keying_detector = _keying_stage(recording)
     assert _debouncing_stage(recording).seen == list(
@@ -204,10 +208,10 @@ def test_the_debouncing_stage_reads_the_key_stamped_with_its_spectrums_time(
     )
 
 
-def test_the_line_reports_the_key_the_debouncing_stage_settled_on(
+async def test_the_line_reports_the_key_the_debouncing_stage_settled_on(
     recording: ToneDetecting,
 ) -> None:
-    read = flags(recording.read(_STREAM))
+    read = flags(await recording.read(_STREAM))
 
     assert read == _reported_keys(_debouncing_stage(recording).reported)
     assert read != _reported_keys(_keying_stage(recording).reported)

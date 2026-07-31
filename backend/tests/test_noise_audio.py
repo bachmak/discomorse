@@ -32,7 +32,7 @@ async def _floors(
     samples: npt.NDArray[PCM16.IntType], percentile: float = 50.0
 ) -> tuple[float, ...]:
     """The floor read off real spectrums, cut the way the pipeline cuts them."""
-    spectrums = limit(await analyze(samples))
+    spectrums = await limit(await analyze(samples))
     floors = noises(estimate(spectrums, noise_estimator=estimator(percentile)))
     assert floors
     return floors

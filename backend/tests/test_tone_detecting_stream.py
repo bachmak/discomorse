@@ -27,7 +27,7 @@ async def test_the_line_reads_back_the_same_however_the_audio_is_chunked(
 async def test_every_spectrum_yields_one_sample_stamped_with_its_own_time() -> None:
     spectrums = await analyze(_PCM)
 
-    samples = detect(spectrums)
+    samples = await detect(spectrums)
 
     assert tuple(sample.ts for sample in samples) == tuple(
         spectrum.ts for spectrum in spectrums
