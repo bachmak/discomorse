@@ -14,6 +14,10 @@ from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
 )
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import FrequencyWindow
 from morse_decoder.pipeline.stages.tone_detector.impl.helpers import limit_to_window
+from morse_decoder.pipeline.stages.tone_detector.impl.keying_debouncer import (
+    KeyingDebouncer,
+    TimedKeyingDebouncer,
+)
 from morse_decoder.pipeline.stages.tone_detector.impl.keying_detector import (
     AdaptiveKeyingDetector,
     KeyingDetector,
@@ -38,6 +42,9 @@ _NOISE_ESTIMATORS: dict[str, _SubstageConstructor[NoiseEstimator]] = {
 _KEYING_DETECTORS: dict[str, _SubstageConstructor[KeyingDetector]] = {
     "AdaptiveKeyingDetector": AdaptiveKeyingDetector,
 }
+_KEYING_DEBOUNCERS: dict[str, _SubstageConstructor[KeyingDebouncer]] = {
+    "TimedKeyingDebouncer": TimedKeyingDebouncer,
+}
 
 
 class SpectralToneDetector(ToneDetector):
@@ -52,6 +59,9 @@ class SpectralToneDetector(ToneDetector):
         self._keying_detector = _build(
             _KEYING_DETECTORS, settings.keying_detector, "keying detector", settings
         )
+        self._keying_debouncer = _build(
+            _KEYING_DEBOUNCERS, settings.keying_debouncer, "keying debouncer", settings
+        )
 
     async def process(self, reading: SpectrumReading) -> ToneReading:
         return ToneReading(
@@ -62,7 +72,8 @@ class SpectralToneDetector(ToneDetector):
         windowed = limit_to_window(spectrum, self._window)
         carrier = self._carrier_source.track(windowed)
         noise = self._noise_estimator.estimate(windowed)
-        _ = self._keying_detector.detect(carrier, noise)
+        keying = self._keying_detector.detect(carrier, noise)
+        _ = self._keying_debouncer.debounce(keying, spectrum.ts)
         return ToneSample(ts=spectrum.ts, on=False)
 
 
