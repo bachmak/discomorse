@@ -37,6 +37,16 @@ class CarrierReading:
 
 
 @dataclass(frozen=True)
+class NoiseSample:
+    noise: float
+
+
+@dataclass(frozen=True)
+class NoiseReading:
+    samples: tuple[NoiseSample, ...]
+
+
+@dataclass(frozen=True)
 class FrequencyWindow:
     min_hz: float
     max_hz: float
