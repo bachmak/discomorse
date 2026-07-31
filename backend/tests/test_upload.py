@@ -3,10 +3,10 @@ from collections.abc import AsyncIterator
 
 from morse_decoder.api.file_session import FileSession
 from morse_decoder.pipeline.events import DecodedText, OutboundEvent
-from morse_decoder.pipeline.runner import PipelineRunner
+from morse_decoder.pipeline.pipeline import Pipeline
 
 
-class _StubRunner(PipelineRunner):
+class _StubPipeline(Pipeline):
     def __init__(self, events: list[OutboundEvent]) -> None:
         self._events = events
 
@@ -16,7 +16,7 @@ class _StubRunner(PipelineRunner):
 
 
 async def _lines(events: list[OutboundEvent]) -> list[str]:
-    session = FileSession(_StubRunner(events))
+    session = FileSession(_StubPipeline(events))
     return [line async for line in session.run()]
 
 

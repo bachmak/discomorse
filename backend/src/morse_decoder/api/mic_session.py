@@ -10,8 +10,8 @@ from morse_decoder.audio.impl.resampler import Resampler
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.mic_source import EndOfStream, MicSource
 from morse_decoder.config import Settings, global_settings
-from morse_decoder.pipeline.factory import create_pipeline_runner
-from morse_decoder.pipeline.runner import PipelineRunner
+from morse_decoder.pipeline.factory import create_pipeline
+from morse_decoder.pipeline.pipeline import Pipeline
 
 
 async def handle_mic_stream(ws: WebSocket) -> None:
@@ -49,7 +49,7 @@ class MicSession:
         )
         self._pumps: tuple[Pump, Pump] = (
             AudioInboundPump(ws, source),
-            EventOutboundPump(ws, create_pipeline_runner(source, settings.pipeline)),
+            EventOutboundPump(ws, create_pipeline(source, settings.pipeline)),
         )
 
     async def run(self) -> None:
@@ -77,10 +77,10 @@ class AudioInboundPump(Pump):
 class EventOutboundPump(Pump):
     """Streams decoded pipeline events out to the socket as JSON text."""
 
-    def __init__(self, ws: WebSocket, runner: PipelineRunner) -> None:
+    def __init__(self, ws: WebSocket, pipeline: Pipeline) -> None:
         self._ws = ws
-        self._runner = runner
+        self._pipeline = pipeline
 
     async def run(self) -> None:
-        async for event in self._runner.run():
+        async for event in self._pipeline.run():
             await self._ws.send_text(event.to_message().model_dump_json())

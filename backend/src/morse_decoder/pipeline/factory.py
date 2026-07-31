@@ -8,8 +8,8 @@ from morse_decoder.config import (
     TimingDecoderSettings,
     ToneDetectorSettings,
 )
+from morse_decoder.pipeline.pipeline import Pipeline
 from morse_decoder.pipeline.resolve_type import resolve
-from morse_decoder.pipeline.runner import PipelineRunner
 from morse_decoder.pipeline.stages.interpreter.dummy_interpreter import DummyInterpreter
 from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
@@ -81,10 +81,10 @@ def _build_interpreter(settings: PipelineSettings) -> Interpreter:
     return interpreter(settings.interpreter_settings)
 
 
-def create_pipeline_runner(
+def create_pipeline(
     source: AudioSource, pipeline_settings: PipelineSettings
-) -> PipelineRunner:
-    return PipelineRunner(
+) -> Pipeline:
+    return Pipeline(
         source=source,
         spectrum_analyzer=_build_spectrum_analyzer(pipeline_settings),
         tone_detector=_build_tone_detector(pipeline_settings),

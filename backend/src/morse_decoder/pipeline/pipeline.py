@@ -14,7 +14,7 @@ from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
 from morse_decoder.pipeline.stages.tone_detector.interface import ToneDetector
 
 
-class PipelineRunner:
+class Pipeline:
     """Streams audio through analyzer → detector → decoder → interpreter."""
 
     def __init__(
