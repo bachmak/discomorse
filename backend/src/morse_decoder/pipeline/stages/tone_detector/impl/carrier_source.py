@@ -1,12 +1,13 @@
+import datetime
 from abc import ABC, abstractmethod
 
 from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import SpectrumReading, ToneMagnitude, ToneSpectrum
+from morse_decoder.pipeline.dto import SpectrumReading, ToneSpectrum
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
     CarrierReading,
     CarrierSample,
     FrequencyWindow,
-    SpectrumPeak,
+    Tone,
 )
 from morse_decoder.pipeline.stages.tone_detector.impl.fsm.search_state import (
     SearchState,
@@ -29,17 +30,19 @@ class CarrierSource(ABC):
 class PeakCarrierSource(CarrierSource):
     """Reads the carrier off the loudest bin of the configured window, then holds it.
 
-    Drives the tracking machine: each spectrum moves it into its next state,
-    and that state reads the carrier out. The machine lives on between calls,
-    so a pause in the keying — and the reading boundary that a chunk of audio
-    ends at — leaves the carrier where it was instead of letting the loudest
-    bin of the noise stand in for it.
+    Drives the tracking machine: each spectrum moves it into its next state.
     """
 
     def __init__(self, settings: ToneDetectorSettings) -> None:
         self._window = FrequencyWindow(settings.carrier_min_hz, settings.carrier_max_hz)
-        self._state: CarrierTrackingState = SearchState.create(
-            CarrierLockPolicy.from_settings(settings)
+        self._state: CarrierTrackingState = SearchState(
+            policy=CarrierLockPolicy(
+                min_magnitude=settings.carrier_lock_magnitude,
+                tolerance_hz=settings.carrier_lock_tolerance_hz,
+                lock_time=datetime.timedelta(seconds=settings.carrier_lock_seconds),
+                hold_time=datetime.timedelta(seconds=settings.carrier_hold_seconds),
+            ),
+            candidate=Tone.empty(),
         )
 
     def track(self, reading: SpectrumReading) -> CarrierReading:
@@ -48,17 +51,12 @@ class PeakCarrierSource(CarrierSource):
         )
 
     def _update(self, spectrum: ToneSpectrum) -> CarrierSample:
-        peak = SpectrumPeak(
-            spectrum=spectrum,
-            tone=_loudest_tone_in_spectrum(spectrum, self._window),
-        )
-        self._state = self._state.update(peak)
-        return self._state.read(peak)
+        peak = _loudest_tone_in_spectrum(spectrum, self._window)
+        self._state = self._state.update(peak, spectrum)
+        return self._state.get_carrier(peak)
 
 
-def _loudest_tone_in_spectrum(
-    spectrum: ToneSpectrum, window: FrequencyWindow
-) -> ToneMagnitude:
+def _loudest_tone_in_spectrum(spectrum: ToneSpectrum, window: FrequencyWindow) -> Tone:
     tones_inside_window = tuple(
         tone
         for tone in spectrum.magnitudes
@@ -68,4 +66,9 @@ def _loudest_tone_in_spectrum(
     if not tones_inside_window:
         raise ValueError(f"no spectrum bin in {window.min_hz}..{window.max_hz} Hz")
 
-    return max(tones_inside_window, key=lambda tone: tone.magnitude)
+    magnitude = max(tones_inside_window, key=lambda tone: tone.magnitude)
+    return Tone(
+        frequency=magnitude.frequency,
+        magnitude=magnitude.magnitude,
+        ts=spectrum.ts,
+    )

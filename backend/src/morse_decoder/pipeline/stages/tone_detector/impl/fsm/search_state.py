@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from morse_decoder.pipeline.dto import ToneSpectrum
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    CarrierCandidate,
     CarrierSample,
-    SpectrumPeak,
+    Tone,
 )
 from morse_decoder.pipeline.stages.tone_detector.impl.fsm.hold_state import HoldState
 from morse_decoder.pipeline.stages.tone_detector.impl.fsm.state import (
@@ -17,24 +17,25 @@ from morse_decoder.pipeline.stages.tone_detector.impl.lock_policy import (
 class SearchState(CarrierTrackingState):
     """Passes the loudest bin on unchanged until one frequency repeats enough."""
 
-    def __init__(self, policy: CarrierLockPolicy, candidate: CarrierCandidate) -> None:
+    def __init__(self, policy: CarrierLockPolicy, candidate: Tone) -> None:
         self._policy = policy
         self._candidate = candidate
 
-    @classmethod
-    def create(cls, policy: CarrierLockPolicy) -> SearchState:
-        return cls(policy, CarrierCandidate.empty())
-
-    def update(self, peak: SpectrumPeak) -> CarrierTrackingState:
-        candidate = self._policy.sighted(self._candidate, peak.tone)
-        if self._policy.confirms(candidate):
-            return HoldState.create(self._policy, candidate.frequency)
+    def update(self, peak: Tone, _: ToneSpectrum) -> CarrierTrackingState:
+        candidate = self._updated_candidate(peak)
+        if self._policy.is_persistent(candidate, peak.ts):
+            return HoldState(self._policy, carrier=peak, rival=Tone.empty())
         return SearchState(self._policy, candidate)
 
-    def read(self, peak: SpectrumPeak) -> CarrierSample:
+    def _updated_candidate(self, peak: Tone) -> Tone:
+        if not self._policy.is_credible(peak.magnitude):
+            return Tone.empty()
+        if self._policy.continues(self._candidate, peak):
+            return self._candidate
+        return peak
+
+    def get_carrier(self, peak: Tone) -> CarrierSample:
         return CarrierSample(
-            ts=peak.spectrum.ts,
-            frequency=peak.tone.frequency,
-            magnitude=peak.tone.magnitude,
+            tone=peak,
             is_locked=False,
         )

@@ -1,7 +1,16 @@
 import datetime
 from dataclasses import dataclass
 
-from morse_decoder.pipeline.dto import ToneMagnitude, ToneSpectrum
+
+@dataclass(frozen=True)
+class Tone:
+    frequency: float
+    magnitude: float
+    ts: datetime.datetime
+
+    @classmethod
+    def empty(cls) -> "Tone":
+        return cls(frequency=0.0, magnitude=0.0, ts=datetime.datetime.min)
 
 
 @dataclass(frozen=True)
@@ -12,9 +21,7 @@ class CarrierSample:
     read off the loudest bin while still searching for a carrier.
     """
 
-    ts: datetime.datetime
-    frequency: float
-    magnitude: float
+    tone: Tone
     is_locked: bool
 
 
@@ -27,21 +34,3 @@ class CarrierReading:
 class FrequencyWindow:
     min_hz: float
     max_hz: float
-
-
-@dataclass(frozen=True)
-class SpectrumPeak:
-    spectrum: ToneSpectrum
-    tone: ToneMagnitude
-
-
-@dataclass(frozen=True)
-class CarrierCandidate:
-    """A frequency the peak indicates, and how many spectrums in a row it did."""
-
-    frequency: float
-    sightings: int
-
-    @classmethod
-    def empty(cls) -> "CarrierCandidate":
-        return cls(frequency=0.0, sightings=0)

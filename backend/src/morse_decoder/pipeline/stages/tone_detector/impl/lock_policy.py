@@ -1,55 +1,49 @@
-from typing import Self
+import datetime
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import ToneMagnitude
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierCandidate
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
+    Tone,
+)
+
+
+def _is_valid(tone: Tone) -> bool:
+    return (
+        tone.ts != datetime.datetime.min
+        and tone.frequency != 0.0
+        and tone.magnitude != 0.0
+    )
 
 
 class CarrierLockPolicy:
-    """How loud a peak must be, how far it may move, and how often it must repeat.
-
-    The tracking states ask the policy what a peak is worth; they never weigh
-    magnitudes or frequency distances themselves.
-    """
+    """How loud a peak must be, how far it may move, and how often it must repeat."""
 
     def __init__(
-        self, min_magnitude: float, tolerance_hz: float, min_confirmations: int
+        self,
+        min_magnitude: float,
+        tolerance_hz: float,
+        lock_time: datetime.timedelta,
+        hold_time: datetime.timedelta,
     ) -> None:
         self._min_magnitude = min_magnitude
         self._tolerance_hz = tolerance_hz
-        self._min_confirmations = min_confirmations
+        self._lock_time = lock_time
+        self._hold_time = hold_time
 
-    @classmethod
-    def from_settings(cls, settings: ToneDetectorSettings) -> Self:
-        return cls(
-            min_magnitude=settings.carrier_lock_magnitude,
-            tolerance_hz=settings.carrier_lock_tolerance_hz,
-            min_confirmations=settings.carrier_lock_confirmations,
-        )
+    def is_credible(self, magnitude: float) -> bool:
+        """Whether a level stands out enough to be a carrier rather than noise."""
+        return magnitude >= self._min_magnitude
 
-    def sighted(
-        self, candidate: CarrierCandidate, peak: ToneMagnitude
-    ) -> CarrierCandidate:
-        """The candidate this peak leaves behind: a run continued, restarted or lost."""
-        if not self._is_credible(peak):
-            return CarrierCandidate.empty()
-        if self._continues(candidate, peak):
-            return CarrierCandidate(peak.frequency, candidate.sightings + 1)
-        return CarrierCandidate(peak.frequency, sightings=1)
+    def continues(self, prev_tone: Tone, new_tone: Tone) -> bool:
+        if not _is_valid(new_tone):
+            return False
 
-    def confirms(self, candidate: CarrierCandidate) -> bool:
-        """Whether the candidate has repeated often enough to be locked onto."""
-        return candidate.sightings >= self._min_confirmations
+        return abs(prev_tone.frequency - new_tone.frequency) <= self._tolerance_hz
 
-    def follows(self, frequency: float, peak: ToneMagnitude) -> bool:
-        """Whether a carrier held at ``frequency`` may drift onto this peak."""
-        return self._is_credible(peak) and self._agrees(frequency, peak)
+    def is_persistent(self, tone: Tone, ts: datetime.datetime) -> bool:
+        return _is_valid(tone) and (ts >= tone.ts + self._lock_time)
 
-    def _continues(self, candidate: CarrierCandidate, peak: ToneMagnitude) -> bool:
-        return (candidate.sightings > 0) and self._agrees(candidate.frequency, peak)
-
-    def _is_credible(self, peak: ToneMagnitude) -> bool:
-        return peak.magnitude >= self._min_magnitude
-
-    def _agrees(self, frequency: float, peak: ToneMagnitude) -> bool:
-        return abs(peak.frequency - frequency) <= self._tolerance_hz
+    def beats(self, prev_tone: Tone, new_tone: Tone) -> bool:
+        if not self.is_credible(new_tone.magnitude):
+            return False
+        if new_tone.ts > prev_tone.ts + self._hold_time:
+            return True
+        return new_tone.magnitude >= prev_tone.magnitude
