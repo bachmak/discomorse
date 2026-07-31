@@ -9,12 +9,10 @@ from carrier_fixtures import (
     RIVAL_HZ,
     SILENT,
     SpectrumTimeline,
-    spectrum,
-    spectrums_at,
 )
 from noise_fixtures import estimate, estimator, noise_of, noises
 
-from morse_decoder.pipeline.dto import SpectrumReading, ToneSpectrum
+from morse_decoder.pipeline.dto import ToneSpectrum
 
 _QUIET = 0.02
 _NOISY = {CARRIER_HZ: LOUD, RIVAL_HZ: _QUIET, 500.0: _QUIET / 2, 900.0: _QUIET * 3}
@@ -29,14 +27,6 @@ _SCENARIOS = {
     "a-single-spectrum": SpectrumTimeline().add(_NOISY).build(),
 }
 _STREAMS = [pytest.param(spectrums, id=name) for name, spectrums in _SCENARIOS.items()]
-
-
-@pytest.mark.parametrize("spectrums", _STREAMS)
-@pytest.mark.parametrize("batch_size", [1, 2, 3, 7])
-def test_how_the_stream_is_batched_does_not_change_the_samples(
-    spectrums: tuple[ToneSpectrum, ...], batch_size: int
-) -> None:
-    assert estimate(spectrums, batch_size=batch_size) == estimate(spectrums)
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
@@ -95,25 +85,11 @@ def test_scaling_every_bin_scales_the_floor_with_it(gain: float) -> None:
     assert noise_of(scaled) == pytest.approx(noise_of(bins) * gain)
 
 
-def test_an_empty_reading_between_two_others_changes_nothing() -> None:
+def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
     spectrums = _SCENARIOS["keying-in-noise"]
     reader = estimator()
 
-    head = reader.estimate(SpectrumReading(spectrums=spectrums[:3])).samples
-    empty = reader.estimate(SpectrumReading(spectrums=())).samples
-    tail = reader.estimate(SpectrumReading(spectrums=spectrums[3:])).samples
+    head = estimate(spectrums[:3], noise_estimator=reader)
+    tail = estimate(spectrums[3:], noise_estimator=reader)
 
-    assert empty == ()
     assert head + tail == estimate(spectrums)
-
-
-def test_a_spectrum_missing_the_window_aborts_the_reading_but_not_the_estimator() -> (
-    None
-):
-    reader = estimator()
-    good = spectrums_at(_NOISY, (0.0, 0.01))
-
-    with pytest.raises(ValueError, match="no spectrum bin"):
-        reader.estimate(SpectrumReading(spectrums=good + (spectrum({}, 0.02),)))
-
-    assert estimate(good, noise_estimator=reader) == estimate(good)

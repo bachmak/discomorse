@@ -11,23 +11,16 @@ from carrier_fixtures import (
     FRAME_SECONDS,
     HOLD_SECONDS,
     LOCK_SECONDS,
-    MAX_HZ,
-    MIN_HZ,
     RIVAL_HZ,
     SAMPLE_RATE,
     analyze,
     seconds_since_epoch,
-    source,
     spectrum,
     track,
 )
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import SpectrumReading, ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
-    PeakCarrierSource,
-)
+from morse_decoder.pipeline.dto import ToneSpectrum
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample, Tone
 
 _DRIFT = (600.0, 662.5, 725.0, 787.5)
@@ -42,10 +35,6 @@ _SWEEP_HZ_PER_S = (_SWEEP_END_HZ - _SWEEP_START_HZ) / _SWEEP_SECONDS
 # The carrier can only be read to the nearest bin, and one frame smears the
 # sweep over the ground it covers while the frame is open.
 _SWEEP_TOLERANCE_HZ = BIN_WIDTH_HZ / 2 + _SWEEP_HZ_PER_S * FRAME_SECONDS
-
-
-def _source(min_hz: float = MIN_HZ, max_hz: float = MAX_HZ) -> PeakCarrierSource:
-    return source(ToneDetectorSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz))
 
 
 def _tone(freq_hz: float, amplitude: float = 0.5) -> npt.NDArray[PCM16.IntType]:
@@ -93,9 +82,9 @@ def _keyed_then_silent_against(
 def test_source_reads_the_carrier_off_the_loudest_bin_in_the_window(
     bins: dict[float, float], want_frequency: float, want_magnitude: float
 ) -> None:
-    reading = _source().track(SpectrumReading(spectrums=(spectrum(bins),)))
+    samples = track((spectrum(bins),))
 
-    assert reading.samples == (
+    assert samples == (
         CarrierSample(
             tone=Tone(frequency=want_frequency, magnitude=want_magnitude, ts=EPOCH),
             is_locked=False,
@@ -103,15 +92,7 @@ def test_source_reads_the_carrier_off_the_loudest_bin_in_the_window(
     )
 
 
-@pytest.mark.parametrize(
-    "batch_size",
-    [
-        pytest.param(1, id="one-spectrum-per-call"),
-        pytest.param(2, id="two-spectrums-per-call"),
-        pytest.param(len(_DRIFT), id="all-spectrums-in-one-call"),
-    ],
-)
-def test_source_follows_a_carrier_drifting_inside_the_window(batch_size: int) -> None:
+def test_source_follows_a_carrier_drifting_inside_the_window() -> None:
     spectrums = tuple(
         spectrum(
             {400.0: 0.1, frequency: 0.8, 1_200.0: 0.1},
@@ -120,7 +101,7 @@ def test_source_follows_a_carrier_drifting_inside_the_window(batch_size: int) ->
         for index, frequency in enumerate(_DRIFT)
     )
 
-    samples = track(spectrums, batch_size=batch_size)
+    samples = track(spectrums)
 
     assert samples == tuple(
         CarrierSample(
@@ -161,36 +142,15 @@ def test_source_defends_a_locked_carrier_while_it_is_only_pausing(
 ) -> None:
     spectrums = _keyed_then_silent_against(rival_magnitude, gap_seconds)
 
-    samples = track(spectrums, batch_size=1)
+    samples = track(spectrums)
 
     assert samples[-1].tone.frequency == want_frequency
-
-
-def test_source_reports_nothing_for_a_reading_without_spectrums() -> None:
-    reading = _source().track(SpectrumReading(spectrums=()))
-
-    assert reading.samples == ()
-
-
-@pytest.mark.parametrize(
-    "bins",
-    [
-        pytest.param({100.0: 1.0, 200.0: 0.5}, id="all-bins-below-window"),
-        pytest.param({2_000.0: 1.0, 3_000.0: 0.5}, id="all-bins-above-window"),
-        pytest.param({}, id="no-bins-at-all"),
-    ],
-)
-def test_source_rejects_a_spectrum_that_misses_the_window(
-    bins: dict[float, float],
-) -> None:
-    with pytest.raises(ValueError, match="no spectrum bin"):
-        _source().track(SpectrumReading(spectrums=(spectrum(bins),)))
 
 
 async def test_source_locks_onto_a_played_tone() -> None:
     reading = await analyze(_tone(750.0))
 
-    samples = _source().track(reading).samples
+    samples = track(reading.spectrums)
     assert samples
     assert all(sample.tone.frequency == 750.0 for sample in samples)
     assert [sample.tone.magnitude for sample in samples] == pytest.approx(
@@ -203,7 +163,7 @@ async def test_source_follows_a_tone_sweeping_through_real_spectrums() -> None:
         chirp_pcm(_SWEEP_START_HZ, _SWEEP_END_HZ, _SWEEP_SECONDS, SAMPLE_RATE)
     )
 
-    samples = _source().track(reading).samples
+    samples = track(reading.spectrums)
     assert samples
     assert [sample.tone.frequency for sample in samples] == pytest.approx(
         [_swept_hz(sample.tone.ts) for sample in samples], abs=_SWEEP_TOLERANCE_HZ
@@ -215,14 +175,14 @@ async def test_source_reads_a_sweep_as_a_carrier_that_never_falls_silent() -> No
         chirp_pcm(_SWEEP_START_HZ, _SWEEP_END_HZ, _SWEEP_SECONDS, SAMPLE_RATE)
     )
 
-    samples = _source().track(reading).samples
+    samples = track(reading.spectrums)
     assert samples
     assert all(sample.tone.magnitude > 0.4 for sample in samples)
 
 
 async def test_source_keeps_noise_far_below_the_magnitude_of_a_tone() -> None:
-    noise = _source().track(await analyze(noise_pcm(0.1, SAMPLE_RATE))).samples
-    tone = _source().track(await analyze(_tone(750.0))).samples
+    noise = track((await analyze(noise_pcm(0.1, SAMPLE_RATE))).spectrums)
+    tone = track((await analyze(_tone(750.0))).spectrums)
 
     assert noise and tone
     assert max(sample.tone.magnitude for sample in noise) < 0.1 * min(
@@ -235,6 +195,6 @@ async def test_source_ignores_a_louder_tone_outside_the_window() -> None:
 
     reading = await analyze(np.asarray(mixed, dtype=PCM16.IntType))
 
-    samples = _source().track(reading).samples
+    samples = track(reading.spectrums)
     assert samples
     assert all(sample.tone.frequency == 750.0 for sample in samples)

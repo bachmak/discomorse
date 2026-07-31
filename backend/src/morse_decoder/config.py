@@ -21,6 +21,8 @@ class SpectrumAnalyzerSettings(BaseSettings):
 
 
 class ToneDetectorSettings(BaseSettings):
+    carrier_source: str = "PeakCarrierSource"
+    noise_estimator: str = "PercentileNoiseEstimator"
     carrier_min_hz: float = Field(default=400.0, gt=0)
     carrier_max_hz: float = Field(default=1_200.0, gt=0)
     carrier_lock_magnitude: float = Field(default=0.05, gt=0)
@@ -53,7 +55,7 @@ class InterpreterSettings(BaseSettings):
 
 class PipelineSettings(BaseSettings):
     spectrum_analyzer: str = "STFTSpectrumAnalyzer"
-    tone_detector: str = "DummyToneDetector"
+    tone_detector: str = "SpectralToneDetector"
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "DummyInterpreter"
     language: str = "en"

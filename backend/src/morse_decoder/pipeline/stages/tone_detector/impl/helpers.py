@@ -1,10 +1,8 @@
-from morse_decoder.pipeline.dto import ToneMagnitude, ToneSpectrum
+from morse_decoder.pipeline.dto import ToneSpectrum
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import FrequencyWindow
 
 
-def tones_in_window(
-    spectrum: ToneSpectrum, window: FrequencyWindow
-) -> tuple[ToneMagnitude, ...]:
+def limit_to_window(spectrum: ToneSpectrum, window: FrequencyWindow) -> ToneSpectrum:
     tones = tuple(
         tone
         for tone in spectrum.magnitudes
@@ -14,4 +12,4 @@ def tones_in_window(
     if not tones:
         raise ValueError(f"no spectrum bin in {window.min_hz}..{window.max_hz} Hz")
 
-    return tones
+    return ToneSpectrum(ts=spectrum.ts, magnitudes=tones)

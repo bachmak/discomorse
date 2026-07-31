@@ -4,12 +4,9 @@ import datetime
 
 import pytest
 from audio_fixtures import EPOCH
+from carrier_fixtures import track
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import SpectrumReading, ToneMagnitude, ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
-    PeakCarrierSource,
-)
+from morse_decoder.pipeline.dto import ToneMagnitude, ToneSpectrum
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample
 
 _CARRIER_HZ = 700.0
@@ -38,8 +35,7 @@ def _keyed(levels: tuple[float, ...]) -> tuple[ToneSpectrum, ...]:
 
 
 def _track(spectrums: tuple[ToneSpectrum, ...]) -> tuple[CarrierSample, ...]:
-    source = PeakCarrierSource(ToneDetectorSettings())
-    return source.track(SpectrumReading(spectrums=spectrums)).samples
+    return track(spectrums)
 
 
 @pytest.mark.parametrize(

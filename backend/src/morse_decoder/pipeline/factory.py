@@ -8,6 +8,7 @@ from morse_decoder.config import (
     TimingDecoderSettings,
     ToneDetectorSettings,
 )
+from morse_decoder.pipeline.resolve_type import resolve
 from morse_decoder.pipeline.runner import PipelineRunner
 from morse_decoder.pipeline.stages.interpreter.dummy_interpreter import DummyInterpreter
 from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
@@ -19,10 +20,10 @@ from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder imp
     AdaptiveThresholdDecoder,
 )
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
-from morse_decoder.pipeline.stages.tone_detector.dummy_tone_detector import (
-    DummyToneDetector,
-)
 from morse_decoder.pipeline.stages.tone_detector.interface import ToneDetector
+from morse_decoder.pipeline.stages.tone_detector.tone_detector import (
+    SpectralToneDetector,
+)
 
 
 class _SpectrumAnalyzerConstructor(Protocol):
@@ -48,7 +49,7 @@ _SPECTRUM_ANALYZERS: dict[str, _SpectrumAnalyzerConstructor] = {
     "STFTSpectrumAnalyzer": STFTSpectrumAnalyzer,
 }
 _TONE_DETECTORS: dict[str, _ToneDetectorConstructor] = {
-    "DummyToneDetector": DummyToneDetector,
+    "SpectralToneDetector": SpectralToneDetector,
 }
 _TIMING_DECODERS: dict[str, _TimingDecoderConstructor] = {
     "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
@@ -58,33 +59,25 @@ _INTERPRETERS: dict[str, _InterpreterConstructor] = {
 }
 
 
-def _resolve[T](catalog: dict[str, T], name: str, kind: str) -> T:
-    try:
-        return catalog[name]
-    except KeyError as exc:
-        known = ", ".join(sorted(catalog)) or "none"
-        raise KeyError(f"Unknown {kind}: {name!r} (known: {known})") from exc
-
-
 def _build_spectrum_analyzer(settings: PipelineSettings) -> SpectrumAnalyzer:
-    analyzer = _resolve(
+    analyzer = resolve(
         _SPECTRUM_ANALYZERS, settings.spectrum_analyzer, "spectrum analyzer"
     )
     return analyzer(settings.spectrum_analyzer_settings)
 
 
 def _build_tone_detector(settings: PipelineSettings) -> ToneDetector:
-    detector = _resolve(_TONE_DETECTORS, settings.tone_detector, "tone detector")
+    detector = resolve(_TONE_DETECTORS, settings.tone_detector, "tone detector")
     return detector(settings.tone_detector_settings)
 
 
 def _build_timing_decoder(settings: PipelineSettings) -> TimingDecoder:
-    decoder = _resolve(_TIMING_DECODERS, settings.timing_decoder, "timing decoder")
+    decoder = resolve(_TIMING_DECODERS, settings.timing_decoder, "timing decoder")
     return decoder(settings.timing_decoder_settings)
 
 
 def _build_interpreter(settings: PipelineSettings) -> Interpreter:
-    interpreter = _resolve(_INTERPRETERS, settings.interpreter, "interpreter")
+    interpreter = resolve(_INTERPRETERS, settings.interpreter, "interpreter")
     return interpreter(settings.interpreter_settings)
 
 
