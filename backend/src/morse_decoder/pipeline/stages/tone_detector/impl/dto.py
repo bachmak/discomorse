@@ -12,9 +12,6 @@ class Tone:
     def empty(cls) -> "Tone":
         return cls(frequency=0.0, magnitude=0.0, ts=datetime.datetime.min)
 
-    def with_frequency(self, frequency: float) -> "Tone":
-        return Tone(frequency=frequency, magnitude=self.magnitude, ts=self.ts)
-
     def with_magnitude(self, magnitude: float) -> "Tone":
         return Tone(frequency=self.frequency, magnitude=magnitude, ts=self.ts)
 

@@ -33,9 +33,8 @@ class HoldState(CarrierTrackingState):
         return HoldState(policy, carrier, carrier.magnitude, Tone.empty())
 
     def update(self, peak: Tone, spectrum: ToneSpectrum) -> CarrierTrackingState:
-        carrier = self._updated_carrier(spectrum)
         if not self._policy.is_credible(peak.magnitude):
-            return self._clone(carrier, Tone.empty())
+            return self._clone(self._updated_carrier(spectrum), Tone.empty())
 
         if self._policy.continues(self._carrier, peak):
             return self._clone(peak, Tone.empty())
@@ -44,11 +43,11 @@ class HoldState(CarrierTrackingState):
             prev_tone=self._carrier.with_magnitude(self._max_carrier_magnitude),
             new_tone=peak,
         ):
-            return self._clone(carrier, Tone.empty())
+            return self._clone(self._updated_carrier(spectrum), Tone.empty())
 
         rival = self._updated_rival(peak)
         if not self._policy.is_persistent(rival, peak.ts):
-            return self._clone(carrier, rival)
+            return self._clone(self._updated_carrier(spectrum), rival)
 
         return HoldState(self._policy, peak, peak.magnitude, Tone.empty())
 
