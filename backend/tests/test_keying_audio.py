@@ -14,6 +14,7 @@ from carrier_fixtures import (
     track,
 )
 from keying_fixtures import key_off, keys
+from limiter_fixtures import limit
 
 from morse_decoder.audio.pcm16 import PCM16
 
@@ -80,7 +81,7 @@ async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
     spectrums = (await analyze(_keyed_pcm())).spectrums
 
     flags = keys(key_off(spectrums))
-    carriers = track(spectrums)
+    carriers = track(limit(spectrums))
 
     assert not any(
         flag

@@ -16,7 +16,6 @@ from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import CarrierSourceSettings, SpectrumAnalyzerSettings
 from morse_decoder.pipeline.dto import (
     CarrierSample,
-    FrequencyWindow,
     PcmChunk,
     SpectrumReading,
     ToneMagnitude,
@@ -30,9 +29,6 @@ from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer impo
 )
 
 SETTINGS = CarrierSourceSettings()
-MIN_HZ = SETTINGS.carrier_min_hz
-MAX_HZ = SETTINGS.carrier_max_hz
-WINDOW = FrequencyWindow(MIN_HZ, MAX_HZ)
 MIN_MAGNITUDE = SETTINGS.carrier_lock_magnitude
 TOLERANCE_HZ = SETTINGS.carrier_lock_tolerance_hz
 LOCK_SECONDS = SETTINGS.carrier_lock_seconds
@@ -58,11 +54,6 @@ HOP_SECONDS = ANALYZER_SETTINGS.hop_length / ANALYZER_SETTINGS.sample_rate
 
 def source(settings: CarrierSourceSettings | None = None) -> PeakCarrierSource:
     return PeakCarrierSource(settings or SETTINGS)
-
-
-def narrow_source(min_hz: float, max_hz: float) -> PeakCarrierSource:
-    """A source that reads a window of its own instead of the default one."""
-    return source(CarrierSourceSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz))
 
 
 def spectrum_at(bins: dict[float, float], ts: datetime.datetime) -> ToneSpectrum:

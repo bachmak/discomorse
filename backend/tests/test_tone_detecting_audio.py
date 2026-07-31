@@ -7,14 +7,13 @@ import numpy.typing as npt
 import pytest
 from audio_fixtures import noise_pcm, silence_pcm, sine_pcm
 from carrier_fixtures import (
-    MAX_HZ,
-    MIN_HZ,
     MIN_MAGNITUDE,
     SAMPLE_RATE,
     analyze,
     lock_flags,
     track,
 )
+from limiter_fixtures import MAX_HZ, MIN_HZ, limit
 from tone_detecting_fixtures import detect, read_tone
 from tone_fixtures import (
     EDGE_DRIFT_SECONDS,
@@ -109,7 +108,9 @@ async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
 
     assert not any(
         sample.on
-        for sample, locked in zip(samples, lock_flags(track(spectrums)), strict=True)
+        for sample, locked in zip(
+            samples, lock_flags(track(limit(spectrums))), strict=True
+        )
         if not locked
     )
 
@@ -127,11 +128,11 @@ async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
         ),
         pytest.param(
             sine_pcm(MIN_HZ / 2, _SECONDS, SAMPLE_RATE, KEY_DOWN_AMPLITUDE),
-            id="a-tone-under-the-window",
+            id="a-tone-under-the-band",
         ),
         pytest.param(
             sine_pcm(MAX_HZ * 1.25, _SECONDS, SAMPLE_RATE, KEY_DOWN_AMPLITUDE),
-            id="a-tone-over-the-window",
+            id="a-tone-over-the-band",
         ),
     ],
 )

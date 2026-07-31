@@ -20,30 +20,29 @@ class SpectrumAnalyzerSettings(BaseSettings):
     hop_length: int = 16
 
 
-class CarrierWindowSettings(BaseSettings):
-    """The frequency band every stage that reads a spectrum limits itself to."""
+class SpectrumLimiterSettings(BaseSettings):
+    """The frequency band the stages behind the limiter get to read."""
 
-    carrier_min_hz: float = Field(default=400.0, gt=0)
-    carrier_max_hz: float = Field(default=1_200.0, gt=0)
+    min_hz: float = Field(default=400.0, gt=0)
+    max_hz: float = Field(default=1_200.0, gt=0)
 
     @model_validator(mode="after")
-    def _carrier_window_must_rise(self) -> Self:
-        if self.carrier_min_hz >= self.carrier_max_hz:
+    def _band_must_rise(self) -> Self:
+        if self.min_hz >= self.max_hz:
             raise ValueError(
-                f"carrier_min_hz ({self.carrier_min_hz}) must be below "
-                f"carrier_max_hz ({self.carrier_max_hz})"
+                f"min_hz ({self.min_hz}) must be below max_hz ({self.max_hz})"
             )
         return self
 
 
-class CarrierSourceSettings(CarrierWindowSettings):
+class CarrierSourceSettings(BaseSettings):
     carrier_lock_magnitude: float = Field(default=0.05, gt=0)
     carrier_lock_tolerance_hz: float = Field(default=100.0, gt=0)
     carrier_lock_seconds: float = Field(default=0.02, gt=0)
     carrier_hold_seconds: float = Field(default=2.0, gt=0)
 
 
-class NoiseEstimatorSettings(CarrierWindowSettings):
+class NoiseEstimatorSettings(BaseSettings):
     noise_detector_percentile: float = Field(default=50.0, ge=0, le=100)
 
 
@@ -91,6 +90,7 @@ class InterpreterSettings(BaseSettings):
 
 class PipelineSettings(BaseSettings):
     spectrum_analyzer: str = "STFTSpectrumAnalyzer"
+    spectrum_limiter: str = "StaticSpectrumLimiter"
     carrier_source: str = "PeakCarrierSource"
     noise_estimator: str = "PercentileNoiseEstimator"
     keying_detector: str = "AdaptiveKeyingDetector"
@@ -100,6 +100,9 @@ class PipelineSettings(BaseSettings):
     language: str = "en"
     spectrum_analyzer_settings: SpectrumAnalyzerSettings = Field(
         default_factory=SpectrumAnalyzerSettings
+    )
+    spectrum_limiter_settings: SpectrumLimiterSettings = Field(
+        default_factory=SpectrumLimiterSettings
     )
     carrier_source_settings: CarrierSourceSettings = Field(
         default_factory=CarrierSourceSettings

@@ -10,6 +10,7 @@ from dataclasses import dataclass, replace
 
 from audio_fixtures import EPOCH
 from carrier_fixtures import CARRIER_HZ, source
+from limiter_fixtures import limit
 from noise_fixtures import estimator
 
 from morse_decoder.config import KeyingDetectorSettings
@@ -104,13 +105,13 @@ def keyed(
 
 
 def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[KeyingSample, ...]:
-    """Read the key off spectrums the way the pipeline wires the three stages."""
+    """Read the key off spectrums the way the pipeline wires the four stages."""
     carrier_source, noise_estimator, keying_detector = source(), estimator(), detector()
     return tuple(
         keying_detector.detect(
-            carrier_source.track(spectrum), noise_estimator.estimate(spectrum)
+            carrier_source.track(limited), noise_estimator.estimate(limited)
         )
-        for spectrum in spectrums
+        for limited in limit(spectrums)
     )
 
 
