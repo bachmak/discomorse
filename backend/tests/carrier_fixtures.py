@@ -12,6 +12,7 @@ from typing import Self
 import numpy.typing as npt
 from audio_fixtures import EPOCH
 from spectrum_fixtures import spectrums_of
+from stream_fixtures import stream
 
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import CarrierSourceSettings, SpectrumAnalyzerSettings
@@ -21,6 +22,7 @@ from morse_decoder.pipeline.dto import (
     ToneMagnitude,
     ToneSpectrum,
 )
+from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
 from morse_decoder.pipeline.stages.carrier_source.peak_carrier_source import (
     PeakCarrierSource,
 )
@@ -115,14 +117,14 @@ def locking_timeline(step_seconds: float = STEP_S) -> SpectrumTimeline:
     return SpectrumTimeline(step_seconds).hold(KEYED, LOCK_PHASE_SECONDS)
 
 
-def track(
+async def track(
     spectrums: tuple[ToneSpectrum, ...],
     *,
-    carrier_source: PeakCarrierSource | None = None,
+    carrier_source: CarrierSource | None = None,
 ) -> tuple[CarrierSample, ...]:
     """Feed ``spectrums`` to one source the way the pipeline would."""
     tracked = carrier_source or source()
-    return tuple(tracked.track(spectrum) for spectrum in spectrums)
+    return tuple([one async for one in tracked.process(stream(*spectrums))])
 
 
 def frequencies(samples: tuple[CarrierSample, ...]) -> tuple[float, ...]:

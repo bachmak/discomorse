@@ -12,6 +12,7 @@ from audio_fixtures import EPOCH
 from carrier_fixtures import CARRIER_HZ, source
 from limiter_fixtures import limit
 from noise_fixtures import estimator
+from stream_fixtures import stream
 
 from morse_decoder.config import KeyingDetectorSettings
 from morse_decoder.pipeline.dto import (
@@ -28,6 +29,7 @@ from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
 from morse_decoder.pipeline.stages.keying_detector.impl.threshold_tracker import (
     ThresholdTracker,
 )
+from morse_decoder.pipeline.stages.streams import StreamFork, azip
 
 SETTINGS = KeyingDetectorSettings()
 RISE_ALPHA = SETTINGS.threshold_rise_alpha
@@ -106,12 +108,15 @@ def keyed(
 
 async def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[KeyingSample, ...]:
     """Read the key off spectrums the way the pipeline wires the four stages."""
-    carrier_source, noise_estimator, keying_detector = source(), estimator(), detector()
+    keying_detector = detector()
+    lhs, rhs = StreamFork(stream(*await limit(spectrums))).branches()
     return tuple(
-        keying_detector.detect(
-            carrier_source.track(limited), noise_estimator.estimate(limited)
-        )
-        for limited in await limit(spectrums)
+        [
+            keying_detector.detect(carrier, noise)
+            async for carrier, noise in azip(
+                source().process(lhs), estimator().process(rhs)
+            )
+        ]
     )
 
 

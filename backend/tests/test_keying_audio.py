@@ -82,7 +82,7 @@ async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
     spectrums = await analyze(_keyed_pcm())
 
     flags = keys(await key_off(spectrums))
-    carriers = track(await limit(spectrums))
+    carriers = await track(await limit(spectrums))
 
     assert not any(
         flag

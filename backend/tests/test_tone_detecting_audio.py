@@ -109,7 +109,7 @@ async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
     assert not any(
         sample.on
         for sample, locked in zip(
-            samples, lock_flags(track(await limit(spectrums))), strict=True
+            samples, lock_flags(await track(await limit(spectrums))), strict=True
         )
         if not locked
     )

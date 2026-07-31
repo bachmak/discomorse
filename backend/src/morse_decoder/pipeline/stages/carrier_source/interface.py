@@ -1,10 +1,6 @@
-from abc import ABC, abstractmethod
-
 from morse_decoder.pipeline.dto import CarrierSample, ToneSpectrum
+from morse_decoder.pipeline.stages.interface import PipelineStage
 
 
-class CarrierSource(ABC):
-    @abstractmethod
-    def track(self, spectrum: ToneSpectrum) -> CarrierSample:
-        """Follow the carrier the spectrum carries, if it has one."""
-        ...
+class CarrierSource(PipelineStage[ToneSpectrum, CarrierSample]):
+    """Follows the carrier every spectrum carries, if it has one."""

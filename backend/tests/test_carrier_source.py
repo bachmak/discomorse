@@ -49,7 +49,7 @@ async def _tracked(
     samples: npt.NDArray[PCM16.IntType],
 ) -> tuple[CarrierSample, ...]:
     """The carrier read off real spectrums, cut the way the pipeline cuts them."""
-    tracked = track(await limit(await analyze(samples)))
+    tracked = await track(await limit(await analyze(samples)))
     assert tracked
     return tracked
 
@@ -86,10 +86,10 @@ def _keyed_then_silent_against(
         pytest.param({700.0: 0.0, 800.0: 0.0}, 700.0, 0.0, id="silence-still-tracked"),
     ],
 )
-def test_source_reads_the_carrier_off_the_loudest_bin_it_is_given(
+async def test_source_reads_the_carrier_off_the_loudest_bin_it_is_given(
     bins: dict[float, float], want_frequency: float, want_magnitude: float
 ) -> None:
-    samples = track((spectrum(bins),))
+    samples = await track((spectrum(bins),))
 
     assert samples == (
         CarrierSample(
@@ -99,7 +99,7 @@ def test_source_reads_the_carrier_off_the_loudest_bin_it_is_given(
     )
 
 
-def test_source_follows_a_drifting_carrier() -> None:
+async def test_source_follows_a_drifting_carrier() -> None:
     spectrums = tuple(
         spectrum(
             {400.0: 0.1, frequency: 0.8, 1_200.0: 0.1},
@@ -108,7 +108,7 @@ def test_source_follows_a_drifting_carrier() -> None:
         for index, frequency in enumerate(_DRIFT)
     )
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert samples == tuple(
         CarrierSample(
@@ -144,12 +144,12 @@ def test_source_follows_a_drifting_carrier() -> None:
         ),
     ],
 )
-def test_source_defends_a_locked_carrier_while_it_is_only_pausing(
+async def test_source_defends_a_locked_carrier_while_it_is_only_pausing(
     rival_magnitude: float, gap_seconds: float, want_frequency: float
 ) -> None:
     spectrums = _keyed_then_silent_against(rival_magnitude, gap_seconds)
 
-    samples = track(spectrums)
+    samples = await track(spectrums)
 
     assert samples[-1].tone.frequency == want_frequency
 

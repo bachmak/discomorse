@@ -45,7 +45,7 @@ class RecordingCarrierSource(CarrierSource):
         self.seen: list[ToneSpectrum] = []
         self.reported: list[CarrierSample] = []
 
-    def track(self, spectrum: ToneSpectrum) -> CarrierSample:
+    def transform(self, spectrum: ToneSpectrum) -> CarrierSample:
         self.seen.append(spectrum)
         self.reported.append(
             CarrierSample(tone=Tone.empty().with_ts(spectrum.ts), is_locked=False)
@@ -61,7 +61,7 @@ class RecordingNoiseEstimator(NoiseEstimator):
         self.seen: list[ToneSpectrum] = []
         self.reported: list[NoiseSample] = []
 
-    def estimate(self, spectrum: ToneSpectrum) -> NoiseSample:
+    def transform(self, spectrum: ToneSpectrum) -> NoiseSample:
         self.seen.append(spectrum)
         self.reported.append(NoiseSample(noise=float(len(self.seen))))
         return self.reported[-1]

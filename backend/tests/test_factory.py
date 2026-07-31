@@ -55,7 +55,7 @@ class _FakeCarrierSource(CarrierSource):
     def __init__(self, settings: CarrierSourceSettings) -> None:
         self._settings = settings
 
-    def track(self, spectrum: ToneSpectrum) -> CarrierSample:
+    def transform(self, spectrum: ToneSpectrum) -> CarrierSample:
         return CarrierSample(tone=Tone.empty(), is_locked=False)
 
 

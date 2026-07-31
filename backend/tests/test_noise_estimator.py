@@ -23,10 +23,10 @@ _CARRIER_HZ = 700.0
         pytest.param(_FLOOR_BINS | {_CARRIER_HZ: _LOUD}, _QUIET, id="carrier-in-noise"),
     ],
 )
-def test_estimator_reads_the_floor_off_the_bins_it_is_given(
+async def test_estimator_reads_the_floor_off_the_bins_it_is_given(
     bins: dict[float, float], want: float
 ) -> None:
-    assert noise_of(bins) == pytest.approx(want)
+    assert await noise_of(bins) == pytest.approx(want)
 
 
 @pytest.mark.parametrize(
@@ -39,38 +39,38 @@ def test_estimator_reads_the_floor_off_the_bins_it_is_given(
         pytest.param(100.0, 0.4, id="loudest-bin"),
     ],
 )
-def test_estimator_follows_the_configured_percentile(
+async def test_estimator_follows_the_configured_percentile(
     percentile: float, want: float
 ) -> None:
     bins = {500.0: 0.1, 700.0: 0.2, 900.0: 0.3, 1_100.0: 0.4}
 
-    assert noise_of(bins, percentile) == pytest.approx(want)
+    assert await noise_of(bins, percentile) == pytest.approx(want)
 
 
-def test_a_high_enough_percentile_climbs_onto_the_carrier() -> None:
+async def test_a_high_enough_percentile_climbs_onto_the_carrier() -> None:
     bins = _FLOOR_BINS | {_CARRIER_HZ: _LOUD}
 
-    assert noise_of(bins, percentile=100.0) == pytest.approx(_LOUD)
+    assert await noise_of(bins, percentile=100.0) == pytest.approx(_LOUD)
 
 
-def test_estimator_reports_one_sample_per_spectrum() -> None:
+async def test_estimator_reports_one_sample_per_spectrum() -> None:
     spectrums = tuple(
         spectrum({700.0: magnitude}, at_second=index * 0.01)
         for index, magnitude in enumerate((0.1, 0.2, 0.3))
     )
 
-    assert estimate(spectrums) == (
+    assert await estimate(spectrums) == (
         NoiseSample(noise=0.1),
         NoiseSample(noise=0.2),
         NoiseSample(noise=0.3),
     )
 
 
-def test_a_rising_floor_is_read_as_a_rising_floor() -> None:
+async def test_a_rising_floor_is_read_as_a_rising_floor() -> None:
     climb = (0.01, 0.02, 0.05, 0.2, 0.5)
     spectrums = tuple(
         spectrum({500.0: level, 900.0: level}, at_second=index * 0.01)
         for index, level in enumerate(climb)
     )
 
-    assert noises(estimate(spectrums)) == pytest.approx(climb)
+    assert noises(await estimate(spectrums)) == pytest.approx(climb)
