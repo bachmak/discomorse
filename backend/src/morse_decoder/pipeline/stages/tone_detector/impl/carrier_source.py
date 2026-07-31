@@ -66,9 +66,9 @@ def _loudest_tone_in_spectrum(spectrum: ToneSpectrum, window: FrequencyWindow) -
     if not tones_inside_window:
         raise ValueError(f"no spectrum bin in {window.min_hz}..{window.max_hz} Hz")
 
-    magnitude = max(tones_inside_window, key=lambda tone: tone.magnitude)
+    tone = max(tones_inside_window, key=lambda tone: tone.magnitude)
     return Tone(
-        frequency=magnitude.frequency,
-        magnitude=magnitude.magnitude,
+        frequency=tone.frequency,
+        magnitude=tone.magnitude,
         ts=spectrum.ts,
     )
