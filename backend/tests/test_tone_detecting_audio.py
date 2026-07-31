@@ -102,7 +102,7 @@ async def test_no_mark_reads_back_as_long_as_one_keyed_longer(
 
 
 async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
-    spectrums = (await analyze(_PCM)).spectrums
+    spectrums = await analyze(_PCM)
 
     samples = detect(spectrums)
 

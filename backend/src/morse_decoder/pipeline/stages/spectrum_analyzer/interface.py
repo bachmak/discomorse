@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterable, AsyncIterator
 
-from morse_decoder.pipeline.dto import PcmChunk, SpectrumReading
+from morse_decoder.pipeline.dto import PcmChunk, ToneSpectrum
 
 
 class SpectrumAnalyzer(ABC):
     @abstractmethod
-    async def process(self, chunk: PcmChunk) -> SpectrumReading:
-        """Transform one PCM chunk into frequency spectrums."""
+    def process(self, chunks: AsyncIterable[PcmChunk]) -> AsyncIterator[ToneSpectrum]:
+        """Turn a stream of PCM chunks into a stream of frequency spectrums."""
         ...

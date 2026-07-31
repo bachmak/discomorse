@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterable, AsyncIterator
+
 import librosa
 import numpy as np
 import numpy.typing as npt
@@ -6,7 +8,6 @@ from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import SpectrumAnalyzerSettings
 from morse_decoder.pipeline.dto import (
     PcmChunk,
-    SpectrumReading,
     ToneMagnitude,
     ToneSpectrum,
 )
@@ -43,13 +44,17 @@ class STFTSpectrumAnalyzer(SpectrumAnalyzer):
             sample_rate=settings.sample_rate,
         )
 
-    async def process(self, chunk: PcmChunk) -> SpectrumReading:
-        batch = self._frame_stream.push(_chunk_to_samples(chunk), chunk.ts)
-        if not batch.timestamps:
-            return SpectrumReading(spectrums=())
-        return SpectrumReading(spectrums=self._to_spectrums(batch))
+    async def process(
+        self, chunks: AsyncIterable[PcmChunk]
+    ) -> AsyncIterator[ToneSpectrum]:
+        async for chunk in chunks:
+            batch = self._frame_stream.push(_chunk_to_samples(chunk), chunk.ts)
+            for spectrum in self._to_spectrums(batch):
+                yield spectrum
 
     def _to_spectrums(self, batch: FrameBatch) -> tuple[ToneSpectrum, ...]:
+        if not batch.timestamps:
+            return ()
         magnitudes = self._samples_to_magnitudes(batch.samples)
         return tuple(
             ToneSpectrum(
