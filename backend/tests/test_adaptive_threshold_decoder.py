@@ -72,7 +72,7 @@ def _decoder() -> AdaptiveThresholdDecoder:
 async def test_process_classifies_runs(
     runs: list[tuple[bool, float]], want: list[MorseElement]
 ) -> None:
-    result = await _decoder().process(_reading(runs))
+    result = _decoder().process(_reading(runs))
 
     assert result.elements == want
 
@@ -83,8 +83,8 @@ async def test_process_carries_run_across_chunks() -> None:
     closing_ts = _EPOCH + datetime.timedelta(seconds=_UNIT)
     closing = ToneReading(samples=(ToneSample(ts=closing_ts, on=False),))
 
-    assert (await decoder.process(opening)).elements == []
-    assert (await decoder.process(closing)).elements == [Dit()]
+    assert (decoder.process(opening)).elements == []
+    assert (decoder.process(closing)).elements == [Dit()]
 
 
 @pytest.mark.parametrize(
