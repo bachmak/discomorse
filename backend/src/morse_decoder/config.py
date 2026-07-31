@@ -23,6 +23,7 @@ class SpectrumAnalyzerSettings(BaseSettings):
 class ToneDetectorSettings(BaseSettings):
     carrier_source: str = "PeakCarrierSource"
     noise_estimator: str = "PercentileNoiseEstimator"
+    keying_detector: str = "AdaptiveKeyingDetector"
     carrier_min_hz: float = Field(default=400.0, gt=0)
     carrier_max_hz: float = Field(default=1_200.0, gt=0)
     carrier_lock_magnitude: float = Field(default=0.05, gt=0)
@@ -30,6 +31,10 @@ class ToneDetectorSettings(BaseSettings):
     carrier_lock_seconds: float = Field(default=0.02, gt=0)
     carrier_hold_seconds: float = Field(default=2.0, gt=0)
     noise_detector_percentile: float = Field(default=50.0, ge=0, le=100)
+    threshold_rise_alpha: float = Field(default=0.3, gt=0, le=1)
+    threshold_fall_alpha: float = Field(default=0.05, gt=0, le=1)
+    threshold_on_factor: float = Field(default=3.0, gt=1)
+    threshold_off_factor: float = Field(default=1.5, gt=1)
 
     @model_validator(mode="after")
     def _carrier_window_must_rise(self) -> Self:
@@ -37,6 +42,15 @@ class ToneDetectorSettings(BaseSettings):
             raise ValueError(
                 f"carrier_min_hz ({self.carrier_min_hz}) must be below "
                 f"carrier_max_hz ({self.carrier_max_hz})"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _keying_band_must_open(self) -> Self:
+        if self.threshold_off_factor >= self.threshold_on_factor:
+            raise ValueError(
+                f"threshold_off_factor ({self.threshold_off_factor}) must be below "
+                f"threshold_on_factor ({self.threshold_on_factor})"
             )
         return self
 

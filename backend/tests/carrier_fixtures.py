@@ -6,6 +6,7 @@ on comparisons against that grid, and a rounded microsecond would move a lock.
 """
 
 import datetime
+from dataclasses import dataclass
 from typing import Self
 
 import numpy.typing as npt
@@ -156,6 +157,25 @@ def first_locked_index(samples: tuple[CarrierSample, ...]) -> int:
 
 def seconds_since_epoch(ts: datetime.datetime) -> float:
     return (ts - EPOCH).total_seconds()
+
+
+@dataclass(frozen=True)
+class Phase:
+    """A stretch of a keyed signal, and which frames fall wholly inside it.
+
+    A frame that straddles an edge of the stretch reads both sides of it at
+    once, so only the frames the stretch covers whole say anything about it.
+    """
+
+    start_s: float
+    end_s: float
+
+    def covers(self, ts: datetime.datetime) -> bool:
+        centre = seconds_since_epoch(ts)
+        return (
+            centre - FRAME_SECONDS / 2 >= self.start_s
+            and centre + FRAME_SECONDS / 2 <= self.end_s
+        )
 
 
 async def analyze(samples: npt.NDArray[PCM16.IntType]) -> SpectrumReading:

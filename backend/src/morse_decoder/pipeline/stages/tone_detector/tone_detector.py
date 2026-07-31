@@ -14,6 +14,10 @@ from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
 )
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import FrequencyWindow
 from morse_decoder.pipeline.stages.tone_detector.impl.helpers import limit_to_window
+from morse_decoder.pipeline.stages.tone_detector.impl.keying_detector import (
+    AdaptiveKeyingDetector,
+    KeyingDetector,
+)
 from morse_decoder.pipeline.stages.tone_detector.impl.noise_estimator import (
     NoiseEstimator,
     PercentileNoiseEstimator,
@@ -21,27 +25,33 @@ from morse_decoder.pipeline.stages.tone_detector.impl.noise_estimator import (
 from morse_decoder.pipeline.stages.tone_detector.interface import ToneDetector
 
 
-class _CarrierSourceConstructor(Protocol):
-    def __call__(self, settings: ToneDetectorSettings) -> CarrierSource: ...
+class _SubstageConstructor[SubstageT](Protocol):
+    def __call__(self, settings: ToneDetectorSettings) -> SubstageT: ...
 
 
-class _NoiseEstimatorConstructor(Protocol):
-    def __call__(self, settings: ToneDetectorSettings) -> NoiseEstimator: ...
-
-
-_CARRIER_SOURCES: dict[str, _CarrierSourceConstructor] = {
+_CARRIER_SOURCES: dict[str, _SubstageConstructor[CarrierSource]] = {
     "PeakCarrierSource": PeakCarrierSource,
 }
-_NOISE_ESTIMATORS: dict[str, _NoiseEstimatorConstructor] = {
+_NOISE_ESTIMATORS: dict[str, _SubstageConstructor[NoiseEstimator]] = {
     "PercentileNoiseEstimator": PercentileNoiseEstimator,
+}
+_KEYING_DETECTORS: dict[str, _SubstageConstructor[KeyingDetector]] = {
+    "AdaptiveKeyingDetector": AdaptiveKeyingDetector,
 }
 
 
 class SpectralToneDetector(ToneDetector):
     def __init__(self, settings: ToneDetectorSettings) -> None:
         self._window = FrequencyWindow(settings.carrier_min_hz, settings.carrier_max_hz)
-        self._carrier_source = _build_carrier_source(settings)
-        self._noise_estimator = _build_noise_estimator(settings)
+        self._carrier_source = _build(
+            _CARRIER_SOURCES, settings.carrier_source, "carrier source", settings
+        )
+        self._noise_estimator = _build(
+            _NOISE_ESTIMATORS, settings.noise_estimator, "noise estimator", settings
+        )
+        self._keying_detector = _build(
+            _KEYING_DETECTORS, settings.keying_detector, "keying detector", settings
+        )
 
     async def process(self, reading: SpectrumReading) -> ToneReading:
         return ToneReading(
@@ -50,16 +60,16 @@ class SpectralToneDetector(ToneDetector):
 
     def _sample(self, spectrum: ToneSpectrum) -> ToneSample:
         windowed = limit_to_window(spectrum, self._window)
-        _ = self._carrier_source.track(windowed)
-        _ = self._noise_estimator.estimate(windowed)
+        carrier = self._carrier_source.track(windowed)
+        noise = self._noise_estimator.estimate(windowed)
+        _ = self._keying_detector.detect(carrier, noise)
         return ToneSample(ts=spectrum.ts, on=False)
 
 
-def _build_carrier_source(settings: ToneDetectorSettings) -> CarrierSource:
-    source = resolve(_CARRIER_SOURCES, settings.carrier_source, "carrier source")
-    return source(settings)
-
-
-def _build_noise_estimator(settings: ToneDetectorSettings) -> NoiseEstimator:
-    estimator = resolve(_NOISE_ESTIMATORS, settings.noise_estimator, "noise estimator")
-    return estimator(settings)
+def _build[SubstageT](
+    catalog: dict[str, _SubstageConstructor[SubstageT]],
+    name: str,
+    kind: str,
+    settings: ToneDetectorSettings,
+) -> SubstageT:
+    return resolve(catalog, name, kind)(settings)
