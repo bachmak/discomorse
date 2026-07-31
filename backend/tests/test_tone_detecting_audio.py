@@ -1,4 +1,4 @@
-"""The key the stage reads off synthesized audio, all four substages wired up."""
+"""The key the stages read off synthesized audio, all four of them wired up."""
 
 from collections import defaultdict
 from itertools import pairwise
@@ -15,17 +15,16 @@ from carrier_fixtures import (
     lock_flags,
     track,
 )
+from tone_detecting_fixtures import detect, read_tone
 from tone_fixtures import (
     EDGE_DRIFT_SECONDS,
     KEY_DOWN_AMPLITUDE,
     TONE_HZ,
     KeyedPhase,
-    detect,
     flags,
     inside,
     keyed_runs,
     morse_line,
-    read_tone,
 )
 
 from morse_decoder.audio.pcm16 import PCM16
@@ -106,7 +105,7 @@ async def test_no_mark_reads_back_as_long_as_one_keyed_longer(
 async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
     spectrums = (await analyze(_PCM)).spectrums
 
-    samples = await detect(spectrums)
+    samples = detect(spectrums)
 
     assert not any(
         sample.on

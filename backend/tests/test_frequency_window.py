@@ -1,10 +1,9 @@
-"""What the tone detector lets through to its substages, and what it cuts away."""
+"""What the window lets through to the stages that read it, and what it cuts away."""
 
 import pytest
 from carrier_fixtures import MAX_HZ, MIN_HZ, WINDOW, spectrum
 
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import FrequencyWindow
-from morse_decoder.pipeline.stages.tone_detector.impl.helpers import limit_to_window
+from morse_decoder.pipeline.dto import FrequencyWindow
 
 _LOUD = 1.0
 
@@ -25,7 +24,7 @@ _LOUD = 1.0
 def test_the_window_keeps_only_the_bins_it_covers(
     bins: dict[float, float], want_frequencies: tuple[float, ...]
 ) -> None:
-    limited = limit_to_window(spectrum(bins), WINDOW)
+    limited = WINDOW.limit(spectrum(bins))
 
     assert tuple(tone.frequency for tone in limited.magnitudes) == want_frequencies
 
@@ -33,14 +32,14 @@ def test_the_window_keeps_only_the_bins_it_covers(
 def test_the_window_stamps_the_limited_spectrum_with_its_own_time() -> None:
     one = spectrum({700.0: _LOUD}, at_second=0.5)
 
-    assert limit_to_window(one, WINDOW).ts == one.ts
+    assert WINDOW.limit(one).ts == one.ts
 
 
 def test_a_narrow_window_cuts_the_bins_just_outside_it() -> None:
     narrow = FrequencyWindow(699.5, 700.5)
     bins = {699.0: _LOUD, 700.0: 0.1, 701.0: _LOUD}
 
-    limited = limit_to_window(spectrum(bins), narrow)
+    limited = narrow.limit(spectrum(bins))
 
     assert tuple(tone.frequency for tone in limited.magnitudes) == (700.0,)
 
@@ -55,4 +54,4 @@ def test_a_narrow_window_cuts_the_bins_just_outside_it() -> None:
 )
 def test_a_spectrum_missing_the_window_is_rejected(bins: dict[float, float]) -> None:
     with pytest.raises(ValueError, match="no spectrum bin"):
-        limit_to_window(spectrum(bins), WINDOW)
+        WINDOW.limit(spectrum(bins))

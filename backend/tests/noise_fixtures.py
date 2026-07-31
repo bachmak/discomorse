@@ -1,28 +1,31 @@
 """Builders for the estimators and spectrums the noise tests drive.
 
-Spectrums come from ``carrier_fixtures`` — both sub-stages read the same
-window off the same readings, so they share one way of writing bins down.
+Spectrums come from ``carrier_fixtures`` — both stages read the same window off
+the same readings, so they share one way of writing bins down.
 """
 
-from carrier_fixtures import SETTINGS, WINDOW, spectrum
+from carrier_fixtures import spectrum
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    FrequencyWindow,
-    NoiseSample,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.helpers import limit_to_window
-from morse_decoder.pipeline.stages.tone_detector.impl.noise_estimator import (
+from morse_decoder.config import NoiseEstimatorSettings
+from morse_decoder.pipeline.dto import NoiseSample, ToneSpectrum
+from morse_decoder.pipeline.stages.noise_estimator.percentile_noise_estimator import (
     PercentileNoiseEstimator,
 )
 
+SETTINGS = NoiseEstimatorSettings()
 PERCENTILE = SETTINGS.noise_detector_percentile
 
 
 def estimator(percentile: float = PERCENTILE) -> PercentileNoiseEstimator:
     return PercentileNoiseEstimator(
-        ToneDetectorSettings(noise_detector_percentile=percentile)
+        NoiseEstimatorSettings(noise_detector_percentile=percentile)
+    )
+
+
+def narrow_estimator(min_hz: float, max_hz: float) -> PercentileNoiseEstimator:
+    """An estimator that reads a window of its own instead of the default one."""
+    return PercentileNoiseEstimator(
+        NoiseEstimatorSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz)
     )
 
 
@@ -30,13 +33,10 @@ def estimate(
     spectrums: tuple[ToneSpectrum, ...],
     *,
     noise_estimator: PercentileNoiseEstimator | None = None,
-    window: FrequencyWindow = WINDOW,
 ) -> tuple[NoiseSample, ...]:
-    """Feed ``spectrums`` to one estimator the way the tone detector would."""
+    """Feed ``spectrums`` to one estimator the way the pipeline would."""
     reader = noise_estimator or estimator()
-    return tuple(
-        reader.estimate(limit_to_window(spectrum, window)) for spectrum in spectrums
-    )
+    return tuple(reader.estimate(spectrum) for spectrum in spectrums)
 
 
 def noises(samples: tuple[NoiseSample, ...]) -> tuple[float, ...]:

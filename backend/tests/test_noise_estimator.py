@@ -1,11 +1,8 @@
 import pytest
 from carrier_fixtures import MAX_HZ, MIN_HZ, spectrum
-from noise_fixtures import estimate, noise_of, noises
+from noise_fixtures import estimate, narrow_estimator, noise_of, noises
 
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    FrequencyWindow,
-    NoiseSample,
-)
+from morse_decoder.pipeline.dto import NoiseSample
 
 _QUIET = 0.02
 _LOUD = 5.0
@@ -75,7 +72,9 @@ def test_estimator_only_reads_bins_inside_the_window(
 def test_a_narrow_window_ignores_the_bins_just_outside_it() -> None:
     bins = {699.0: _LOUD, _CARRIER_HZ: 0.1, 701.0: _LOUD}
 
-    samples = estimate((spectrum(bins),), window=FrequencyWindow(699.5, 700.5))
+    samples = estimate(
+        (spectrum(bins),), noise_estimator=narrow_estimator(699.5, 700.5)
+    )
 
     assert samples == (NoiseSample(noise=0.1),)
 
