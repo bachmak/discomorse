@@ -1,16 +1,52 @@
+"""The state machine that tracks the carrier: it searches, then it locks."""
+
 from __future__ import annotations
 
-from morse_decoder.pipeline.dto import ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    CarrierSample,
-    Tone,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.fsm.state import (
-    CarrierTrackingState,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.lock_policy import (
-    CarrierLockPolicy,
-)
+from abc import ABC, abstractmethod
+
+from morse_decoder.pipeline.dto import CarrierSample, Tone, ToneSpectrum
+from morse_decoder.pipeline.stages.carrier_source.impl.policy import CarrierLockPolicy
+
+
+class CarrierTrackingState(ABC):
+    """One state of the carrier tracking machine.
+
+    Every spectrum drives one transition: ``update`` names the state it moves
+    the machine into, and that state delivers the carrier out of the same spectrum.
+    """
+
+    @abstractmethod
+    def update(self, peak: Tone, spectrum: ToneSpectrum) -> CarrierTrackingState: ...
+
+    @abstractmethod
+    def get_carrier(self, peak: Tone) -> CarrierSample: ...
+
+
+class SearchState(CarrierTrackingState):
+    """Passes the loudest bin on unchanged until one frequency repeats enough."""
+
+    def __init__(self, policy: CarrierLockPolicy, candidate: Tone) -> None:
+        self._policy = policy
+        self._candidate = candidate
+
+    def update(self, peak: Tone, _: ToneSpectrum) -> CarrierTrackingState:
+        candidate = self._updated_candidate(peak)
+        if self._policy.is_persistent(candidate, peak.ts):
+            return HoldState.create(self._policy, peak)
+        return SearchState(self._policy, candidate)
+
+    def _updated_candidate(self, peak: Tone) -> Tone:
+        if not self._policy.is_credible(peak.magnitude):
+            return Tone.empty()
+        if self._policy.continues(self._candidate, peak):
+            return self._candidate
+        return peak
+
+    def get_carrier(self, peak: Tone) -> CarrierSample:
+        return CarrierSample(
+            tone=peak,
+            is_locked=False,
+        )
 
 
 class HoldState(CarrierTrackingState):

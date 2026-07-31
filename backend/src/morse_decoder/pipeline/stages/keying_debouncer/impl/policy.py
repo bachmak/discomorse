@@ -1,6 +1,6 @@
 import datetime
 
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import KeyingSample
+from morse_decoder.pipeline.dto import KeyingSample
 
 
 class KeyingDelayPolicy:

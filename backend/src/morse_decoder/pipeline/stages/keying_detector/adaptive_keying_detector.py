@@ -1,30 +1,17 @@
-from abc import ABC, abstractmethod
-
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    CarrierSample,
-    KeyingSample,
-    KeyingThresholds,
-    NoiseSample,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.keying_state import (
-    KeyingState,
-    OffState,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.threshold_tracker import (
+from morse_decoder.config import KeyingDetectorSettings
+from morse_decoder.pipeline.dto import CarrierSample, KeyingSample, NoiseSample
+from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
+from morse_decoder.pipeline.stages.keying_detector.impl.fsm import KeyingState, OffState
+from morse_decoder.pipeline.stages.keying_detector.impl.threshold_tracker import (
     ThresholdTracker,
 )
-
-
-class KeyingDetector(ABC):
-    @abstractmethod
-    def detect(self, carrier: CarrierSample, noise: NoiseSample) -> KeyingSample: ...
+from morse_decoder.pipeline.stages.keying_detector.interface import KeyingDetector
 
 
 class AdaptiveKeyingDetector(KeyingDetector):
     """Detect on and offs based on dynamically tracked thresholds."""
 
-    def __init__(self, settings: ToneDetectorSettings) -> None:
+    def __init__(self, settings: KeyingDetectorSettings) -> None:
         self._thresholds = ThresholdTracker(settings)
         self._state: KeyingState = OffState()
 

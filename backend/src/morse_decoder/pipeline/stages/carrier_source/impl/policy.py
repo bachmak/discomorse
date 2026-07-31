@@ -1,8 +1,6 @@
 import datetime
 
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
-    Tone,
-)
+from morse_decoder.pipeline.dto import Tone
 
 
 def _is_valid(tone: Tone) -> bool:

@@ -20,24 +20,11 @@ class SpectrumAnalyzerSettings(BaseSettings):
     hop_length: int = 16
 
 
-class ToneDetectorSettings(BaseSettings):
-    carrier_source: str = "PeakCarrierSource"
-    noise_estimator: str = "PercentileNoiseEstimator"
-    keying_detector: str = "AdaptiveKeyingDetector"
-    keying_debouncer: str = "TimedKeyingDebouncer"
+class CarrierWindowSettings(BaseSettings):
+    """The frequency band every stage that reads a spectrum limits itself to."""
+
     carrier_min_hz: float = Field(default=400.0, gt=0)
     carrier_max_hz: float = Field(default=1_200.0, gt=0)
-    carrier_lock_magnitude: float = Field(default=0.05, gt=0)
-    carrier_lock_tolerance_hz: float = Field(default=100.0, gt=0)
-    carrier_lock_seconds: float = Field(default=0.02, gt=0)
-    carrier_hold_seconds: float = Field(default=2.0, gt=0)
-    noise_detector_percentile: float = Field(default=50.0, ge=0, le=100)
-    threshold_rise_alpha: float = Field(default=0.3, gt=0, le=1)
-    threshold_fall_alpha: float = Field(default=0.05, gt=0, le=1)
-    threshold_on_factor: float = Field(default=3.0, gt=1)
-    threshold_off_factor: float = Field(default=1.5, gt=1)
-    debounce_rise_seconds: float = Field(default=0.004, ge=0)
-    debounce_fall_seconds: float = Field(default=0.015, ge=0)
 
     @model_validator(mode="after")
     def _carrier_window_must_rise(self) -> Self:
@@ -48,6 +35,24 @@ class ToneDetectorSettings(BaseSettings):
             )
         return self
 
+
+class CarrierSourceSettings(CarrierWindowSettings):
+    carrier_lock_magnitude: float = Field(default=0.05, gt=0)
+    carrier_lock_tolerance_hz: float = Field(default=100.0, gt=0)
+    carrier_lock_seconds: float = Field(default=0.02, gt=0)
+    carrier_hold_seconds: float = Field(default=2.0, gt=0)
+
+
+class NoiseEstimatorSettings(CarrierWindowSettings):
+    noise_detector_percentile: float = Field(default=50.0, ge=0, le=100)
+
+
+class KeyingDetectorSettings(BaseSettings):
+    threshold_rise_alpha: float = Field(default=0.3, gt=0, le=1)
+    threshold_fall_alpha: float = Field(default=0.05, gt=0, le=1)
+    threshold_on_factor: float = Field(default=3.0, gt=1)
+    threshold_off_factor: float = Field(default=1.5, gt=1)
+
     @model_validator(mode="after")
     def _keying_band_must_open(self) -> Self:
         if self.threshold_off_factor >= self.threshold_on_factor:
@@ -56,6 +61,11 @@ class ToneDetectorSettings(BaseSettings):
                 f"threshold_on_factor ({self.threshold_on_factor})"
             )
         return self
+
+
+class KeyingDebouncerSettings(BaseSettings):
+    debounce_rise_seconds: float = Field(default=0.004, ge=0)
+    debounce_fall_seconds: float = Field(default=0.015, ge=0)
 
     @model_validator(mode="after")
     def _debounce_must_favour_the_key_down(self) -> Self:
@@ -81,15 +91,27 @@ class InterpreterSettings(BaseSettings):
 
 class PipelineSettings(BaseSettings):
     spectrum_analyzer: str = "STFTSpectrumAnalyzer"
-    tone_detector: str = "SpectralToneDetector"
+    carrier_source: str = "PeakCarrierSource"
+    noise_estimator: str = "PercentileNoiseEstimator"
+    keying_detector: str = "AdaptiveKeyingDetector"
+    keying_debouncer: str = "TimedKeyingDebouncer"
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "DummyInterpreter"
     language: str = "en"
     spectrum_analyzer_settings: SpectrumAnalyzerSettings = Field(
         default_factory=SpectrumAnalyzerSettings
     )
-    tone_detector_settings: ToneDetectorSettings = Field(
-        default_factory=ToneDetectorSettings
+    carrier_source_settings: CarrierSourceSettings = Field(
+        default_factory=CarrierSourceSettings
+    )
+    noise_estimator_settings: NoiseEstimatorSettings = Field(
+        default_factory=NoiseEstimatorSettings
+    )
+    keying_detector_settings: KeyingDetectorSettings = Field(
+        default_factory=KeyingDetectorSettings
+    )
+    keying_debouncer_settings: KeyingDebouncerSettings = Field(
+        default_factory=KeyingDebouncerSettings
     )
     timing_decoder_settings: TimingDecoderSettings = Field(
         default_factory=TimingDecoderSettings

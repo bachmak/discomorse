@@ -1,20 +1,13 @@
 import datetime
-from abc import ABC, abstractmethod
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.stages.tone_detector.impl.debounce_policy import (
-    KeyingDelayPolicy,
-)
-from morse_decoder.pipeline.stages.tone_detector.impl.debounce_state import (
+from morse_decoder.config import KeyingDebouncerSettings
+from morse_decoder.pipeline.dto import KeyingSample
+from morse_decoder.pipeline.stages.keying_debouncer.impl.fsm import (
     DebouncedState,
     SettledState,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import KeyingSample
-
-
-class KeyingDebouncer(ABC):
-    @abstractmethod
-    def debounce(self, sample: KeyingSample, ts: datetime.datetime) -> KeyingSample: ...
+from morse_decoder.pipeline.stages.keying_debouncer.impl.policy import KeyingDelayPolicy
+from morse_decoder.pipeline.stages.keying_debouncer.interface import KeyingDebouncer
 
 
 class TimedKeyingDebouncer(KeyingDebouncer):
@@ -23,7 +16,7 @@ class TimedKeyingDebouncer(KeyingDebouncer):
     Drives the debouncing FSM: each reading moves it into its next state.
     """
 
-    def __init__(self, settings: ToneDetectorSettings) -> None:
+    def __init__(self, settings: KeyingDebouncerSettings) -> None:
         self._state: DebouncedState = SettledState(
             policy=KeyingDelayPolicy(
                 rise=datetime.timedelta(seconds=settings.debounce_rise_seconds),
