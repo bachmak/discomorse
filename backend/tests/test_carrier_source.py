@@ -49,7 +49,7 @@ async def _tracked(
     samples: npt.NDArray[PCM16.IntType],
 ) -> tuple[CarrierSample, ...]:
     """The carrier read off real spectrums, cut the way the pipeline cuts them."""
-    tracked = track(limit(await analyze(samples)))
+    tracked = track(await limit(await analyze(samples)))
     assert tracked
     return tracked
 

@@ -104,14 +104,14 @@ def keyed(
     return keys(detect(readings, keying_detector=keying_detector))
 
 
-def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[KeyingSample, ...]:
+async def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[KeyingSample, ...]:
     """Read the key off spectrums the way the pipeline wires the four stages."""
     carrier_source, noise_estimator, keying_detector = source(), estimator(), detector()
     return tuple(
         keying_detector.detect(
             carrier_source.track(limited), noise_estimator.estimate(limited)
         )
-        for limited in limit(spectrums)
+        for limited in await limit(spectrums)
     )
 
 

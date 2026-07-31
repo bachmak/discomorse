@@ -20,28 +20,28 @@ _LOUD = 1.0
         ),
     ],
 )
-def test_the_limiter_keeps_only_the_bins_its_band_covers(
+async def test_the_limiter_keeps_only_the_bins_its_band_covers(
     bins: dict[float, float], want_frequencies: tuple[float, ...]
 ) -> None:
-    assert kept(bins) == want_frequencies
+    assert await kept(bins) == want_frequencies
 
 
-def test_the_limiter_keeps_the_levels_of_the_bins_it_lets_through() -> None:
-    one = limited({100.0: _LOUD, 700.0: 0.3, 900.0: 0.6})
+async def test_the_limiter_keeps_the_levels_of_the_bins_it_lets_through() -> None:
+    one = await limited({100.0: _LOUD, 700.0: 0.3, 900.0: 0.6})
 
     assert tuple(tone.magnitude for tone in one.magnitudes) == (0.3, 0.6)
 
 
-def test_the_limiter_stamps_the_limited_spectrum_with_its_own_time() -> None:
+async def test_the_limiter_stamps_the_limited_spectrum_with_its_own_time() -> None:
     one = spectrum({700.0: _LOUD}, at_second=0.5)
 
-    assert limit((one,))[0].ts == one.ts
+    assert (await limit((one,)))[0].ts == one.ts
 
 
-def test_a_narrow_band_cuts_the_bins_just_outside_it() -> None:
+async def test_a_narrow_band_cuts_the_bins_just_outside_it() -> None:
     bins = {699.0: _LOUD, 700.0: 0.1, 701.0: _LOUD}
 
-    assert kept(bins, spectrum_limiter=limiter(699.5, 700.5)) == (700.0,)
+    assert await kept(bins, spectrum_limiter=limiter(699.5, 700.5)) == (700.0,)
 
 
 @pytest.mark.parametrize(
@@ -52,15 +52,17 @@ def test_a_narrow_band_cuts_the_bins_just_outside_it() -> None:
         pytest.param({}, id="no-bins-at-all"),
     ],
 )
-def test_a_spectrum_missing_the_band_is_rejected(bins: dict[float, float]) -> None:
+async def test_a_spectrum_missing_the_band_is_rejected(
+    bins: dict[float, float],
+) -> None:
     with pytest.raises(ValueError, match="no spectrum bin"):
-        kept(bins)
+        await kept(bins)
 
 
-def test_one_limiter_reads_a_spectrum_as_a_fresh_one_would() -> None:
+async def test_one_limiter_reads_a_spectrum_as_a_fresh_one_would() -> None:
     """The limiter carries no state: a used one still cuts the same band."""
     bins = {100.0: _LOUD, 700.0: 0.3}
     used = limiter()
-    kept(bins, spectrum_limiter=used)
+    await kept(bins, spectrum_limiter=used)
 
-    assert kept(bins, spectrum_limiter=used) == kept(bins)
+    assert await kept(bins, spectrum_limiter=used) == await kept(bins)

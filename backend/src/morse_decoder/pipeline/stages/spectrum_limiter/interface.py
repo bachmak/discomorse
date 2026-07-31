@@ -1,10 +1,6 @@
-from abc import ABC, abstractmethod
-
 from morse_decoder.pipeline.dto import ToneSpectrum
+from morse_decoder.pipeline.stages.interface import PipelineStage
 
 
-class SpectrumLimiter(ABC):
-    @abstractmethod
-    def limit(self, spectrum: ToneSpectrum) -> ToneSpectrum:
-        """Cut the spectrum down to the bins worth reading a carrier off."""
-        ...
+class SpectrumLimiter(PipelineStage[ToneSpectrum, ToneSpectrum]):
+    """Cuts every spectrum down to the bins worth reading a carrier off."""

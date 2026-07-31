@@ -22,6 +22,13 @@ from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLim
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
 
 
+# TODO(#116): drop once every stage is reactive — the limiter then reads the
+# analyzer's stream, and no stage has to be handed one spectrum at a time.
+async def _stream(spectrum: ToneSpectrum) -> AsyncIterator[ToneSpectrum]:
+    """The one spectrum in hand, as the stream a reactive stage reads."""
+    yield spectrum
+
+
 class Pipeline:
     """Streams audio through analyzer → keying stages → decoder → interpreter."""
 
@@ -49,7 +56,8 @@ class Pipeline:
 
     async def run(self) -> AsyncIterator[OutboundEvent]:
         chunks = self._source.stream()
-        async for spectrum in self._spectrum_analyzer.process(chunks):
+        spectrums = self._spectrum_analyzer.process(chunks)
+        async for spectrum in spectrums:
             async for event in self._process_spectrum(spectrum):
                 yield event
 
@@ -58,16 +66,17 @@ class Pipeline:
     ) -> AsyncIterator[OutboundEvent]:
         yield WaterfallFrame(spectrum)
         yield FFTFrame(spectrum)
-        async for event in self._decode(self._sample(spectrum)):
-            yield event
+        limited_spectrums = self._spectrum_limiter.process(_stream(spectrum))
+        async for limited_spectrum in limited_spectrums:
+            async for event in self._decode(self._sample(limited_spectrum)):
+                yield event
 
-    def _sample(self, spectrum: ToneSpectrum) -> ToneSample:
-        limited = self._spectrum_limiter.limit(spectrum)
+    def _sample(self, limited: ToneSpectrum) -> ToneSample:
         carrier = self._carrier_source.track(limited)
         noise = self._noise_estimator.estimate(limited)
         keying = self._keying_detector.detect(carrier, noise)
-        debounced = self._keying_debouncer.debounce(keying, spectrum.ts)
-        return ToneSample(ts=spectrum.ts, on=debounced.is_on)
+        debounced = self._keying_debouncer.debounce(keying, limited.ts)
+        return ToneSample(ts=limited.ts, on=debounced.is_on)
 
     async def _decode(self, sample: ToneSample) -> AsyncIterator[OutboundEvent]:
         timing = self._timing_decoder.process(ToneReading(samples=(sample,)))

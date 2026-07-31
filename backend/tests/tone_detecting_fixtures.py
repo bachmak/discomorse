@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import numpy.typing as npt
 from carrier_fixtures import ANALYZER_SETTINGS
 from keying_fixtures import key_off, keys
+from limiter_fixtures import limit
 from spectrum_fixtures import spectrums_of
 from tone_fixtures import PcmChunks, flags
 
@@ -42,12 +43,16 @@ class ToneDetecting:
     def __init__(self, pipeline: Pipeline) -> None:
         self._pipeline = pipeline
 
-    def read(self, spectrums: tuple[ToneSpectrum, ...]) -> tuple[ToneSample, ...]:
-        return tuple(self._pipeline._sample(spectrum) for spectrum in spectrums)
+    async def read(self, spectrums: tuple[ToneSpectrum, ...]) -> tuple[ToneSample, ...]:
+        limited = await limit(
+            spectrums, spectrum_limiter=self._pipeline._spectrum_limiter
+        )
+        return tuple(self._pipeline._sample(one) for one in limited)
 
     async def feed(self, chunk: PcmChunk) -> tuple[ToneSample, ...]:
         """One chunk of audio, driven through the pipeline the way ``run`` does."""
-        return self.read(await spectrums_of(self._pipeline._spectrum_analyzer, chunk))
+        spectrums = await spectrums_of(self._pipeline._spectrum_analyzer, chunk)
+        return await self.read(spectrums)
 
     def stage[StageT](self, name: str, kind: type[StageT]) -> StageT:
         """The stage the pipeline built under ``name``, told to be a ``kind``."""
@@ -60,13 +65,13 @@ def tone_detecting(settings: PipelineSettings | None = None) -> ToneDetecting:
     return ToneDetecting(create_pipeline(NoAudio(), settings or SETTINGS))
 
 
-def detect(
+async def detect(
     spectrums: tuple[ToneSpectrum, ...],
     *,
     detecting: ToneDetecting | None = None,
 ) -> tuple[ToneSample, ...]:
     """Feed ``spectrums`` to one set of stages the way the pipeline would."""
-    return (detecting or tone_detecting()).read(spectrums)
+    return await (detecting or tone_detecting()).read(spectrums)
 
 
 async def read_tone(
@@ -88,10 +93,12 @@ class ReadKey:
     debounced: tuple[bool, ...]
 
 
-def read_key(spectrums: tuple[ToneSpectrum, ...]) -> ReadKey:
+async def read_key(spectrums: tuple[ToneSpectrum, ...]) -> ReadKey:
     """What the stages make of ``spectrums``, and what they would without a debouncer.
 
     The debounced side comes off the pipeline itself: the four stages meet there,
     and nowhere else is the key read the way the pipeline reads it.
     """
-    return ReadKey(raw=keys(key_off(spectrums)), debounced=flags(detect(spectrums)))
+    return ReadKey(
+        raw=keys(await key_off(spectrums)), debounced=flags(await detect(spectrums))
+    )

@@ -104,12 +104,12 @@ async def test_no_mark_reads_back_as_long_as_one_keyed_longer(
 async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
     spectrums = await analyze(_PCM)
 
-    samples = detect(spectrums)
+    samples = await detect(spectrums)
 
     assert not any(
         sample.on
         for sample, locked in zip(
-            samples, lock_flags(track(limit(spectrums))), strict=True
+            samples, lock_flags(track(await limit(spectrums))), strict=True
         )
         if not locked
     )
