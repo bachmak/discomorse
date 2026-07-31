@@ -1,9 +1,7 @@
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
-    PcmChunk,
-    SpectrumReading,
     ToneReading,
     ToneSample,
     ToneSpectrum,
@@ -50,27 +48,18 @@ class Pipeline:
         self._interpreter = interpreter
 
     async def run(self) -> AsyncIterator[OutboundEvent]:
-        async for chunk in self._source.stream():
-            async for event in self._process_chunk(chunk):
+        chunks = self._source.stream()
+        async for spectrum in self._spectrum_analyzer.process(chunks):
+            async for event in self._process_spectrum(spectrum):
                 yield event
 
-    async def _process_chunk(self, chunk: PcmChunk) -> AsyncIterator[OutboundEvent]:
-        spectrums = await self._spectrum_analyzer.process(chunk)
-        for event in self._spectrum_events(spectrums):
+    async def _process_spectrum(
+        self, spectrum: ToneSpectrum
+    ) -> AsyncIterator[OutboundEvent]:
+        yield WaterfallFrame(spectrum)
+        yield FFTFrame(spectrum)
+        async for event in self._decode(self._sample(spectrum)):
             yield event
-        async for event in self._decode(self._tone_reading(spectrums)):
-            yield event
-
-    def _spectrum_events(self, reading: SpectrumReading) -> Iterator[OutboundEvent]:
-        for spectrum in reading.spectrums:
-            yield WaterfallFrame(spectrum)
-        if reading.spectrums:
-            yield FFTFrame(reading.spectrums[-1])
-
-    def _tone_reading(self, reading: SpectrumReading) -> ToneReading:
-        return ToneReading(
-            samples=tuple(self._sample(spectrum) for spectrum in reading.spectrums)
-        )
 
     def _sample(self, spectrum: ToneSpectrum) -> ToneSample:
         limited = self._spectrum_limiter.limit(spectrum)
@@ -80,8 +69,8 @@ class Pipeline:
         debounced = self._keying_debouncer.debounce(keying, spectrum.ts)
         return ToneSample(ts=spectrum.ts, on=debounced.is_on)
 
-    async def _decode(self, reading: ToneReading) -> AsyncIterator[OutboundEvent]:
-        timing = self._timing_decoder.process(reading)
+    async def _decode(self, sample: ToneSample) -> AsyncIterator[OutboundEvent]:
+        timing = self._timing_decoder.process(ToneReading(samples=(sample,)))
         if not timing.elements:
             return
         transcription = await self._interpreter.interpret(timing)

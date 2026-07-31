@@ -11,13 +11,13 @@ from typing import Self
 
 import numpy.typing as npt
 from audio_fixtures import EPOCH
+from spectrum_fixtures import spectrums_of
 
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import CarrierSourceSettings, SpectrumAnalyzerSettings
 from morse_decoder.pipeline.dto import (
     CarrierSample,
     PcmChunk,
-    SpectrumReading,
     ToneMagnitude,
     ToneSpectrum,
 )
@@ -168,6 +168,8 @@ class Phase:
         )
 
 
-async def analyze(samples: npt.NDArray[PCM16.IntType]) -> SpectrumReading:
-    analyzer = STFTSpectrumAnalyzer(ANALYZER_SETTINGS)
-    return await analyzer.process(PcmChunk(ts=EPOCH, data=samples.tobytes()))
+async def analyze(samples: npt.NDArray[PCM16.IntType]) -> tuple[ToneSpectrum, ...]:
+    return await spectrums_of(
+        STFTSpectrumAnalyzer(ANALYZER_SETTINGS),
+        PcmChunk(ts=EPOCH, data=samples.tobytes()),
+    )

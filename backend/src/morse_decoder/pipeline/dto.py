@@ -75,11 +75,6 @@ class ToneSpectrum:
 
 
 @dataclass(frozen=True)
-class SpectrumReading:
-    spectrums: tuple[ToneSpectrum, ...]
-
-
-@dataclass(frozen=True)
 class Tone:
     frequency: float
     magnitude: float

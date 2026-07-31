@@ -2,6 +2,8 @@
 ### ANYTHING FROM THIS FILE INTO PRODUCTION CODE. ###
 
 
+from collections.abc import AsyncIterable, AsyncIterator
+
 import pytest
 
 from morse_decoder.config import (
@@ -13,7 +15,6 @@ from morse_decoder.pipeline import factory
 from morse_decoder.pipeline.dto import (
     CarrierSample,
     PcmChunk,
-    SpectrumReading,
     Tone,
     ToneSpectrum,
 )
@@ -41,8 +42,11 @@ class _FakeAnalyzer(SpectrumAnalyzer):
     def __init__(self, settings: SpectrumAnalyzerSettings) -> None:
         self._settings = settings
 
-    async def process(self, chunk: PcmChunk) -> SpectrumReading:
-        return SpectrumReading(spectrums=())
+    async def process(
+        self, chunks: AsyncIterable[PcmChunk]
+    ) -> AsyncIterator[ToneSpectrum]:
+        return
+        yield  # pragma: no cover  # marks process() a generator, nothing is read
 
 
 class _FakeCarrierSource(CarrierSource):

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import numpy.typing as npt
 from carrier_fixtures import ANALYZER_SETTINGS
 from keying_fixtures import key_off, keys
+from spectrum_fixtures import spectrums_of
 from tone_fixtures import PcmChunks, flags
 
 from morse_decoder.audio.pcm16 import PCM16
@@ -18,7 +19,6 @@ from morse_decoder.audio.source import AudioSource
 from morse_decoder.config import PipelineSettings
 from morse_decoder.pipeline.dto import (
     PcmChunk,
-    SpectrumReading,
     ToneSample,
     ToneSpectrum,
 )
@@ -43,14 +43,11 @@ class ToneDetecting:
         self._pipeline = pipeline
 
     def read(self, spectrums: tuple[ToneSpectrum, ...]) -> tuple[ToneSample, ...]:
-        return self._pipeline._tone_reading(
-            SpectrumReading(spectrums=spectrums)
-        ).samples
+        return tuple(self._pipeline._sample(spectrum) for spectrum in spectrums)
 
     async def feed(self, chunk: PcmChunk) -> tuple[ToneSample, ...]:
         """One chunk of audio, driven through the pipeline the way ``run`` does."""
-        reading = await self._pipeline._spectrum_analyzer.process(chunk)
-        return self.read(reading.spectrums)
+        return self.read(await spectrums_of(self._pipeline._spectrum_analyzer, chunk))
 
     def stage[StageT](self, name: str, kind: type[StageT]) -> StageT:
         """The stage the pipeline built under ``name``, told to be a ``kind``."""

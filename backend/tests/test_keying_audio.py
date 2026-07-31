@@ -41,14 +41,14 @@ def _keyed_pcm(noise_amplitude: float = 0.0) -> npt.NDArray[PCM16.IntType]:
 
 
 async def _keyed(samples: npt.NDArray[PCM16.IntType]) -> tuple[bool, ...]:
-    return keys(key_off((await analyze(samples)).spectrums))
+    return keys(key_off(await analyze(samples)))
 
 
 async def _keyed_inside(
     samples: npt.NDArray[PCM16.IntType], phase: Phase
 ) -> tuple[bool, ...]:
     """The key over the frames that lie wholly inside ``phase``."""
-    spectrums = (await analyze(samples)).spectrums
+    spectrums = await analyze(samples)
     return tuple(
         flag
         for flag, spectrum in zip(keys(key_off(spectrums)), spectrums, strict=True)
@@ -78,7 +78,7 @@ async def test_the_key_reads_back_the_bursts_it_was_keyed_with(
 
 
 async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
-    spectrums = (await analyze(_keyed_pcm())).spectrums
+    spectrums = await analyze(_keyed_pcm())
 
     flags = keys(key_off(spectrums))
     carriers = track(limit(spectrums))

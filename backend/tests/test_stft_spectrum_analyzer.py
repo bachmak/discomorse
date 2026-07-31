@@ -4,6 +4,7 @@ import numpy as np
 import numpy.typing as npt
 import pytest
 from audio_fixtures import EPOCH, sine_pcm
+from spectrum_fixtures import spectrums_of
 
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.config import SpectrumAnalyzerSettings
@@ -45,19 +46,21 @@ def _peak(spectrum: ToneSpectrum) -> ToneMagnitude:
     return max(spectrum.magnitudes, key=lambda tone: tone.magnitude)
 
 
+def _chunks(
+    samples: npt.NDArray[PCM16.IntType], chunk_size: int
+) -> tuple[PcmChunk, ...]:
+    size = chunk_size or samples.size
+    return tuple(
+        _chunk(samples[offset : offset + size], at_sample=offset)
+        for offset in range(0, samples.size, size)
+    )
+
+
 async def _analyze(
     samples: npt.NDArray[PCM16.IntType], chunk_size: int = 0
 ) -> tuple[ToneSpectrum, ...]:
     """Feed ``samples`` as one chunk, or as back-to-back chunks of ``chunk_size``."""
-    analyzer = _analyzer()
-    size = chunk_size or samples.size
-    spectrums: tuple[ToneSpectrum, ...] = ()
-    for offset in range(0, samples.size, size):
-        reading = await analyzer.process(
-            _chunk(samples[offset : offset + size], at_sample=offset)
-        )
-        spectrums += reading.spectrums
-    return spectrums
+    return await spectrums_of(_analyzer(), *_chunks(samples, chunk_size))
 
 
 @pytest.mark.parametrize(
@@ -112,9 +115,7 @@ async def test_analyzer_stamps_spectrums_on_the_hop_grid() -> None:
 
 
 async def test_analyzer_reports_nothing_before_a_frame_is_filled() -> None:
-    reading = await _analyzer().process(_chunk(_tone(duration_s=0.001)))
-
-    assert reading.spectrums == ()
+    assert await _analyze(_tone(duration_s=0.001)) == ()
 
 
 async def test_analyzer_reports_near_zero_magnitudes_for_silence() -> None:
