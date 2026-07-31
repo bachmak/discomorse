@@ -81,7 +81,7 @@ class Pipeline:
         return ToneSample(ts=spectrum.ts, on=debounced.is_on)
 
     async def _decode(self, reading: ToneReading) -> AsyncIterator[OutboundEvent]:
-        timing = await self._timing_decoder.process(reading)
+        timing = self._timing_decoder.process(reading)
         if not timing.elements:
             return
         transcription = await self._interpreter.interpret(timing)

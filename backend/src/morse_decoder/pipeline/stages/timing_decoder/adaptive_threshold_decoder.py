@@ -154,7 +154,7 @@ class AdaptiveThresholdDecoder(TimingDecoder):
         )
         self._classifiers = _classifiers(settings)
 
-    async def process(self, reading: ToneReading) -> TimingReading:
+    def process(self, reading: ToneReading) -> TimingReading:
         spans = self._extractor.feed(reading.samples)
         return TimingReading([self._classify(span) for span in spans])
 
