@@ -9,6 +9,7 @@ from recording_fixtures import (
     RecordingNoiseEstimator,
     recording_detector,
 )
+from tone_fixtures import flags
 
 from morse_decoder.config import ToneDetectorSettings
 from morse_decoder.pipeline.dto import (
@@ -94,12 +95,10 @@ def test_an_unknown_substage_name_is_rejected(
         SpectralToneDetector(settings)
 
 
-async def test_every_spectrum_yields_one_key_up_sample_stamped_with_its_own_time() -> (
-    None
-):
+async def test_every_spectrum_yields_one_sample_stamped_with_its_own_time() -> None:
     samples = await _process(_detector(), _STREAM)
 
-    assert samples == tuple(ToneSample(ts=one.ts, on=False) for one in _STREAM)
+    assert tuple(sample.ts for sample in samples) == tuple(one.ts for one in _STREAM)
 
 
 async def test_a_reading_without_spectrums_reports_nothing() -> None:
@@ -141,6 +140,12 @@ def _debouncing_substage(detector: SpectralToneDetector) -> RecordingKeyingDebou
     keying_debouncer = detector._keying_debouncer
     assert isinstance(keying_debouncer, RecordingKeyingDebouncer)
     return keying_debouncer
+
+
+def _reported_keys(
+    substage: RecordingKeyingDetector | RecordingKeyingDebouncer,
+) -> tuple[bool, ...]:
+    return tuple(sample.is_on for sample in substage.reported)
 
 
 def _seen_by_substages(
@@ -198,11 +203,11 @@ async def test_the_debouncing_substage_reads_the_key_stamped_with_its_spectrums_
     )
 
 
-async def test_the_key_the_substages_read_stays_off_the_stages_output(
+async def test_the_stage_reports_the_key_the_debouncing_substage_settled_on(
     recording_detector: SpectralToneDetector,
 ) -> None:
     samples = await _process(recording_detector, _STREAM)
 
-    assert _keying_substage(recording_detector).seen
-    assert _debouncing_substage(recording_detector).seen
-    assert not any(sample.on for sample in samples)
+    read = flags(samples)
+    assert read == _reported_keys(_debouncing_substage(recording_detector))
+    assert read != _reported_keys(_keying_substage(recording_detector))

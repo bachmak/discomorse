@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 import pytest
-from audio_fixtures import noise_pcm, sine_pcm
+from audio_fixtures import noise_pcm, silence_pcm, sine_pcm
 from carrier_fixtures import (
     HOP_SECONDS,
     LOCK_SECONDS,
@@ -49,14 +49,10 @@ _PHASES = (
 )
 
 
-def _silence(seconds: float) -> npt.NDArray[PCM16.IntType]:
-    return np.zeros(int(SAMPLE_RATE * seconds), dtype=PCM16.IntType)
-
-
 def _keyed_pcm(noise_amplitude: float = 0.0) -> npt.NDArray[PCM16.IntType]:
     """Two keyed bursts of one tone with the key up in between."""
     burst = sine_pcm(_TONE_HZ, _BURST_SECONDS, SAMPLE_RATE, _KEY_DOWN_AMPLITUDE)
-    keyed = np.concatenate((burst, _silence(_BURST_SECONDS), burst))
+    keyed = np.concatenate((burst, silence_pcm(_BURST_SECONDS, SAMPLE_RATE), burst))
     if not noise_amplitude:
         return keyed
     floor = noise_pcm(_BURST_SECONDS * 3, SAMPLE_RATE, noise_amplitude)
