@@ -27,8 +27,9 @@ class HoldState(CarrierTrackingState):
         self._rival = rival
 
     def update(self, peak: Tone, spectrum: ToneSpectrum) -> CarrierTrackingState:
+        carrier = self._updated_carrier(spectrum)
         if not self._policy.is_credible(peak.magnitude):
-            return self._clone(self._carrier, Tone.empty())
+            return self._clone(carrier, Tone.empty())
 
         if self._policy.continues(self._carrier, peak):
             return self._clone(peak, Tone.empty())
@@ -56,9 +57,6 @@ class HoldState(CarrierTrackingState):
         new_carrier_magnitude = _magnitude_at_nearest_freq(
             spectrum, self._carrier.frequency
         )
-
-        if not self._policy.is_credible(new_carrier_magnitude):
-            return self._carrier
 
         return Tone(
             frequency=self._carrier.frequency,
