@@ -34,3 +34,4 @@ def test_add(a, b, want):
 No `# type: ignore` without a comment explaining why.
 
 Don't hardcode audio-format related information in backend/, use pcm16.py instead.
+Do not commit, push, or open PRs unless explicitly asked to.

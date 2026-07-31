@@ -28,6 +28,11 @@ def sine_pcm(
     )
 
 
+def silence_pcm(duration_s: float, sample_rate: int) -> npt.NDArray[PCM16.IntType]:
+    """Mono Int16 samples of a key-up line: nothing sounds."""
+    return np.zeros(int(sample_rate * duration_s), dtype=PCM16.IntType)
+
+
 def chirp_pcm(
     start_hz: float,
     end_hz: float,
