@@ -16,8 +16,13 @@ from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
 )
 from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
     CarrierSample,
+    KeyingSample,
     NoiseSample,
     Tone,
+)
+from morse_decoder.pipeline.stages.tone_detector.impl.keying_detector import (
+    AdaptiveKeyingDetector,
+    KeyingDetector,
 )
 from morse_decoder.pipeline.stages.tone_detector.impl.noise_estimator import (
     NoiseEstimator,
@@ -32,15 +37,23 @@ _STREAM = SpectrumTimeline().hold(KEYED, LOCK_SECONDS * 4).build()
 
 
 class _RecordingCarrierSource(CarrierSource):
-    """Stand-in source that keeps every spectrum the detector hands it."""
+    """Stand-in source that keeps every spectrum the detector hands it.
+
+    Each sample it reports is stamped with its spectrum's time, so what the
+    keying substage was handed can be told apart reading by reading.
+    """
 
     def __init__(self, settings: ToneDetectorSettings) -> None:
         self._settings = settings
         self.seen: list[ToneSpectrum] = []
+        self.reported: list[CarrierSample] = []
 
     def track(self, spectrum: ToneSpectrum) -> CarrierSample:
         self.seen.append(spectrum)
-        return CarrierSample(tone=Tone.empty(), is_locked=False)
+        self.reported.append(
+            CarrierSample(tone=Tone.empty().with_ts(spectrum.ts), is_locked=False)
+        )
+        return self.reported[-1]
 
 
 class _RecordingNoiseEstimator(NoiseEstimator):
@@ -49,10 +62,28 @@ class _RecordingNoiseEstimator(NoiseEstimator):
     def __init__(self, settings: ToneDetectorSettings) -> None:
         self._settings = settings
         self.seen: list[ToneSpectrum] = []
+        self.reported: list[NoiseSample] = []
 
     def estimate(self, spectrum: ToneSpectrum) -> NoiseSample:
         self.seen.append(spectrum)
-        return NoiseSample(noise=0.0)
+        self.reported.append(NoiseSample(noise=float(len(self.seen))))
+        return self.reported[-1]
+
+
+class _RecordingKeyingDetector(KeyingDetector):
+    """Stand-in detector that keeps every pair the detector hands it.
+
+    It always reports a keyed line: the samples leaving the stage must stay
+    key-up all the same, until the substage's output is wired to them.
+    """
+
+    def __init__(self, settings: ToneDetectorSettings) -> None:
+        self._settings = settings
+        self.seen: list[tuple[CarrierSample, NoiseSample]] = []
+
+    def detect(self, carrier: CarrierSample, noise: NoiseSample) -> KeyingSample:
+        self.seen.append((carrier, noise))
+        return KeyingSample(is_on=True)
 
 
 @pytest.fixture
@@ -63,8 +94,15 @@ def recording_detector(monkeypatch: pytest.MonkeyPatch) -> SpectralToneDetector:
     monkeypatch.setitem(
         tone_detector._NOISE_ESTIMATORS, "recording", _RecordingNoiseEstimator
     )
+    monkeypatch.setitem(
+        tone_detector._KEYING_DETECTORS, "recording", _RecordingKeyingDetector
+    )
     return SpectralToneDetector(
-        ToneDetectorSettings(carrier_source="recording", noise_estimator="recording")
+        ToneDetectorSettings(
+            carrier_source="recording",
+            noise_estimator="recording",
+            keying_detector="recording",
+        )
     )
 
 
@@ -83,6 +121,7 @@ def test_the_detector_builds_the_substages_the_settings_name() -> None:
 
     assert isinstance(detector._carrier_source, PeakCarrierSource)
     assert isinstance(detector._noise_estimator, PercentileNoiseEstimator)
+    assert isinstance(detector._keying_detector, AdaptiveKeyingDetector)
 
 
 @pytest.mark.parametrize(
@@ -97,6 +136,11 @@ def test_the_detector_builds_the_substages_the_settings_name() -> None:
             ToneDetectorSettings(noise_estimator="missing"),
             "Unknown noise estimator: 'missing'",
             id="noise-estimator",
+        ),
+        pytest.param(
+            ToneDetectorSettings(keying_detector="missing"),
+            "Unknown keying detector: 'missing'",
+            id="keying-detector",
         ),
     ],
 )
@@ -134,14 +178,26 @@ async def test_a_spectrum_missing_the_window_is_rejected(
         await _process(_detector(), (spectrum(bins),))
 
 
-def _seen_by_substages(
+def _reading_substages(
     detector: SpectralToneDetector,
-) -> tuple[list[ToneSpectrum], list[ToneSpectrum]]:
+) -> tuple[_RecordingCarrierSource, _RecordingNoiseEstimator]:
     carrier_source = detector._carrier_source
     noise_estimator = detector._noise_estimator
     assert isinstance(carrier_source, _RecordingCarrierSource)
     assert isinstance(noise_estimator, _RecordingNoiseEstimator)
-    return carrier_source.seen, noise_estimator.seen
+    return carrier_source, noise_estimator
+
+
+def _keying_substage(detector: SpectralToneDetector) -> _RecordingKeyingDetector:
+    keying_detector = detector._keying_detector
+    assert isinstance(keying_detector, _RecordingKeyingDetector)
+    return keying_detector
+
+
+def _seen_by_substages(
+    detector: SpectralToneDetector,
+) -> tuple[list[ToneSpectrum], ...]:
+    return tuple(substage.seen for substage in _reading_substages(detector))
 
 
 async def test_both_substages_see_every_spectrum_limited_to_the_window(
@@ -166,3 +222,25 @@ async def test_the_substages_keep_their_state_across_readings(
 
     for seen in _seen_by_substages(recording_detector):
         assert len(seen) == len(_STREAM)
+
+    assert len(_keying_substage(recording_detector).seen) == len(_STREAM)
+
+
+async def test_the_keying_substage_reads_what_the_other_two_reported(
+    recording_detector: SpectralToneDetector,
+) -> None:
+    await _process(recording_detector, _STREAM)
+
+    carrier_source, noise_estimator = _reading_substages(recording_detector)
+    assert _keying_substage(recording_detector).seen == list(
+        zip(carrier_source.reported, noise_estimator.reported, strict=True)
+    )
+
+
+async def test_the_key_the_substage_reads_stays_off_the_stages_output(
+    recording_detector: SpectralToneDetector,
+) -> None:
+    samples = await _process(recording_detector, _STREAM)
+
+    assert _keying_substage(recording_detector).seen
+    assert not any(sample.on for sample in samples)

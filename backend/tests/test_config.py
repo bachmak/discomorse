@@ -62,6 +62,22 @@ def test_tone_detector_settings_reject_a_carrier_window_that_never_opens(
         ToneDetectorSettings(carrier_min_hz=min_hz, carrier_max_hz=max_hz)
 
 
+@pytest.mark.parametrize(
+    "on_factor, off_factor",
+    [
+        pytest.param(1.5, 3.0, id="band-inverted"),
+        pytest.param(3.0, 3.0, id="band-empty"),
+    ],
+)
+def test_tone_detector_settings_reject_a_keying_band_that_never_opens(
+    on_factor: float, off_factor: float
+) -> None:
+    with pytest.raises(ValidationError, match="must be below"):
+        ToneDetectorSettings(
+            threshold_on_factor=on_factor, threshold_off_factor=off_factor
+        )
+
+
 def test_default_settings_agree_on_the_sample_rate() -> None:
     settings = Settings()
 

@@ -7,16 +7,15 @@ import numpy.typing as npt
 import pytest
 from audio_fixtures import noise_pcm, sine_pcm
 from carrier_fixtures import (
-    FRAME_SECONDS,
     HOP_SECONDS,
     LOCK_SECONDS,
     MIN_MAGNITUDE,
     SAMPLE_RATE,
+    Phase,
     analyze,
     first_locked_index,
     frequencies,
     lock_flags,
-    seconds_since_epoch,
     track,
 )
 
@@ -31,21 +30,11 @@ _FRAMES_TO_LOCK = round(LOCK_SECONDS / HOP_SECONDS)
 
 
 @dataclass(frozen=True)
-class _Phase:
+class _Phase(Phase):
     """A stretch of the keyed signal and the levels its frames must report."""
 
-    start_s: float
-    end_s: float
     lowest_magnitude: float
     highest_magnitude: float
-
-    def covers(self, sample: CarrierSample) -> bool:
-        """Whether the sample's frame lies wholly inside this phase."""
-        centre = seconds_since_epoch(sample.tone.ts)
-        return (
-            centre - FRAME_SECONDS / 2 >= self.start_s
-            and centre + FRAME_SECONDS / 2 <= self.end_s
-        )
 
     def holds(self, sample: CarrierSample) -> bool:
         return self.lowest_magnitude <= sample.tone.magnitude <= self.highest_magnitude
@@ -101,7 +90,7 @@ async def test_a_keyed_carrier_holds_its_frequency_through_the_gaps(
 async def test_a_keyed_carrier_reports_the_level_of_every_phase(phase: _Phase) -> None:
     samples = await _tracked(_keyed_pcm())
 
-    inside = tuple(sample for sample in samples if phase.covers(sample))
+    inside = tuple(sample for sample in samples if phase.covers(sample.tone.ts))
     assert inside
     assert all(phase.holds(sample) for sample in inside)
 
@@ -114,9 +103,9 @@ async def test_a_louder_tone_inside_the_window_steals_the_lock() -> None:
     samples = await _tracked(np.concatenate((quiet, loud)))
 
     before = _Phase(0.0, half, 0.0, 1.0)
-    assert {sample.tone.frequency for sample in samples if before.covers(sample)} == {
-        _TONE_HZ
-    }
+    assert {
+        sample.tone.frequency for sample in samples if before.covers(sample.tone.ts)
+    } == {_TONE_HZ}
     assert samples[-1].tone.frequency == _INTRUDER_HZ
     assert samples[-1].is_locked
 
