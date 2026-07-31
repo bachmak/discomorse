@@ -73,8 +73,8 @@ class SpectralToneDetector(ToneDetector):
         carrier = self._carrier_source.track(windowed)
         noise = self._noise_estimator.estimate(windowed)
         keying = self._keying_detector.detect(carrier, noise)
-        _ = self._keying_debouncer.debounce(keying, spectrum.ts)
-        return ToneSample(ts=spectrum.ts, on=False)
+        debounced = self._keying_debouncer.debounce(keying, spectrum.ts)
+        return ToneSample(ts=spectrum.ts, on=debounced.is_on)
 
 
 def _build[SubstageT](
