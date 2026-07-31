@@ -31,12 +31,7 @@ class HoldState(CarrierTrackingState):
             return self._clone(self._carrier, Tone.empty())
 
         if self._policy.continues(self._carrier, peak):
-            new_carrier = Tone(
-                frequency=peak.frequency,
-                magnitude=max(self._carrier.magnitude, peak.magnitude),
-                ts=peak.ts,
-            )
-            return self._clone(new_carrier, Tone.empty())
+            return self._clone(peak, Tone.empty())
 
         carrier = self._updated_carrier(spectrum)
         if not self._policy.beats(prev_tone=carrier, new_tone=peak):
