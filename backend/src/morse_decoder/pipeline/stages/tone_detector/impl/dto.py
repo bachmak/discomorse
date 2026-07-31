@@ -32,18 +32,8 @@ class CarrierSample:
 
 
 @dataclass(frozen=True)
-class CarrierReading:
-    samples: tuple[CarrierSample, ...]
-
-
-@dataclass(frozen=True)
 class NoiseSample:
     noise: float
-
-
-@dataclass(frozen=True)
-class NoiseReading:
-    samples: tuple[NoiseSample, ...]
 
 
 @dataclass(frozen=True)

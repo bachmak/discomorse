@@ -1,12 +1,10 @@
 import pytest
 from carrier_fixtures import MAX_HZ, MIN_HZ, spectrum
-from noise_fixtures import estimate, estimator, noise_of, noises
+from noise_fixtures import estimate, noise_of, noises
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import SpectrumReading
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import NoiseSample
-from morse_decoder.pipeline.stages.tone_detector.impl.noise_estimator import (
-    PercentileNoiseEstimator,
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
+    FrequencyWindow,
+    NoiseSample,
 )
 
 _QUIET = 0.02
@@ -75,14 +73,11 @@ def test_estimator_only_reads_bins_inside_the_window(
 
 
 def test_a_narrow_window_ignores_the_bins_just_outside_it() -> None:
-    settings = ToneDetectorSettings(carrier_min_hz=699.5, carrier_max_hz=700.5)
     bins = {699.0: _LOUD, _CARRIER_HZ: 0.1, 701.0: _LOUD}
 
-    reading = PercentileNoiseEstimator(settings).estimate(
-        SpectrumReading(spectrums=(spectrum(bins),))
-    )
+    samples = estimate((spectrum(bins),), window=FrequencyWindow(699.5, 700.5))
 
-    assert reading.samples == (NoiseSample(noise=0.1),)
+    assert samples == (NoiseSample(noise=0.1),)
 
 
 @pytest.mark.parametrize(
@@ -111,10 +106,6 @@ def test_estimator_reports_one_sample_per_spectrum() -> None:
         NoiseSample(noise=0.2),
         NoiseSample(noise=0.3),
     )
-
-
-def test_estimator_reports_nothing_for_a_reading_without_spectrums() -> None:
-    assert estimator().estimate(SpectrumReading(spectrums=())).samples == ()
 
 
 def test_a_rising_floor_is_read_as_a_rising_floor() -> None:

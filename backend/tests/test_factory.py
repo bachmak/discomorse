@@ -11,6 +11,7 @@ from morse_decoder.config import (
 )
 from morse_decoder.pipeline import factory
 from morse_decoder.pipeline.dto import PcmChunk, SpectrumReading, ToneReading
+from morse_decoder.pipeline.resolve_type import resolve
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
 from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer import (
     STFTSpectrumAnalyzer,
@@ -41,7 +42,7 @@ class _FakeDetector(ToneDetector):
 def test_resolve_returns_registered_class() -> None:
     catalog: dict[str, type[ToneDetector]] = {"fake": _FakeDetector}
 
-    assert factory._resolve(catalog, "fake", "tone detector") is _FakeDetector
+    assert resolve(catalog, "fake", "tone detector") is _FakeDetector
 
 
 @pytest.mark.parametrize(
@@ -53,7 +54,7 @@ def test_resolve_returns_registered_class() -> None:
 )
 def test_resolve_unknown_name_raises(catalog: dict[str, type[ToneDetector]]) -> None:
     with pytest.raises(KeyError, match="Unknown tone detector: 'missing'"):
-        factory._resolve(catalog, "missing", "tone detector")
+        resolve(catalog, "missing", "tone detector")
 
 
 def test_build_passes_typed_settings_to_plugin(

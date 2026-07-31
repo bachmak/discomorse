@@ -4,11 +4,15 @@ Spectrums come from ``carrier_fixtures`` — both sub-stages read the same
 window off the same readings, so they share one way of writing bins down.
 """
 
-from carrier_fixtures import SETTINGS, spectrum
+from carrier_fixtures import SETTINGS, WINDOW, spectrum
 
 from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import SpectrumReading, ToneSpectrum
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import NoiseSample
+from morse_decoder.pipeline.dto import ToneSpectrum
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
+    FrequencyWindow,
+    NoiseSample,
+)
+from morse_decoder.pipeline.stages.tone_detector.impl.helpers import limit_to_window
 from morse_decoder.pipeline.stages.tone_detector.impl.noise_estimator import (
     PercentileNoiseEstimator,
 )
@@ -26,16 +30,13 @@ def estimate(
     spectrums: tuple[ToneSpectrum, ...],
     *,
     noise_estimator: PercentileNoiseEstimator | None = None,
-    batch_size: int | None = None,
+    window: FrequencyWindow = WINDOW,
 ) -> tuple[NoiseSample, ...]:
-    """Feed ``spectrums`` to one estimator, ``batch_size`` of them per call."""
+    """Feed ``spectrums`` to one estimator the way the tone detector would."""
     reader = noise_estimator or estimator()
-    size = batch_size or max(len(spectrums), 1)
-    samples: tuple[NoiseSample, ...] = ()
-    for offset in range(0, len(spectrums), size):
-        reading = SpectrumReading(spectrums=spectrums[offset : offset + size])
-        samples += reader.estimate(reading).samples
-    return samples
+    return tuple(
+        reader.estimate(limit_to_window(spectrum, window)) for spectrum in spectrums
+    )
 
 
 def noises(samples: tuple[NoiseSample, ...]) -> tuple[float, ...]:

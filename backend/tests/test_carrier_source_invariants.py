@@ -16,13 +16,11 @@ from carrier_fixtures import (
     frequencies,
     locking_timeline,
     source,
-    spectrum,
-    spectrums_at,
     track,
 )
 
-from morse_decoder.config import ToneDetectorSettings
-from morse_decoder.pipeline.dto import SpectrumReading, ToneSpectrum
+from morse_decoder.pipeline.dto import ToneSpectrum
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import FrequencyWindow
 
 _LOW_HZ = 500.0
 _GRID_SPECTRUMS = 20
@@ -46,14 +44,6 @@ _SCENARIOS = {
     "drifts-after-the-lock": _drifting(),
 }
 _STREAMS = [pytest.param(spectrums, id=name) for name, spectrums in _SCENARIOS.items()]
-
-
-@pytest.mark.parametrize("spectrums", _STREAMS)
-@pytest.mark.parametrize("batch_size", [1, 2, 3, 7])
-def test_how_the_stream_is_batched_does_not_change_the_samples(
-    spectrums: tuple[ToneSpectrum, ...], batch_size: int
-) -> None:
-    assert track(spectrums, batch_size=batch_size) == track(spectrums)
 
 
 @pytest.mark.parametrize("spectrums", _STREAMS)
@@ -82,49 +72,21 @@ def test_sources_do_not_share_tracking_state() -> None:
     assert not track(spectrums[:1], carrier_source=source())[0].is_locked
 
 
-def test_an_empty_reading_leaves_the_lock_untouched() -> None:
+def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
     spectrums = _SCENARIOS["locks-and-holds"]
     tracked = source()
 
-    head = tracked.track(SpectrumReading(spectrums=spectrums[:3])).samples
-    empty = tracked.track(SpectrumReading(spectrums=())).samples
-    tail = tracked.track(SpectrumReading(spectrums=spectrums[3:])).samples
+    head = track(spectrums[:3], carrier_source=tracked)
+    tail = track(spectrums[3:], carrier_source=tracked)
 
-    assert empty == ()
     assert head + tail == track(spectrums)
 
 
-@pytest.mark.parametrize(
-    "bad_bins",
-    [
-        pytest.param({100.0: 1.0}, id="only-bins-below-the-window"),
-        pytest.param({2_000.0: 1.0}, id="only-bins-above-the-window"),
-        pytest.param({}, id="no-bins-at-all"),
-    ],
-)
-def test_a_spectrum_missing_the_window_aborts_the_reading_and_stops_the_source(
-    bad_bins: dict[float, float],
-) -> None:
-    tracked = source()
-    locking = locking_timeline().build()
-    unseen = spectrums_at({CARRIER_HZ: 0.0, RIVAL_HZ: LOUD * 2}, (1.0, 1.01, 1.02))
-
-    with pytest.raises(ValueError, match="no spectrum bin"):
-        tracked.track(
-            SpectrumReading(spectrums=locking + (spectrum(bad_bins, 0.5),) + unseen)
-        )
-
-    resumed = track(spectrums_at(KEYED, (2.0,)), carrier_source=tracked)
-    assert resumed[0].is_locked
-    assert resumed[0].tone.frequency == CARRIER_HZ
-
-
 def test_a_narrow_window_ignores_much_louder_bins_just_outside_it() -> None:
-    settings = ToneDetectorSettings(carrier_min_hz=699.5, carrier_max_hz=700.5)
     bins = {699.0: 1.0, CARRIER_HZ: MIN_MAGNITUDE, 701.0: 1.0}
     spectrums = SpectrumTimeline().add(bins, count=6).build()
 
-    samples = track(spectrums, carrier_source=source(settings))
+    samples = track(spectrums, window=FrequencyWindow(699.5, 700.5))
 
     assert set(frequencies(samples)) == {CARRIER_HZ}
     assert samples[-1].is_locked
@@ -139,17 +101,6 @@ def test_bins_tied_for_loudest_do_not_make_the_carrier_flicker() -> None:
 
     assert set(frequencies(samples)) == {_LOW_HZ}
     assert samples[-1].is_locked
-
-
-def test_a_reading_of_a_single_spectrum_at_a_time_is_the_streaming_case() -> None:
-    spectrums = _SCENARIOS["rival-takeover"]
-    tracked = source()
-
-    streamed = tuple(
-        tracked.track(SpectrumReading(spectrums=(one,))).samples[0] for one in spectrums
-    )
-
-    assert streamed == track(spectrums)
 
 
 @pytest.mark.parametrize(

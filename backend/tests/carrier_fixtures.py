@@ -25,11 +25,16 @@ from morse_decoder.pipeline.stages.spectrum_analyzer.stft_spectrum_analyzer impo
 from morse_decoder.pipeline.stages.tone_detector.impl.carrier_source import (
     PeakCarrierSource,
 )
-from morse_decoder.pipeline.stages.tone_detector.impl.dto import CarrierSample
+from morse_decoder.pipeline.stages.tone_detector.impl.dto import (
+    CarrierSample,
+    FrequencyWindow,
+)
+from morse_decoder.pipeline.stages.tone_detector.impl.helpers import limit_to_window
 
 SETTINGS = ToneDetectorSettings()
 MIN_HZ = SETTINGS.carrier_min_hz
 MAX_HZ = SETTINGS.carrier_max_hz
+WINDOW = FrequencyWindow(MIN_HZ, MAX_HZ)
 MIN_MAGNITUDE = SETTINGS.carrier_lock_magnitude
 TOLERANCE_HZ = SETTINGS.carrier_lock_tolerance_hz
 LOCK_SECONDS = SETTINGS.carrier_lock_seconds
@@ -120,16 +125,13 @@ def track(
     spectrums: tuple[ToneSpectrum, ...],
     *,
     carrier_source: PeakCarrierSource | None = None,
-    batch_size: int | None = None,
+    window: FrequencyWindow = WINDOW,
 ) -> tuple[CarrierSample, ...]:
-    """Feed ``spectrums`` to one source, ``batch_size`` of them per call."""
+    """Feed ``spectrums`` to one source the way the tone detector would."""
     tracked = carrier_source or source()
-    size = batch_size or max(len(spectrums), 1)
-    samples: tuple[CarrierSample, ...] = ()
-    for offset in range(0, len(spectrums), size):
-        reading = SpectrumReading(spectrums=spectrums[offset : offset + size])
-        samples += tracked.track(reading).samples
-    return samples
+    return tuple(
+        tracked.track(limit_to_window(spectrum, window)) for spectrum in spectrums
+    )
 
 
 def frequencies(samples: tuple[CarrierSample, ...]) -> tuple[float, ...]:

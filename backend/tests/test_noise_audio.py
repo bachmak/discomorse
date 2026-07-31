@@ -8,7 +8,6 @@ from carrier_fixtures import SAMPLE_RATE, analyze
 from noise_fixtures import estimate, estimator, noises
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.pipeline.dto import SpectrumReading
 
 _TONE_HZ = 750.0
 _SECONDS = 0.1
@@ -83,7 +82,3 @@ async def test_a_tone_keyed_over_noise_is_read_as_the_noise_it_sits_in() -> None
     keyed = np.asarray(_tone() + noise, dtype=PCM16.IntType)
 
     assert max(await _floors(keyed)) < 2 * max(await _floors(noise))
-
-
-async def test_an_empty_reading_of_real_audio_reports_nothing() -> None:
-    assert estimator().estimate(SpectrumReading(spectrums=())).samples == ()
