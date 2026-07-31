@@ -27,6 +27,7 @@ class ToneDetectorSettings(BaseSettings):
     carrier_lock_tolerance_hz: float = Field(default=100.0, gt=0)
     carrier_lock_seconds: float = Field(default=0.02, gt=0)
     carrier_hold_seconds: float = Field(default=2.0, gt=0)
+    noise_detector_percentile: float = Field(default=50.0, ge=0, le=100)
 
     @model_validator(mode="after")
     def _carrier_window_must_rise(self) -> Self:

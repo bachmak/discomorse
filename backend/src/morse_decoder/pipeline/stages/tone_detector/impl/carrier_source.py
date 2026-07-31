@@ -15,6 +15,7 @@ from morse_decoder.pipeline.stages.tone_detector.impl.fsm.search_state import (
 from morse_decoder.pipeline.stages.tone_detector.impl.fsm.state import (
     CarrierTrackingState,
 )
+from morse_decoder.pipeline.stages.tone_detector.impl.helpers import tones_in_window
 from morse_decoder.pipeline.stages.tone_detector.impl.lock_policy import (
     CarrierLockPolicy,
 )
@@ -57,16 +58,7 @@ class PeakCarrierSource(CarrierSource):
 
 
 def _loudest_tone_in_spectrum(spectrum: ToneSpectrum, window: FrequencyWindow) -> Tone:
-    tones_inside_window = tuple(
-        tone
-        for tone in spectrum.magnitudes
-        if window.min_hz <= tone.frequency <= window.max_hz
-    )
-
-    if not tones_inside_window:
-        raise ValueError(f"no spectrum bin in {window.min_hz}..{window.max_hz} Hz")
-
-    tone = max(tones_inside_window, key=lambda tone: tone.magnitude)
+    tone = max(tones_in_window(spectrum, window), key=lambda tone: tone.magnitude)
     return Tone(
         frequency=tone.frequency,
         magnitude=tone.magnitude,
