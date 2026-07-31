@@ -1,6 +1,6 @@
 """Smoke test: drives a generated morse WAV through the whole pipeline.
 
-Fails when a stage raises or when the runner stops emitting the events the
+Fails when a stage raises or when the pipeline stops emitting the events the
 frontend lives on. The web API is deliberately out of scope.
 """
 
@@ -20,8 +20,8 @@ from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.config import Settings, global_settings
 from morse_decoder.pipeline.events import FFTFrame, OutboundEvent, WaterfallFrame
-from morse_decoder.pipeline.factory import create_pipeline_runner
-from morse_decoder.pipeline.runner import PipelineRunner
+from morse_decoder.pipeline.factory import create_pipeline
+from morse_decoder.pipeline.pipeline import Pipeline
 
 _MESSAGE = "SOS DE SMOKE TEST"
 _EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
@@ -51,13 +51,13 @@ class SmokeRun:
 
     async def tally(self) -> EventTally:
         counts: Counter[type[OutboundEvent]] = Counter()
-        async for event in self._runner().run():
+        async for event in self._pipeline().run():
             event.to_message().model_dump_json()  # serialization is under test too
             counts[type(event)] += 1
         return EventTally(counts)
 
-    def _runner(self) -> PipelineRunner:
-        return create_pipeline_runner(self._source(), self._settings.pipeline)
+    def _pipeline(self) -> Pipeline:
+        return create_pipeline(self._source(), self._settings.pipeline)
 
     def _source(self) -> FileSource:
         return FileSource(

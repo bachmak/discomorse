@@ -1,7 +1,7 @@
 """Builders for the audio the tone stage is driven with, and the key it reads back.
 
 The stage is where the four substages meet, so its tests drive it the way the
-runner does: audio in, one keyed sample per spectrum out. A test writes a line
+pipeline does: audio in, one keyed sample per spectrum out. A test writes a line
 of marks and gaps in dit units and reads the answer back as runs of the same
 shape, because runs of a keyed line are what the timing stage lives on.
 
@@ -181,7 +181,7 @@ class PcmChunks:
 
 
 class StageRun:
-    """One analyzer and one stage, driven chunk by chunk the way the runner does."""
+    """One analyzer and one stage, driven chunk by chunk the way the pipeline does."""
 
     def __init__(self) -> None:
         self._analyzer = STFTSpectrumAnalyzer(ANALYZER_SETTINGS)
@@ -206,7 +206,7 @@ async def detect(
     *,
     tone_detector: SpectralToneDetector | None = None,
 ) -> tuple[ToneSample, ...]:
-    """Feed ``spectrums`` to one stage the way the runner would."""
+    """Feed ``spectrums`` to one stage the way the pipeline would."""
     stage = tone_detector or detector()
     return (await stage.process(SpectrumReading(spectrums=spectrums))).samples
 
