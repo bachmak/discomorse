@@ -1,0 +1,12 @@
+{
+  "signal": {
+    "input_text": "CQ CQ DE DL1ABC K",
+    "wpm": 18,
+    "pitch_hz": 700,
+    "qrn_snr_db": 20,
+    "qrm_level": 0.0,
+    "qsb_depth": 0.0
+  },
+  "expected_morse": "-.-. --.- / -.-. --.- / -.. . / -.. .-.. .---- .- -... -.-. / -.-",
+  "min_similarity": 0.9
+}
