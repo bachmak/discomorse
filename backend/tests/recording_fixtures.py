@@ -4,6 +4,8 @@ Each double reports something the next stage in the chain can be caught
 holding, so a test can tell what was passed on from what was merely read.
 """
 
+from collections.abc import AsyncIterable, AsyncIterator
+
 import pytest
 from carrier_fixtures import ANALYZER_SETTINGS
 from tone_detecting_fixtures import ToneDetecting, tone_detecting
@@ -96,10 +98,13 @@ class RecordingKeyingDebouncer(KeyingDebouncer):
         self.seen: list[ToneSample] = []
         self.reported: list[ToneSample] = []
 
-    def transform(self, sample: ToneSample) -> ToneSample:
-        self.seen.append(sample)
-        self.reported.append(ToneSample(ts=sample.ts, on=len(self.seen) % 2 == 0))
-        return self.reported[-1]
+    async def process(
+        self, samples: AsyncIterable[ToneSample]
+    ) -> AsyncIterator[ToneSample]:
+        async for sample in samples:
+            self.seen.append(sample)
+            self.reported.append(ToneSample(ts=sample.ts, on=len(self.seen) % 2 == 0))
+            yield self.reported[-1]
 
 
 def recording_stages(monkeypatch: pytest.MonkeyPatch) -> ToneDetecting:
