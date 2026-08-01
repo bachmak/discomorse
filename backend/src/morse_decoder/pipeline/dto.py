@@ -121,11 +121,6 @@ class ToneSample:
 
 
 @dataclass(frozen=True)
-class ToneReading:
-    samples: tuple[ToneSample, ...]
-
-
-@dataclass(frozen=True)
 class TimingReading:
     elements: list[MorseElement]
 

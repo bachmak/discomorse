@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import dataclass
 
 from morse_decoder.config import TimingDecoderSettings
@@ -12,8 +12,6 @@ from morse_decoder.pipeline.dto import (
     InterCharSpace,
     IntraCharSpace,
     MorseElement,
-    TimingReading,
-    ToneReading,
     ToneSample,
     WordSpace,
 )
@@ -44,8 +42,8 @@ class SpanExtractor:
     def __init__(self) -> None:
         self._accumulator: _SpanAccumulator | None = None
 
-    def feed(self, samples: tuple[ToneSample, ...]) -> Iterator[Span]:
-        for sample in samples:
+    async def feed(self, samples: AsyncIterable[ToneSample]) -> AsyncIterator[Span]:
+        async for sample in samples:
             span = self._advance(sample)
             if span is not None:
                 yield span
@@ -154,9 +152,11 @@ class AdaptiveThresholdDecoder(TimingDecoder):
         )
         self._classifiers = _classifiers(settings)
 
-    def process(self, reading: ToneReading) -> TimingReading:
-        spans = self._extractor.feed(reading.samples)
-        return TimingReading([self._classify(span) for span in spans])
+    async def process(
+        self, samples: AsyncIterable[ToneSample]
+    ) -> AsyncIterator[MorseElement]:
+        async for span in self._extractor.feed(samples):
+            yield self._classify(span)
 
     def _classify(self, span: Span) -> MorseElement:
         classification = self._claim(span)
