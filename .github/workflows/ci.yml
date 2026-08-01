@@ -99,8 +99,14 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync
-      - name: Drive a generated morse file through the whole pipeline
-        run: uv run python scripts/smoke_pipeline.py
+      - name: Decode every generated test signal
+        run: |
+          failed=0
+          for config in test_configs/*.json; do
+            uv run python scripts/run_test_config.py "$config" || failed=1
+            echo
+          done
+          exit $failed
 
   backend-docker:
     needs: changes

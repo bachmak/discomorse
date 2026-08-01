@@ -32,8 +32,12 @@ class Excerpt(ABC):
     def absorb(self, event: OutboundEvent) -> None:
         self._parts.extend(self._fragments(event))
 
+    def text(self) -> str:
+        """Everything this excerpt collected, unlabelled."""
+        return "".join(self._parts)
+
     def render(self) -> str:
-        return f"{self._label}: {''.join(self._parts)}"
+        return f"{self._label}: {self.text()}"
 
     @property
     @abstractmethod
