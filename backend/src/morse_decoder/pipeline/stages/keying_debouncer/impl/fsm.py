@@ -29,6 +29,12 @@ class SettledState(DebouncedState):
         if sample.on == self._is_on:
             return StateTransition(state=self, reported_samples=(sample,))
 
+        if self._policy.is_held(sample, sample.ts):
+            return StateTransition(
+                state=SettledState(self._policy, sample.on),
+                reported_samples=(sample,),
+            )
+
         return StateTransition(
             state=PendingState(self._policy, self._is_on, (sample,)),
             reported_samples=(),
