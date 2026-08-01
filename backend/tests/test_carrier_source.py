@@ -58,11 +58,6 @@ def _swept_hz(ts: datetime.datetime) -> float:
     return _SWEEP_START_HZ + _SWEEP_HZ_PER_S * seconds_since_epoch(ts)
 
 
-def _is_locked_at(index: int, step_seconds: float) -> bool:
-    """Whether the spectrum at ``index`` closes a long enough run of sightings."""
-    return index * step_seconds >= LOCK_SECONDS
-
-
 def _keyed_then_silent_against(
     rival_magnitude: float, gap_seconds: float
 ) -> tuple[ToneSpectrum, ...]:
@@ -113,11 +108,9 @@ async def test_source_follows_a_drifting_carrier() -> None:
     assert samples == tuple(
         CarrierSample(
             tone=Tone(frequency=frequency, magnitude=0.8, ts=drifted.ts),
-            is_locked=_is_locked_at(index, _DRIFT_STEP_S),
+            is_locked=True,
         )
-        for index, (drifted, frequency) in enumerate(
-            zip(spectrums, _DRIFT, strict=True)
-        )
+        for drifted, frequency in zip(spectrums, _DRIFT, strict=True)
     )
 
 

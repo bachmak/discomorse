@@ -13,6 +13,9 @@ from morse_decoder.audio.pcm16 import PCM16
 
 _MARK_SECONDS = 0.1
 _NOISE_AMPLITUDE = 0.05
+# The line opens key-up so that the edge into the mark is one the stages read,
+# rather than the one the very first frame of the recording makes on its own.
+_LEAD_IN_SECONDS = 0.05
 
 
 def _torn_pcm(
@@ -20,7 +23,14 @@ def _torn_pcm(
 ) -> npt.NDArray[PCM16.IntType]:
     """One mark of a tone cut in two by ``gap_seconds`` of key-up."""
     half = sine_pcm(TONE_HZ, _MARK_SECONDS, SAMPLE_RATE, KEY_DOWN_AMPLITUDE)
-    keyed = np.concatenate((half, silence_pcm(gap_seconds, SAMPLE_RATE), half))
+    keyed = np.concatenate(
+        (
+            silence_pcm(_LEAD_IN_SECONDS, SAMPLE_RATE),
+            half,
+            silence_pcm(gap_seconds, SAMPLE_RATE),
+            half,
+        )
+    )
     if not noise_amplitude:
         return keyed
     floor = noise_pcm(len(keyed) / SAMPLE_RATE, SAMPLE_RATE, noise_amplitude)

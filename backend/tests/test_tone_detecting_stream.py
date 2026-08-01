@@ -8,6 +8,8 @@ from tone_fixtures import KeyedLine, PcmChunks, morse_line
 
 _LINE = morse_line()
 _PCM = _LINE.pcm()
+# Enough readings that no single one spans a run long enough to close a lock.
+_READINGS = 12
 
 
 @pytest.mark.parametrize(
@@ -42,11 +44,13 @@ async def test_a_chunk_too_short_to_fill_a_frame_reads_back_nothing() -> None:
         assert await tone_detecting().feed(chunk) == ()
 
 
-async def test_a_locked_carrier_keys_the_next_reading_from_its_first_sample() -> None:
-    lead_in, held = tuple(PcmChunks(KeyedLine().mark(4).pcm(), count=2))
+async def test_a_locked_carrier_keys_a_reading_too_short_to_lock_on_its_own() -> None:
+    """A reading of its own is no run; the lock the earlier ones made carries it."""
+    *lead_in, held = tuple(PcmChunks(KeyedLine().mark(4).pcm(), count=_READINGS))
     warmed = tone_detecting()
 
-    await warmed.feed(lead_in)
+    for chunk in lead_in:
+        await warmed.feed(chunk)
 
-    assert flags(await warmed.feed(held))[0]
-    assert not flags(await tone_detecting().feed(held))[0]
+    assert all(flags(await warmed.feed(held)))
+    assert not any(flags(await tone_detecting().feed(held)))

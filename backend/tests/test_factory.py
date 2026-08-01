@@ -15,7 +15,6 @@ from morse_decoder.pipeline import factory
 from morse_decoder.pipeline.dto import (
     CarrierSample,
     PcmChunk,
-    Tone,
     ToneSpectrum,
 )
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
@@ -55,8 +54,11 @@ class _FakeCarrierSource(CarrierSource):
     def __init__(self, settings: CarrierSourceSettings) -> None:
         self._settings = settings
 
-    def transform(self, spectrum: ToneSpectrum) -> CarrierSample:
-        return CarrierSample(tone=Tone.empty(), is_locked=False)
+    async def process(
+        self, spectrums: AsyncIterable[ToneSpectrum]
+    ) -> AsyncIterator[CarrierSample]:
+        return
+        yield  # pragma: no cover  # marks process() a generator, nothing is read
 
 
 def test_resolve_returns_registered_class() -> None:

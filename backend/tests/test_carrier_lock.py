@@ -1,6 +1,5 @@
 """Acquiring the lock: what the source demands before it stops searching."""
 
-import datetime
 import math
 
 import pytest
@@ -14,7 +13,6 @@ from carrier_fixtures import (
     STEP_S,
     TOLERANCE_HZ,
     SpectrumTimeline,
-    first_locked_index,
     frequencies,
     lock_flags,
     magnitudes,
@@ -40,40 +38,51 @@ _DRIFT_START_HZ = 500.0
         pytest.param(LOCK_SECONDS * 3, id="one-spectrum-per-three-lock-times"),
     ],
 )
-async def test_the_lock_closes_once_one_frequency_has_held_for_the_lock_time(
+async def test_the_lock_reaches_back_over_the_whole_run_that_closed_it(
     step_seconds: float,
 ) -> None:
+    """A run is carrier from its first frame on, not from the frame that proved it.
+
+    The frames that make the lock are the opening of the signal that closed it,
+    so the lock time costs the run nothing once the verdict is in.
+    """
     spectrums = (
         SpectrumTimeline(step_seconds).add({CARRIER_HZ: LOUD}, _SPECTRUMS).build()
     )
 
     samples = await track(spectrums)
 
-    assert lock_flags(samples) == tuple(
-        index * datetime.timedelta(seconds=step_seconds)
-        >= datetime.timedelta(seconds=LOCK_SECONDS)
-        for index in range(_SPECTRUMS)
-    )
+    assert lock_flags(samples) == (True,) * _SPECTRUMS
 
 
 @pytest.mark.parametrize(
-    "lock_seconds, want_first_locked_index",
+    "lock_seconds, want_locked",
     [
-        pytest.param(STEP_S / 10, 1, id="far-shorter-than-one-spectrum"),
-        pytest.param(STEP_S, 1, id="exactly-one-spectrum"),
-        pytest.param(STEP_S * 2, 2, id="two-spectrums"),
-        pytest.param(STEP_S * _SPECTRUMS, _SPECTRUMS, id="longer-than-the-stream"),
+        pytest.param(STEP_S / 10, True, id="far-shorter-than-one-spectrum"),
+        pytest.param(STEP_S, True, id="exactly-one-spectrum"),
+        pytest.param(STEP_S * 2, True, id="two-spectrums"),
+        pytest.param(STEP_S * _SPECTRUMS, False, id="longer-than-the-stream"),
     ],
 )
-async def test_the_first_spectrum_can_never_close_the_lock_on_its_own(
-    lock_seconds: float, want_first_locked_index: int
+async def test_only_a_run_that_reaches_the_lock_time_becomes_the_carrier(
+    lock_seconds: float, want_locked: bool
 ) -> None:
     settings = CarrierSourceSettings(carrier_lock_seconds=lock_seconds)
     spectrums = SpectrumTimeline().add({CARRIER_HZ: LOUD}, _SPECTRUMS).build()
 
     samples = await track(spectrums, carrier_source=source(settings))
 
-    assert first_locked_index(samples) == want_first_locked_index
+    assert any(lock_flags(samples)) == want_locked
+
+
+async def test_the_first_spectrum_can_never_close_the_lock_on_its_own() -> None:
+    """One sighting is no run, however little time the lock asks for."""
+    settings = CarrierSourceSettings(carrier_lock_seconds=STEP_S / 10)
+    spectrums = SpectrumTimeline().add({CARRIER_HZ: LOUD}, 1).build()
+
+    samples = await track(spectrums, carrier_source=source(settings))
+
+    assert lock_flags(samples) == (False,)
 
 
 @pytest.mark.parametrize(
@@ -98,19 +107,17 @@ async def test_only_a_level_above_the_lock_threshold_can_be_locked(
 
 
 @pytest.mark.parametrize(
-    "stride_hz, want_first_locked_index",
+    "stride_hz, want_locked",
     [
-        pytest.param(0.0, 2, id="a-steady-carrier"),
-        pytest.param(TOLERANCE_HZ / 4, 2, id="well-inside-the-band"),
-        pytest.param(TOLERANCE_HZ / 2, 2, id="reaching-the-edge-as-the-lock-closes"),
-        pytest.param(
-            TOLERANCE_HZ / 2 + 1.0, _DRIFT_SPECTRUMS, id="leaving-the-band-too-early"
-        ),
-        pytest.param(TOLERANCE_HZ + 1.0, _DRIFT_SPECTRUMS, id="hopping-past-the-band"),
+        pytest.param(0.0, True, id="a-steady-carrier"),
+        pytest.param(TOLERANCE_HZ / 4, True, id="well-inside-the-band"),
+        pytest.param(TOLERANCE_HZ / 2, True, id="reaching-the-edge-as-the-lock-closes"),
+        pytest.param(TOLERANCE_HZ / 2 + 1.0, False, id="leaving-the-band-too-early"),
+        pytest.param(TOLERANCE_HZ + 1.0, False, id="hopping-past-the-band"),
     ],
 )
 async def test_the_run_survives_only_drift_that_stays_inside_the_tolerance_band(
-    stride_hz: float, want_first_locked_index: int
+    stride_hz: float, want_locked: bool
 ) -> None:
     """The band is pinned to the first sighting, so drift accumulates against it."""
     timeline = SpectrumTimeline()
@@ -119,7 +126,7 @@ async def test_the_run_survives_only_drift_that_stays_inside_the_tolerance_band(
 
     samples = await track(timeline.build())
 
-    assert first_locked_index(samples) == want_first_locked_index
+    assert lock_flags(samples) == (want_locked,) * _DRIFT_SPECTRUMS
 
 
 async def test_the_lock_lands_where_the_carrier_is_now_not_where_it_began() -> None:
@@ -130,7 +137,7 @@ async def test_the_lock_lands_where_the_carrier_is_now_not_where_it_began() -> N
 
     samples = await track(timeline.build())
 
-    assert first_locked_index(samples) == 2
+    assert all(lock_flags(samples))
     assert frequencies(samples) == drift
     assert samples[2].tone.frequency != drift[0]
 
@@ -168,10 +175,10 @@ async def test_a_run_broken_every_other_spectrum_never_locks(
         pytest.param((1.0, 0.5, 0.0), (False, False, False), id="stamps-running-back"),
         pytest.param(
             (0.0, LOCK_SECONDS, LOCK_SECONDS * 2),
-            (False, True, True),
+            (True, True, True),
             id="one-lock-time-per-step",
         ),
-        pytest.param((0.0, 60.0), (False, True), id="a-minute-long-gap-in-the-stream"),
+        pytest.param((0.0, 60.0), (True, True), id="a-minute-long-gap-in-the-stream"),
     ],
 )
 async def test_the_lock_follows_the_stamps_the_spectrums_carry(

@@ -5,8 +5,6 @@ import numpy.typing as npt
 import pytest
 from audio_fixtures import noise_pcm, silence_pcm, sine_pcm
 from carrier_fixtures import (
-    FRAME_SECONDS,
-    LOCK_SECONDS,
     MIN_MAGNITUDE,
     SAMPLE_RATE,
     Phase,
@@ -22,10 +20,11 @@ from morse_decoder.audio.pcm16 import PCM16
 _TONE_HZ = 750.0
 _BURST_SECONDS = 0.1
 _KEY_DOWN_AMPLITUDE = 0.5
-_LOCKED_S = LOCK_SECONDS + FRAME_SECONDS
 
 _PHASES = (
-    (Phase(_LOCKED_S, _BURST_SECONDS), True),
+    # From zero: acquiring the carrier costs the burst that pays for it nothing,
+    # so a recording that opens on a mark is keyed from its very first frame.
+    (Phase(0.0, _BURST_SECONDS), True),
     (Phase(_BURST_SECONDS, _BURST_SECONDS * 2), False),
     (Phase(_BURST_SECONDS * 2, _BURST_SECONDS * 3), True),
 )
