@@ -121,10 +121,5 @@ class ToneSample:
 
 
 @dataclass(frozen=True)
-class TimingReading:
-    elements: list[MorseElement]
-
-
-@dataclass(frozen=True)
 class Transcription:
     text: str
