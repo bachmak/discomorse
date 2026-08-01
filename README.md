@@ -28,7 +28,8 @@ The API is available at `http://localhost:8000`. Copy `config.toml` to `config.l
 Decode an audio file offline to inspect what the pipeline makes of it:
 
 ```bash
-uv run python scripts/decode_file.py path/to/recording.wav
+cd backend
+uv run python scripts/decode_file.py test_audio/<audio-file-name>
 ```
 
 **Frontend**
