@@ -1,7 +1,7 @@
 import datetime
 
 from morse_decoder.config import KeyingDebouncerSettings
-from morse_decoder.pipeline.dto import KeyingSample
+from morse_decoder.pipeline.dto import ToneSample
 from morse_decoder.pipeline.stages.keying_debouncer.impl.fsm import (
     DebouncedState,
     SettledState,
@@ -22,9 +22,9 @@ class TimedKeyingDebouncer(KeyingDebouncer):
                 rise=datetime.timedelta(seconds=settings.debounce_rise_seconds),
                 fall=datetime.timedelta(seconds=settings.debounce_fall_seconds),
             ),
-            keying=KeyingSample(is_on=False),
+            is_on=False,
         )
 
-    def debounce(self, sample: KeyingSample, ts: datetime.datetime) -> KeyingSample:
-        self._state = self._state.update(sample, ts)
-        return self._state.get_keying()
+    def transform(self, sample: ToneSample) -> ToneSample:
+        self._state = self._state.update(sample)
+        return ToneSample(ts=sample.ts, on=self._state.is_on())

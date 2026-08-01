@@ -166,10 +166,6 @@ def morse_line() -> KeyedLine:
     return KeyedLine().mark().gap().mark(3).gap(3).mark(3).gap().mark().gap(7).mark(3)
 
 
-def flags(samples: tuple[ToneSample, ...]) -> tuple[bool, ...]:
-    return tuple(sample.on for sample in samples)
-
-
 def runs(samples: tuple[ToneSample, ...]) -> tuple[Run, ...]:
     """The samples gathered into the stretches the key held one side over."""
     return tuple(

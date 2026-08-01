@@ -4,8 +4,6 @@ Each double reports something the next stage in the chain can be caught
 holding, so a test can tell what was passed on from what was merely read.
 """
 
-import datetime
-
 import pytest
 from carrier_fixtures import ANALYZER_SETTINGS
 from tone_detecting_fixtures import ToneDetecting, tone_detecting
@@ -19,10 +17,11 @@ from morse_decoder.config import (
 )
 from morse_decoder.pipeline import factory
 from morse_decoder.pipeline.dto import (
+    CarrierNoiseSample,
     CarrierSample,
-    KeyingSample,
     NoiseSample,
     Tone,
+    ToneSample,
     ToneSpectrum,
 )
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
@@ -68,20 +67,20 @@ class RecordingNoiseEstimator(NoiseEstimator):
 
 
 class RecordingKeyingDetector(KeyingDetector):
-    """Stand-in detector that keeps every pair the pipeline hands it.
+    """Stand-in detector that keeps every reading the pipeline hands it.
 
-    It always reports a keyed line, so the key that leaves the stages can be told
-    apart from the one the stage behind it settled on.
+    Each key it reports is keyed down and stamped with its carrier's time, so
+    what the debouncing stage was handed can be told apart reading by reading.
     """
 
     def __init__(self, settings: KeyingDetectorSettings) -> None:
         self._settings = settings
-        self.seen: list[tuple[CarrierSample, NoiseSample]] = []
-        self.reported: list[KeyingSample] = []
+        self.seen: list[CarrierNoiseSample] = []
+        self.reported: list[ToneSample] = []
 
-    def detect(self, carrier: CarrierSample, noise: NoiseSample) -> KeyingSample:
-        self.seen.append((carrier, noise))
-        self.reported.append(KeyingSample(is_on=True))
+    def transform(self, sample: CarrierNoiseSample) -> ToneSample:
+        self.seen.append(sample)
+        self.reported.append(ToneSample(ts=sample.carrier.tone.ts, on=True))
         return self.reported[-1]
 
 
@@ -94,12 +93,12 @@ class RecordingKeyingDebouncer(KeyingDebouncer):
 
     def __init__(self, settings: KeyingDebouncerSettings) -> None:
         self._settings = settings
-        self.seen: list[tuple[KeyingSample, datetime.datetime]] = []
-        self.reported: list[KeyingSample] = []
+        self.seen: list[ToneSample] = []
+        self.reported: list[ToneSample] = []
 
-    def debounce(self, sample: KeyingSample, ts: datetime.datetime) -> KeyingSample:
-        self.seen.append((sample, ts))
-        self.reported.append(KeyingSample(is_on=len(self.seen) % 2 == 0))
+    def transform(self, sample: ToneSample) -> ToneSample:
+        self.seen.append(sample)
+        self.reported.append(ToneSample(ts=sample.ts, on=len(self.seen) % 2 == 0))
         return self.reported[-1]
 
 

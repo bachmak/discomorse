@@ -8,14 +8,16 @@ no matter how fine it is, and a rounded microsecond cannot move an edge.
 """
 
 import datetime
-from dataclasses import dataclass
 from itertools import pairwise
 from typing import Self
 
 from audio_fixtures import EPOCH
+from key_fixtures import flags
+from stream_fixtures import stream
 
 from morse_decoder.config import KeyingDebouncerSettings
-from morse_decoder.pipeline.dto import KeyingSample
+from morse_decoder.pipeline.dto import ToneSample
+from morse_decoder.pipeline.stages.keying_debouncer.interface import KeyingDebouncer
 from morse_decoder.pipeline.stages.keying_debouncer.timed_keying_debouncer import (
     TimedKeyingDebouncer,
 )
@@ -27,14 +29,6 @@ FALL_SECONDS = SETTINGS.debounce_fall_seconds
 STEP_S = RISE_SECONDS / 4
 SETTLE_SECONDS = FALL_SECONDS * 2
 BETWEEN_DELAYS_SECONDS = (RISE_SECONDS + FALL_SECONDS) / 2
-
-
-@dataclass(frozen=True)
-class KeyReading:
-    """One reading as the debouncer sees it: a key and the time it was read."""
-
-    sample: KeyingSample
-    ts: datetime.datetime
 
 
 class KeyTimeline:
@@ -61,16 +55,16 @@ class KeyTimeline:
     def steps_in(self, seconds: float) -> int:
         return round(datetime.timedelta(seconds=seconds) / self._step)
 
-    def build(self) -> tuple[KeyReading, ...]:
+    def build(self) -> tuple[ToneSample, ...]:
         return tuple(
-            KeyReading(KeyingSample(is_on=is_on), EPOCH + index * self._step)
+            ToneSample(ts=EPOCH + index * self._step, on=is_on)
             for index, is_on in enumerate(self._flags)
         )
 
 
 def blip(
     is_on: bool, seconds: float, step_seconds: float = STEP_S
-) -> tuple[KeyReading, ...]:
+) -> tuple[ToneSample, ...]:
     """A run of one side of ``seconds``, on a line resting on the other side."""
     return (
         KeyTimeline(step_seconds)
@@ -85,33 +79,31 @@ def debouncer(settings: KeyingDebouncerSettings | None = None) -> TimedKeyingDeb
     return TimedKeyingDebouncer(settings or SETTINGS)
 
 
-def debounce(
-    readings: tuple[KeyReading, ...],
+async def debounce(
+    readings: tuple[ToneSample, ...],
     *,
-    keying_debouncer: TimedKeyingDebouncer | None = None,
-) -> tuple[KeyingSample, ...]:
+    keying_debouncer: KeyingDebouncer | None = None,
+) -> tuple[ToneSample, ...]:
     """Feed ``readings`` to one debouncer the way the pipeline would."""
     reader = keying_debouncer or debouncer()
-    return tuple(reader.debounce(one.sample, one.ts) for one in readings)
+    return tuple([one async for one in reader.process(stream(*readings))])
 
 
-def debounced(
-    readings: tuple[KeyReading, ...],
+async def debounced(
+    readings: tuple[ToneSample, ...],
     *,
-    keying_debouncer: TimedKeyingDebouncer | None = None,
+    keying_debouncer: KeyingDebouncer | None = None,
 ) -> tuple[bool, ...]:
     """The key as one debouncer reads it off ``readings``."""
-    return tuple(
-        sample.is_on for sample in debounce(readings, keying_debouncer=keying_debouncer)
-    )
+    return flags(await debounce(readings, keying_debouncer=keying_debouncer))
 
 
-def edges(flags: tuple[bool, ...]) -> int:
-    """How often the key changes side over ``flags``."""
-    return sum(one != other for one, other in pairwise(flags))
+def edges(keys: tuple[bool, ...]) -> int:
+    """How often the key changes side over ``keys``."""
+    return sum(one != other for one, other in pairwise(keys))
 
 
-def keyed_seconds(readings: tuple[KeyReading, ...]) -> float:
+async def keyed_seconds(readings: tuple[ToneSample, ...]) -> float:
     """How long the debounced key stays down over ``readings`` of one grid."""
     step = (readings[1].ts - readings[0].ts).total_seconds()
-    return sum(debounced(readings)) * step
+    return sum(await debounced(readings)) * step

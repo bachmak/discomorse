@@ -13,7 +13,8 @@ from carrier_fixtures import (
     analyze,
     track,
 )
-from keying_fixtures import key_off, keys
+from key_fixtures import flags
+from keying_fixtures import key_off
 from limiter_fixtures import limit
 
 from morse_decoder.audio.pcm16 import PCM16
@@ -41,7 +42,7 @@ def _keyed_pcm(noise_amplitude: float = 0.0) -> npt.NDArray[PCM16.IntType]:
 
 
 async def _keyed(samples: npt.NDArray[PCM16.IntType]) -> tuple[bool, ...]:
-    return keys(await key_off(await analyze(samples)))
+    return flags(await key_off(await analyze(samples)))
 
 
 async def _keyed_inside(
@@ -49,10 +50,10 @@ async def _keyed_inside(
 ) -> tuple[bool, ...]:
     """The key over the frames that lie wholly inside ``phase``."""
     spectrums = await analyze(samples)
-    flags = keys(await key_off(spectrums))
+    read = flags(await key_off(spectrums))
     return tuple(
         flag
-        for flag, spectrum in zip(flags, spectrums, strict=True)
+        for flag, spectrum in zip(read, spectrums, strict=True)
         if phase.covers(spectrum.ts)
     )
 
@@ -72,21 +73,21 @@ async def _keyed_inside(
 async def test_the_key_reads_back_the_bursts_it_was_keyed_with(
     noise_amplitude: float, phase: Phase, want: bool
 ) -> None:
-    flags = await _keyed_inside(_keyed_pcm(noise_amplitude), phase)
+    read = await _keyed_inside(_keyed_pcm(noise_amplitude), phase)
 
-    assert flags
-    assert all(flag is want for flag in flags)
+    assert read
+    assert all(flag is want for flag in read)
 
 
 async def test_the_key_stays_up_until_the_carrier_is_locked() -> None:
     spectrums = await analyze(_keyed_pcm())
 
-    flags = keys(await key_off(spectrums))
+    read = flags(await key_off(spectrums))
     carriers = await track(await limit(spectrums))
 
     assert not any(
         flag
-        for flag, carrier in zip(flags, carriers, strict=True)
+        for flag, carrier in zip(read, carriers, strict=True)
         if not carrier.is_locked
     )
 

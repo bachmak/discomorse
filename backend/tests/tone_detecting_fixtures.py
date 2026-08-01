@@ -10,10 +10,11 @@ from dataclasses import dataclass
 
 import numpy.typing as npt
 from carrier_fixtures import ANALYZER_SETTINGS
-from keying_fixtures import key_off, keys
+from key_fixtures import flags
+from keying_fixtures import key_off
 from limiter_fixtures import limit
 from spectrum_fixtures import spectrums_of
-from tone_fixtures import PcmChunks, flags
+from tone_fixtures import PcmChunks
 
 from morse_decoder.audio.pcm16 import PCM16
 from morse_decoder.audio.source import AudioSource
@@ -102,5 +103,5 @@ async def read_key(spectrums: tuple[ToneSpectrum, ...]) -> ReadKey:
     and nowhere else is the key read the way the pipeline reads it.
     """
     return ReadKey(
-        raw=keys(await key_off(spectrums)), debounced=flags(await detect(spectrums))
+        raw=flags(await key_off(spectrums)), debounced=flags(await detect(spectrums))
     )

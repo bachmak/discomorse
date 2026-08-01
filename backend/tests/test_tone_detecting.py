@@ -8,6 +8,7 @@ from carrier_fixtures import (
     SpectrumTimeline,
     spectrum,
 )
+from key_fixtures import flags
 from recording_fixtures import (
     RecordingCarrierSource,
     RecordingKeyingDebouncer,
@@ -16,10 +17,9 @@ from recording_fixtures import (
     recording_stages,
 )
 from tone_detecting_fixtures import ToneDetecting, detect, tone_detecting
-from tone_fixtures import flags
 
 from morse_decoder.config import PipelineSettings
-from morse_decoder.pipeline.dto import KeyingSample, ToneSpectrum
+from morse_decoder.pipeline.dto import CarrierNoiseSample, ToneSample, ToneSpectrum
 from morse_decoder.pipeline.stages.carrier_source.peak_carrier_source import (
     PeakCarrierSource,
 )
@@ -71,8 +71,8 @@ def _debouncing_stage(detecting: ToneDetecting) -> RecordingKeyingDebouncer:
     return detecting.stage("keying_debouncer", RecordingKeyingDebouncer)
 
 
-def _reported_keys(reported: list[KeyingSample]) -> tuple[bool, ...]:
-    return tuple(sample.is_on for sample in reported)
+def _reported_keys(reported: list[ToneSample]) -> tuple[bool, ...]:
+    return flags(tuple(reported))
 
 
 def _seen_by_reading_stages(
@@ -192,9 +192,12 @@ async def test_the_keying_stage_reads_what_the_other_two_reported(
     await recording.read(_STREAM)
 
     carrier_source, noise_estimator = _reading_stages(recording)
-    assert _keying_stage(recording).seen == list(
-        zip(carrier_source.reported, noise_estimator.reported, strict=True)
-    )
+    assert _keying_stage(recording).seen == [
+        CarrierNoiseSample(carrier=carrier, noise=noise)
+        for carrier, noise in zip(
+            carrier_source.reported, noise_estimator.reported, strict=True
+        )
+    ]
 
 
 async def test_the_debouncing_stage_reads_the_key_stamped_with_its_spectrums_time(
@@ -202,10 +205,9 @@ async def test_the_debouncing_stage_reads_the_key_stamped_with_its_spectrums_tim
 ) -> None:
     await recording.read(_STREAM)
 
-    keying_detector = _keying_stage(recording)
-    assert _debouncing_stage(recording).seen == list(
-        zip(keying_detector.reported, [one.ts for one in _STREAM], strict=True)
-    )
+    seen = _debouncing_stage(recording).seen
+    assert seen == _keying_stage(recording).reported
+    assert [one.ts for one in seen] == [one.ts for one in _STREAM]
 
 
 async def test_the_line_reports_the_key_the_debouncing_stage_settled_on(
