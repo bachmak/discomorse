@@ -5,11 +5,12 @@ from dataclasses import dataclass
 
 from morse_decoder.api.wire import (
     FFTMessage,
+    MorseMessage,
     ServerMessage,
     TextMessage,
     WaterfallMessage,
 )
-from morse_decoder.pipeline.dto import ToneSpectrum
+from morse_decoder.pipeline.dto import MorseElement, ToneSpectrum
 
 
 class OutboundEvent(ABC):
@@ -42,6 +43,14 @@ class WaterfallFrame(MagnitudeFrame):
 class FFTFrame(MagnitudeFrame):
     def to_message(self) -> FFTMessage:
         return FFTMessage(data=self._data(), ts=self._ts())
+
+
+@dataclass(frozen=True)
+class DecodedMorse(OutboundEvent):
+    element: MorseElement
+
+    def to_message(self) -> MorseMessage:
+        return MorseMessage(data=self.element.notation)
 
 
 @dataclass(frozen=True)
