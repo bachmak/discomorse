@@ -1,19 +1,20 @@
 """Tone detecting: the four stages that turn spectrums into a keyed line.
 
 Carrier source, noise estimator, keying detector and debouncer only meet in the
-pipeline, so a test that wants them together drives a real one — the wiring
-under test is then the wiring that runs in production, not a copy of it.
+pipeline, so a test that wants them together drives the ones a real pipeline
+built, chained here the way ``Pipeline.run`` chains them.
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import dataclass
 
 import numpy.typing as npt
 from carrier_fixtures import ANALYZER_SETTINGS
 from key_fixtures import flags
-from keying_fixtures import key_off
+from keying_fixtures import key_off, readings_off
 from limiter_fixtures import limit
 from spectrum_fixtures import spectrums_of
+from stream_fixtures import stream
 from tone_fixtures import PcmChunks
 
 from morse_decoder.audio.pcm16 import PCM16
@@ -48,8 +49,17 @@ class ToneDetecting:
         limited = await limit(
             spectrums, spectrum_limiter=self._pipeline._spectrum_limiter
         )
-        return tuple(
-            [sample for one in limited async for sample in self._pipeline._samples(one)]
+        return tuple([sample async for sample in self._samples(stream(*limited))])
+
+    def _samples(
+        self, limited: AsyncIterable[ToneSpectrum]
+    ) -> AsyncIterator[ToneSample]:
+        """The key the four stages read, one sample per spectrum they are given."""
+        readings = readings_off(
+            limited, self._pipeline._carrier_source, self._pipeline._noise_estimator
+        )
+        return self._pipeline._keying_debouncer.process(
+            self._pipeline._keying_detector.process(readings)
         )
 
     async def feed(self, chunk: PcmChunk) -> tuple[ToneSample, ...]:

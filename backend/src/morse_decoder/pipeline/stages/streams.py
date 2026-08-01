@@ -1,8 +1,26 @@
 """Ways of splitting, pairing and merging the streams the stages read."""
 
 import asyncio
-from collections import deque
 from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Callable
+
+_DEFAULT_ROOM = 64
+
+
+class _Waiting[T]:
+    """The items one branch has been handed and not read yet, and its room for more."""
+
+    def __init__(self, room: int) -> None:
+        self._items: asyncio.Queue[T] = asyncio.Queue(maxsize=room)
+
+    def holds_any(self) -> bool:
+        return not self._items.empty()
+
+    async def add(self, item: T) -> None:
+        """Wait for the branch to make room, then leave the item behind for it."""
+        await self._items.put(item)
+
+    def take(self) -> T:
+        return self._items.get_nowait()
 
 
 class StreamFork[T]:
@@ -12,36 +30,46 @@ class StreamFork[T]:
     copy for its sibling, so both read every item and neither knows the other.
     Only one of them is at the source at a time, so the two may also be read
     side by side.
+
+    A branch may leave its sibling no more than ``room`` items unread: past
+    that it waits at the source until the sibling catches up, so the faster of
+    the two cannot buffer a whole stream behind the slower one. A branch that
+    is never read at all therefore brings the other one to a stop.
     """
 
-    def __init__(self, source: AsyncIterable[T]) -> None:
+    def __init__(self, source: AsyncIterable[T], room: int = _DEFAULT_ROOM) -> None:
         self._source = aiter(source)
-        self._left: deque[T] = deque()
-        self._right: deque[T] = deque()
+        self._left = _Waiting[T](room)
+        self._right = _Waiting[T](room)
         self._turn = asyncio.Lock()
 
     def branches(self) -> tuple[AsyncIterator[T], AsyncIterator[T]]:
         return self._read(self._left), self._read(self._right)
 
-    async def _read(self, waiting: deque[T]) -> AsyncIterator[T]:
+    async def _read(self, waiting: _Waiting[T]) -> AsyncIterator[T]:
         while True:
-            if not waiting and not await self._pull(waiting):
+            if not waiting.holds_any() and not await self._pull(waiting):
                 return
-            yield waiting.popleft()
+            yield waiting.take()
 
-    async def _pull(self, waiting: deque[T]) -> bool:
+    async def _pull(self, waiting: _Waiting[T]) -> bool:
         """Wait for our turn at the source; ``False`` once it holds nothing more."""
         async with self._turn:
-            return bool(waiting) or await self._take()  # our sibling may have served us
+            served = waiting.holds_any()  # our sibling may have served us meanwhile
+            return served or await self._take()
 
     async def _take(self) -> bool:
-        """Hand the next item to both branches; ``False`` once the source is spent."""
+        """Hand the next item to both branches; ``False`` once the source is spent.
+
+        A branch with no room left holds the turn until it is read from, which
+        it can be: reading takes no turn.
+        """
         try:
             item = await anext(self._source)
         except StopAsyncIteration:
             return False
-        self._left.append(item)
-        self._right.append(item)
+        await self._left.add(item)
+        await self._right.add(item)
         return True
 
 
