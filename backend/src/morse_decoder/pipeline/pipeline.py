@@ -3,7 +3,8 @@ from collections.abc import AsyncIterator
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
-    ToneReading,
+    MorseElement,
+    TimingReading,
     ToneSample,
     ToneSpectrum,
 )
@@ -77,8 +78,9 @@ class Pipeline:
     async def _process_limited(
         self, limited: ToneSpectrum
     ) -> AsyncIterator[OutboundEvent]:
-        async for sample in self._samples(limited):
-            async for event in self._decode(sample):
+        elements = self._timing_decoder.process(self._samples(limited))
+        async for element in elements:
+            async for event in self._interpret(element):
                 yield event
 
     def _samples(self, limited: ToneSpectrum) -> AsyncIterator[ToneSample]:
@@ -102,10 +104,7 @@ class Pipeline:
         ):
             yield CarrierNoiseSample(carrier=carrier, noise=noise)
 
-    async def _decode(self, sample: ToneSample) -> AsyncIterator[OutboundEvent]:
-        timing = self._timing_decoder.process(ToneReading(samples=(sample,)))
-        if not timing.elements:
-            return
-        transcription = await self._interpreter.interpret(timing)
+    async def _interpret(self, element: MorseElement) -> AsyncIterator[OutboundEvent]:
+        transcription = await self._interpreter.interpret(TimingReading([element]))
         if transcription.text:
             yield DecodedText(transcription.text)
