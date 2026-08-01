@@ -14,29 +14,30 @@ from debounce_fixtures import (
     edges,
     keyed_seconds,
 )
+from key_fixtures import flags
 
 from morse_decoder.config import KeyingDebouncerSettings
 from morse_decoder.pipeline.dto import ToneSample
 
 _DIT_SECONDS = 1.2 / 20  # a dit at the speed the timing stage is seeded with
+_INTER_CHAR_DITS = 3  # the gap that holds two characters apart
 _FLAP_CYCLES = 20
 
 
 @pytest.mark.parametrize(
-    "is_on, want_edges",
+    "is_on",
     [
-        pytest.param(False, 0, id="a-line-resting-up"),
-        pytest.param(True, 1, id="a-line-keyed-down-from-the-start"),
+        pytest.param(False, id="a-line-resting-up"),
+        pytest.param(True, id="a-line-keyed-down-from-the-start"),
     ],
 )
 async def test_a_key_that_never_changes_settles_on_its_side_and_stays_there(
-    is_on: bool, want_edges: int
+    is_on: bool,
 ) -> None:
-    flags = await debounced(KeyTimeline().hold(is_on, SETTLE_SECONDS).build())
+    """A line that opens keyed reads keyed from its first reading, not from the delay"""
+    read = await debounced(KeyTimeline().hold(is_on, SETTLE_SECONDS).build())
 
-    assert flags[0] is False
-    assert flags[-1] is is_on
-    assert edges(flags) == want_edges
+    assert read == (is_on,) * len(read)
 
 
 @pytest.mark.parametrize(
@@ -55,20 +56,21 @@ async def test_the_key_falls_only_once_it_has_been_held_down_past_the_rise_delay
 @pytest.mark.parametrize(
     "seconds, want",
     [
-        pytest.param(FALL_SECONDS / 2, 1, id="shorter-than-the-fall-delay"),
-        pytest.param(FALL_SECONDS * 2, 3, id="longer-than-the-fall-delay"),
+        pytest.param(FALL_SECONDS / 2, 0, id="shorter-than-the-fall-delay"),
+        pytest.param(FALL_SECONDS * 2, 2, id="longer-than-the-fall-delay"),
     ],
 )
 async def test_the_key_lifts_only_once_it_has_been_let_up_past_the_fall_delay(
     seconds: float, want: int
 ) -> None:
+    """The line opens keyed, so the only edges to count are the ones the gap cuts."""
     assert edges(await debounced(blip(False, seconds))) == want
 
 
 async def test_the_key_waits_longer_to_lift_than_it_waits_to_fall() -> None:
     """One stretch, read on both sides: long enough to key, too short to lift."""
     assert edges(await debounced(blip(True, BETWEEN_DELAYS_SECONDS))) == 2
-    assert edges(await debounced(blip(False, BETWEEN_DELAYS_SECONDS))) == 1
+    assert edges(await debounced(blip(False, BETWEEN_DELAYS_SECONDS))) == 0
 
 
 @pytest.mark.parametrize(
@@ -132,8 +134,8 @@ async def test_the_gap_between_two_elements_lives_through_the_debouncer() -> Non
     assert edges(await debounced(line)) == 4
 
 
-async def test_a_mark_comes_out_stretched_by_the_gap_between_the_two_delays() -> None:
-    """Both edges arrive late, and the key falls sooner than it lifts."""
+async def test_a_mark_comes_out_as_long_as_it_was_keyed() -> None:
+    """Both edges are dated where they happened, however long they took to believe."""
     line = (
         KeyTimeline()
         .hold(False, SETTLE_SECONDS)
@@ -142,9 +144,22 @@ async def test_a_mark_comes_out_stretched_by_the_gap_between_the_two_delays() ->
         .build()
     )
 
-    assert await keyed_seconds(line) == pytest.approx(
-        _DIT_SECONDS + FALL_SECONDS - RISE_SECONDS, abs=STEP_S
+    assert await keyed_seconds(line) == pytest.approx(_DIT_SECONDS, abs=STEP_S)
+
+
+async def test_a_key_that_never_bounces_comes_out_the_way_it_went_in() -> None:
+    """Marks long and gaps short is what used to lose a character boundary."""
+    line = (
+        KeyTimeline()
+        .hold(False, SETTLE_SECONDS)
+        .hold(True, _DIT_SECONDS)
+        .hold(False, _DIT_SECONDS * _INTER_CHAR_DITS)
+        .hold(True, _DIT_SECONDS)
+        .hold(False, SETTLE_SECONDS)
+        .build()
     )
+
+    assert await debounced(line) == flags(line)
 
 
 async def test_a_debouncer_without_delays_passes_every_change_straight_on() -> None:
@@ -155,7 +170,7 @@ async def test_a_debouncer_without_delays_passes_every_change_straight_on() -> N
 
     read = await debounced(line, keying_debouncer=reader)
 
-    assert read == tuple(one.on for one in line)
+    assert read == flags(line)
 
 
 async def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
