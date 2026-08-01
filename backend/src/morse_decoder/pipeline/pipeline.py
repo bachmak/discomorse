@@ -3,10 +3,12 @@ from collections.abc import AsyncIterable, AsyncIterator
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
+    MorseElement,
     ToneSpectrum,
     Transcription,
 )
 from morse_decoder.pipeline.events import (
+    DecodedMorse,
     DecodedText,
     FFTFrame,
     OutboundEvent,
@@ -65,10 +67,12 @@ class Pipeline:
         raw_tones = self._keying_detector.process(carrier_noise_samples)
         debounced_tones = self._keying_debouncer.process(raw_tones)
         morse_elements = self._timing_decoder.process(debounced_tones)
-        transcriptions = self._interpreter.process(morse_elements)
+        morse_to_interpreter, morse_to_events = StreamFork(morse_elements).branches()
+        transcriptions = self._interpreter.process(morse_to_interpreter)
 
         event_stream = StreamMerge(
             _stream_spectrums(to_events),
+            _stream_morse(morse_to_events),
             _stream_text(transcriptions),
         )
 
@@ -81,6 +85,13 @@ async def _stream_spectrums(
     async for spectrum in spectrums:
         yield WaterfallFrame(spectrum)
         yield FFTFrame(spectrum)
+
+
+async def _stream_morse(
+    elements: AsyncIterable[MorseElement],
+) -> AsyncIterator[OutboundEvent]:
+    async for element in elements:
+        yield DecodedMorse(element)
 
 
 async def _stream_text(

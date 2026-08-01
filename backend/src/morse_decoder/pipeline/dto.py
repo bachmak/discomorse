@@ -6,8 +6,12 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class MorseElement:
+class MorseElement(ABC):
     """One unit the timing decoder reads from the tone stream: a signal or a space."""
+
+    @property
+    @abstractmethod
+    def notation(self) -> str: ...
 
 
 class Signal(MorseElement, ABC):
@@ -22,6 +26,10 @@ class Signal(MorseElement, ABC):
     def code_symbol(self) -> str:
         """This element's mark in a character's code: '.' or '-'."""
         ...
+
+    @property
+    def notation(self) -> str:
+        return self.code_symbol
 
 
 class Dit(Signal):
@@ -40,20 +48,33 @@ class Dah(Signal):
         return "-"
 
 
-class Space(MorseElement):
+class Space(MorseElement, ABC):
     """A boundary between signals; it carries no code symbol."""
 
 
 class IntraCharSpace(Space):
     """Gap between the dits and dahs of a single character."""
 
+    @property
+    def notation(self) -> str:
+        """Written morse runs a character's signals together, so nothing."""
+        return ""
+
 
 class InterCharSpace(Space):
     """Gap that ends one character and begins the next."""
 
+    @property
+    def notation(self) -> str:
+        return " "
+
 
 class WordSpace(Space):
     """Gap that ends one word and begins the next."""
+
+    @property
+    def notation(self) -> str:
+        return " / "
 
 
 @dataclass(frozen=True)

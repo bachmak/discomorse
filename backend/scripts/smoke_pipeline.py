@@ -19,13 +19,18 @@ from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.config import Settings, global_settings
-from morse_decoder.pipeline.events import FFTFrame, OutboundEvent, WaterfallFrame
+from morse_decoder.pipeline.events import (
+    DecodedMorse,
+    FFTFrame,
+    OutboundEvent,
+    WaterfallFrame,
+)
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
 _MESSAGE = "SOS DE SMOKE TEST"
 _EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
-_EXPECTED: tuple[type[OutboundEvent], ...] = (WaterfallFrame, FFTFrame)
+_EXPECTED: tuple[type[OutboundEvent], ...] = (WaterfallFrame, FFTFrame, DecodedMorse)
 
 
 @dataclass(frozen=True)

@@ -34,13 +34,20 @@ class OscilloscopeMessage(_WireModel):
     ts: float
 
 
+class MorseMessage(_WireModel):
+    """One decoded morse element, written the way it reads in a line of morse."""
+
+    type: Literal["morse"] = "morse"
+    data: str
+
+
 class TextMessage(_WireModel):
     type: Literal["text"] = "text"
     data: str
 
 
 type ServerMessage = Annotated[
-    WaterfallMessage | FFTMessage | OscilloscopeMessage | TextMessage,
+    WaterfallMessage | FFTMessage | OscilloscopeMessage | MorseMessage | TextMessage,
     Field(discriminator="type"),
 ]
 
