@@ -8,6 +8,7 @@ from morse_decoder.pipeline.dto import (
     Dah,
     Dit,
     MorseElement,
+    Transcription,
     WordSpace,
 )
 from morse_decoder.pipeline.stages.interpreter.dummy_interpreter import DummyInterpreter
@@ -29,19 +30,25 @@ async def _counted(
 
 
 @pytest.mark.parametrize(
-    "elements",
+    "elements, want",
     [
-        pytest.param([], id="nothing-at-all"),
-        pytest.param([Dit()], id="one-element"),
-        pytest.param(_ELEMENTS, id="several-elements"),
+        pytest.param([], [], id="nothing-at-all"),
+        pytest.param([Dit()], [Transcription(text=".")], id="one-signal"),
+        pytest.param([WordSpace()], [], id="one-space"),
+        pytest.param(
+            _ELEMENTS,
+            [Transcription(text="."), Transcription(text="-")],
+            id="several-elements",
+        ),
     ],
 )
-async def test_process_transcribes_nothing_whatever_it_is_handed(
+async def test_process_transcribes_every_signal_it_is_handed(
     elements: list[MorseElement],
+    want: list[Transcription],
 ) -> None:
     transcriptions = _interpreter().process(stream(*elements))
 
-    assert [transcription async for transcription in transcriptions] == []
+    assert [transcription async for transcription in transcriptions] == want
 
 
 async def test_process_reads_every_element_it_is_handed() -> None:
