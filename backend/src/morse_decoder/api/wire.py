@@ -6,9 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 
 class _WireModel(BaseModel):
-    """Shared config: reject unknown keys so the JSON schema forbids extras."""
+    """Shared config: reject unknown keys, and treat defaulted fields as always
+    present on the wire so the generated TS discriminant is never optional."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid", json_schema_serialization_defaults_required=True
+    )
 
 
 class MicHandshake(_WireModel):
@@ -59,7 +62,9 @@ client_message_adapter: TypeAdapter[ClientMessage] = TypeAdapter(ClientMessage)
 
 def server_message_json_schema() -> dict[str, object]:
     """The JSON schema of every message the server can send, for TS codegen."""
-    schema = server_message_adapter.json_schema(ref_template="#/$defs/{model}")
+    schema = server_message_adapter.json_schema(
+        mode="serialization", ref_template="#/$defs/{model}"
+    )
     schema["title"] = "ServerMessage"
     return schema
 

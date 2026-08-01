@@ -7,29 +7,29 @@ export type ServerMessage = WaterfallMessage | FFTMessage | OscilloscopeMessage 
 export interface WaterfallMessage {
   data: number[];
   ts: number;
-  type?: "waterfall";
+  type: "waterfall";
 }
 export interface FFTMessage {
   data: number[];
   ts: number;
-  type?: "fft";
+  type: "fft";
 }
 export interface OscilloscopeMessage {
   data: number[];
-  mode?: ("append" | "replace") | null;
+  mode: ("append" | "replace") | null;
   ts: number;
-  type?: "oscilloscope";
+  type: "oscilloscope";
 }
 /**
  * One decoded morse element, written the way it reads in a line of morse.
  */
 export interface MorseMessage {
   data: string;
-  type?: "morse";
+  type: "morse";
 }
 export interface TextMessage {
   data: string;
-  type?: "text";
+  type: "text";
 }
 
 export interface MicHandshake {
