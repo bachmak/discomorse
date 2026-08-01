@@ -2,8 +2,9 @@
 
 import pytest
 from carrier_fixtures import ANALYZER_SETTINGS, analyze
+from key_fixtures import flags
 from tone_detecting_fixtures import detect, read_tone, tone_detecting
-from tone_fixtures import KeyedLine, PcmChunks, flags, morse_line
+from tone_fixtures import KeyedLine, PcmChunks, morse_line
 
 _LINE = morse_line()
 _PCM = _LINE.pcm()

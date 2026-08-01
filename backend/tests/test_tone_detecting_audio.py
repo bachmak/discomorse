@@ -13,6 +13,7 @@ from carrier_fixtures import (
     lock_flags,
     track,
 )
+from key_fixtures import flags
 from limiter_fixtures import MAX_HZ, MIN_HZ, limit
 from tone_detecting_fixtures import detect, read_tone
 from tone_fixtures import (
@@ -20,7 +21,6 @@ from tone_fixtures import (
     KEY_DOWN_AMPLITUDE,
     TONE_HZ,
     KeyedPhase,
-    flags,
     inside,
     keyed_runs,
     morse_line,

@@ -6,20 +6,23 @@ dictionary. Levels are named after where they sit relative to the thresholds
 the default settings put over ``FLOOR``.
 """
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, replace
 
 from audio_fixtures import EPOCH
 from carrier_fixtures import CARRIER_HZ, source
+from key_fixtures import flags
 from limiter_fixtures import limit
 from noise_fixtures import estimator
 from stream_fixtures import stream
 
 from morse_decoder.config import KeyingDetectorSettings
 from morse_decoder.pipeline.dto import (
+    CarrierNoiseSample,
     CarrierSample,
-    KeyingSample,
     NoiseSample,
     Tone,
+    ToneSample,
     ToneSpectrum,
 )
 from morse_decoder.pipeline.stages.keying_detector.adaptive_keying_detector import (
@@ -29,6 +32,7 @@ from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
 from morse_decoder.pipeline.stages.keying_detector.impl.threshold_tracker import (
     ThresholdTracker,
 )
+from morse_decoder.pipeline.stages.keying_detector.interface import KeyingDetector
 from morse_decoder.pipeline.stages.streams import StreamFork, azip
 
 SETTINGS = KeyingDetectorSettings()
@@ -51,13 +55,16 @@ class Step:
     floor: float = FLOOR
     is_locked: bool = True
 
-    def carrier(self) -> CarrierSample:
+    def reading(self) -> CarrierNoiseSample:
+        return CarrierNoiseSample(carrier=self._carrier(), noise=self._noise())
+
+    def _carrier(self) -> CarrierSample:
         return CarrierSample(
             tone=Tone(frequency=CARRIER_HZ, magnitude=self.magnitude, ts=EPOCH),
             is_locked=self.is_locked,
         )
 
-    def noise(self) -> NoiseSample:
+    def _noise(self) -> NoiseSample:
         return NoiseSample(noise=self.floor)
 
 
@@ -83,41 +90,39 @@ def detector(settings: KeyingDetectorSettings | None = None) -> AdaptiveKeyingDe
     return AdaptiveKeyingDetector(settings or SETTINGS)
 
 
-def detect(
+async def detect(
     readings: tuple[Step, ...],
     *,
-    keying_detector: AdaptiveKeyingDetector | None = None,
-) -> tuple[KeyingSample, ...]:
+    keying_detector: KeyingDetector | None = None,
+) -> tuple[ToneSample, ...]:
     """Feed ``readings`` to one detector the way the pipeline would."""
     reader = keying_detector or detector()
-    return tuple(reader.detect(step.carrier(), step.noise()) for step in readings)
+    read = stream(*(step.reading() for step in readings))
+    return tuple([one async for one in reader.process(read)])
 
 
-def keys(samples: tuple[KeyingSample, ...]) -> tuple[bool, ...]:
-    return tuple(sample.is_on for sample in samples)
-
-
-def keyed(
+async def keyed(
     readings: tuple[Step, ...],
     *,
-    keying_detector: AdaptiveKeyingDetector | None = None,
+    keying_detector: KeyingDetector | None = None,
 ) -> tuple[bool, ...]:
     """The key as one detector reads it off ``readings``."""
-    return keys(detect(readings, keying_detector=keying_detector))
+    return flags(await detect(readings, keying_detector=keying_detector))
 
 
-async def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[KeyingSample, ...]:
-    """Read the key off spectrums the way the pipeline wires the four stages."""
-    keying_detector = detector()
-    lhs, rhs = StreamFork(stream(*await limit(spectrums))).branches()
-    return tuple(
-        [
-            keying_detector.detect(carrier, noise)
-            async for carrier, noise in azip(
-                source().process(lhs), estimator().process(rhs)
-            )
-        ]
-    )
+async def _readings_off(
+    spectrums: tuple[ToneSpectrum, ...],
+) -> AsyncIterator[CarrierNoiseSample]:
+    """Carrier and noise off ``spectrums``, paired the way the pipeline pairs them."""
+    lhs, rhs = StreamFork(stream(*spectrums)).branches()
+    async for carrier, noise in azip(source().process(lhs), estimator().process(rhs)):
+        yield CarrierNoiseSample(carrier=carrier, noise=noise)
+
+
+async def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[ToneSample, ...]:
+    """Read the key off spectrums the way the pipeline does, short of the debouncer."""
+    readings = _readings_off(await limit(spectrums))
+    return tuple([one async for one in detector().process(readings)])
 
 
 def tracker(settings: KeyingDetectorSettings | None = None) -> ThresholdTracker:

@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
+    CarrierNoiseSample,
     ToneReading,
     ToneSample,
     ToneSpectrum,
@@ -80,20 +81,26 @@ class Pipeline:
             async for event in self._decode(sample):
                 yield event
 
-    async def _samples(self, limited: ToneSpectrum) -> AsyncIterator[ToneSample]:
-        """The key the four stages read, one sample per spectrum they are given.
+    def _samples(self, limited: ToneSpectrum) -> AsyncIterator[ToneSample]:
+        """The key the four stages read, one sample per spectrum they are given."""
+        return self._keying_debouncer.process(
+            self._keying_detector.process(self._readings(limited))
+        )
 
-        Carrier and noise are read off the same spectrums, so the stream is
-        forked: each of the two stages reads a branch of it, neither the other.
+    async def _readings(
+        self, limited: ToneSpectrum
+    ) -> AsyncIterator[CarrierNoiseSample]:
+        """Carrier and noise off the same spectrums, paired reading by reading.
+
+        Both stages read the one stream, so it is forked: each of them reads a
+        branch of it, neither the other.
         """
         lhs, rhs = StreamFork(_stream(limited)).branches()
         async for carrier, noise in azip(
             self._carrier_source.process(lhs),
             self._noise_estimator.process(rhs),
         ):
-            keying = self._keying_detector.detect(carrier, noise)
-            debounced = self._keying_debouncer.debounce(keying, limited.ts)
-            yield ToneSample(ts=limited.ts, on=debounced.is_on)
+            yield CarrierNoiseSample(carrier=carrier, noise=noise)
 
     async def _decode(self, sample: ToneSample) -> AsyncIterator[OutboundEvent]:
         timing = self._timing_decoder.process(ToneReading(samples=(sample,)))

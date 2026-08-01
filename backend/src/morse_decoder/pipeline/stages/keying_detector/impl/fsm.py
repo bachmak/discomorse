@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from morse_decoder.pipeline.dto import KeyingSample
 from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
 
 
@@ -13,7 +12,7 @@ class KeyingState(ABC):
     def update(self, magnitude: float, thresholds: KeyingThresholds) -> KeyingState: ...
 
     @abstractmethod
-    def get_keying(self) -> KeyingSample: ...
+    def is_on(self) -> bool: ...
 
 
 class OffState(KeyingState):
@@ -22,8 +21,8 @@ class OffState(KeyingState):
             return OnState()
         return self
 
-    def get_keying(self) -> KeyingSample:
-        return KeyingSample(is_on=False)
+    def is_on(self) -> bool:
+        return False
 
 
 class OnState(KeyingState):
@@ -32,5 +31,5 @@ class OnState(KeyingState):
             return OffState()
         return self
 
-    def get_keying(self) -> KeyingSample:
-        return KeyingSample(is_on=True)
+    def is_on(self) -> bool:
+        return True

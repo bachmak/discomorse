@@ -109,8 +109,9 @@ class NoiseSample:
 
 
 @dataclass(frozen=True)
-class KeyingSample:
-    is_on: bool
+class CarrierNoiseSample:
+    carrier: CarrierSample
+    noise: NoiseSample
 
 
 @dataclass(frozen=True)

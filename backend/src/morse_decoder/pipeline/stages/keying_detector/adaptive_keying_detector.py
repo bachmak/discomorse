@@ -1,5 +1,5 @@
 from morse_decoder.config import KeyingDetectorSettings
-from morse_decoder.pipeline.dto import CarrierSample, KeyingSample, NoiseSample
+from morse_decoder.pipeline.dto import CarrierNoiseSample, CarrierSample, ToneSample
 from morse_decoder.pipeline.stages.keying_detector.dto import KeyingThresholds
 from morse_decoder.pipeline.stages.keying_detector.impl.fsm import KeyingState, OffState
 from morse_decoder.pipeline.stages.keying_detector.impl.threshold_tracker import (
@@ -15,10 +15,10 @@ class AdaptiveKeyingDetector(KeyingDetector):
         self._thresholds = ThresholdTracker(settings)
         self._state: KeyingState = OffState()
 
-    def detect(self, carrier: CarrierSample, noise: NoiseSample) -> KeyingSample:
-        thresholds = self._thresholds.update(noise)
-        self._state = self._next_state(carrier, thresholds)
-        return self._state.get_keying()
+    def transform(self, sample: CarrierNoiseSample) -> ToneSample:
+        thresholds = self._thresholds.update(sample.noise)
+        self._state = self._next_state(sample.carrier, thresholds)
+        return ToneSample(ts=sample.carrier.tone.ts, on=self._state.is_on())
 
     def _next_state(
         self, carrier: CarrierSample, thresholds: KeyingThresholds
