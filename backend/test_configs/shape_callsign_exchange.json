@@ -1,0 +1,11 @@
+{
+  "signal": {
+    "input_text": "DL1ABC DE W1AW UR 599 QSL",
+    "wpm": 20,
+    "pitch_hz": 600,
+    "qrn_snr_db": 40,
+    "qrm_level": 0.0,
+    "qsb_depth": 0.0
+  },
+  "expected_morse": "-.. .-.. .---- .- -... -.-. / -.. . / .-- .---- .- .-- / ..- .-. / ..... ----. ----. / --.- ... .-.."
+}

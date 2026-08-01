@@ -1,0 +1,12 @@
+{
+  "signal": {
+    "input_text": "CQ DE TEST",
+    "wpm": 20,
+    "pitch_hz": 600,
+    "qrn_snr_db": 40,
+    "qrm_level": 0.0,
+    "qsb_depth": 0.0,
+    "sample_rate": 11025
+  },
+  "expected_morse": "-.-. --.- / -.. . / - . ... -"
+}
