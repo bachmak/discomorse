@@ -236,6 +236,16 @@ button:focus-visible {
     var(--screen);
 }
 
+.panel canvas.chart {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.panel canvas.chart:active {
+  cursor: grabbing;
+}
+
 .decoded pre {
   margin: 0 0 10px;
   padding: 16px 18px;

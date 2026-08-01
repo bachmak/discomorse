@@ -50,10 +50,10 @@ class MicCapture {
   }
 }
 
-export function useAudioCapture(send: Send) {
+export function useAudioCapture() {
   const captureRef = useRef<MicCapture | null>(null);
 
-  const start = async (): Promise<void> => {
+  const start = async (send: Send): Promise<void> => {
     if (captureRef.current) return;
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     captureRef.current = new MicCapture(stream, send);

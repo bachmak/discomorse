@@ -2,24 +2,40 @@ import { useEffect, useRef } from "react";
 import { useStore } from "../store";
 import type { WaterfallMessage } from "../types/ws";
 import { NYQUIST_HZ } from "../audioFormat";
-import { AXIS_HEIGHT, FrequencyAxis, axisCaption } from "./chartAxis";
+import { AXIS_HEIGHT, FrequencyAxis, axisCaption, type AxisGeometry } from "../charts/axis";
+import { Range } from "../charts/ticks";
+import { VerticalScroll } from "../charts/gestures";
+import type { ItemWindow } from "../charts/viewport";
+import { useViewport, type ViewportSetup } from "../hooks/useViewport";
 import { useCanvasSize, prepareContext } from "./canvas";
+import { ChartCanvas } from "./ChartCanvas";
 
 const HEIGHT = 300;
 const PLOT_HEIGHT = HEIGHT - AXIS_HEIGHT;
-const TICK_HZ = 1000;
+const VISIBLE_FRAMES = 200;
 const HINT_COLOR = "rgba(148, 163, 184, 0.75)";
 
-const FREQUENCY_AXIS = new FrequencyAxis(NYQUIST_HZ, TICK_HZ);
+const FREQUENCY_AXIS = new FrequencyAxis();
+const FREQUENCY_RANGE = new Range(0, NYQUIST_HZ);
 
-function drawAxis(ctx: CanvasRenderingContext2D, width: number): void {
-  FREQUENCY_AXIS.draw(ctx, {
+const WATERFALL_VIEW: ViewportSetup = {
+  gesture: new VerticalScroll(),
+  span: VISIBLE_FRAMES,
+  limits: { min: VISIBLE_FRAMES, max: VISIBLE_FRAMES },
+};
+
+function geometry(width: number): AxisGeometry {
+  return {
     width,
     tickTop: PLOT_HEIGHT,
     tickBottom: PLOT_HEIGHT + 4,
     labelY: HEIGHT - 6,
-    labelInset: 12,
-  });
+    labelInset: 14,
+  };
+}
+
+function drawAxis(ctx: CanvasRenderingContext2D, width: number): void {
+  FREQUENCY_AXIS.draw(ctx, FREQUENCY_RANGE, geometry(width));
   axisCaption(ctx, "Time (newer ↓)");
 }
 
@@ -62,6 +78,10 @@ function paintRow(image: ImageData, row: number, magnitudes: number[]): void {
   }
 }
 
+function visibleFrames(frames: WaterfallMessage[], window: ItemWindow): WaterfallMessage[] {
+  return frames.slice(Math.max(0, Math.round(window.from)), Math.max(0, Math.round(window.to)));
+}
+
 function buildSpectrogram(frames: WaterfallMessage[]): ImageData | null {
   const width = frames.length > 0 ? frames[frames.length - 1].data.length : 0;
   if (width === 0) return null;
@@ -92,25 +112,32 @@ function drawHint(ctx: CanvasRenderingContext2D, width: number): void {
   ctx.fillText("Waiting for signal…", width / 2, PLOT_HEIGHT / 2);
 }
 
+function drawWaterfall(
+  ctx: CanvasRenderingContext2D,
+  frames: WaterfallMessage[],
+  buffer: HTMLCanvasElement,
+  width: number,
+): void {
+  const image = buildSpectrogram(frames);
+  if (image) scaleOnto(ctx, image, buffer, width);
+  else drawHint(ctx, width);
+  drawAxis(ctx, width);
+}
+
 export function Waterfall() {
   const { ref, size } = useCanvasSize(HEIGHT);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
   const frames = useStore((s) => s.waterfallFrames);
+  const { view, goLive } = useViewport(ref, frames.length, WATERFALL_VIEW);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || size.width === 0) return;
     const ctx = prepareContext(canvas, size);
-    if (!ctx) return;
-    const image = buildSpectrogram(frames);
-    if (image) {
-      if (!bufferRef.current) bufferRef.current = document.createElement("canvas");
-      scaleOnto(ctx, image, bufferRef.current, size.width);
-    } else {
-      drawHint(ctx, size.width);
-    }
-    drawAxis(ctx, size.width);
-  }, [ref, frames, size.width, size.height]);
+    bufferRef.current ??= document.createElement("canvas");
+    const visible = visibleFrames(frames, view.window(frames.length));
+    if (ctx) drawWaterfall(ctx, visible, bufferRef.current, size.width);
+  }, [ref, frames, view, size.width, size.height]);
 
-  return <canvas ref={ref} style={{ width: "100%", height: HEIGHT, display: "block" }} />;
+  return <ChartCanvas canvasRef={ref} height={HEIGHT} goLive={goLive} />;
 }
