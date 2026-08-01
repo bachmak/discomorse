@@ -4,6 +4,7 @@ from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
     MorseElement,
+    ToneSample,
     ToneSpectrum,
     Transcription,
 )
@@ -12,6 +13,7 @@ from morse_decoder.pipeline.events import (
     DecodedText,
     FFTFrame,
     OutboundEvent,
+    ScopeTrace,
     WaterfallFrame,
 )
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
@@ -21,8 +23,16 @@ from morse_decoder.pipeline.stages.keying_detector.interface import KeyingDetect
 from morse_decoder.pipeline.stages.noise_estimator.interface import NoiseEstimator
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
 from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLimiter
-from morse_decoder.pipeline.stages.streams import StreamFork, StreamMerge, azip
+from morse_decoder.pipeline.stages.streams import (
+    StreamFork,
+    StreamMerge,
+    abatch,
+    azip,
+)
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
+
+# One trace step per 25 keying readings: 50 ms at the default hop rate.
+_SCOPE_TRACE_SAMPLES = 25
 
 
 class Pipeline:
@@ -66,12 +76,14 @@ class Pipeline:
         )
         raw_tones = self._keying_detector.process(carrier_noise_samples)
         debounced_tones = self._keying_debouncer.process(raw_tones)
-        morse_elements = self._timing_decoder.process(debounced_tones)
+        tones_to_decoder, tones_to_events = StreamFork(debounced_tones).branches()
+        morse_elements = self._timing_decoder.process(tones_to_decoder)
         morse_to_interpreter, morse_to_events = StreamFork(morse_elements).branches()
         transcriptions = self._interpreter.process(morse_to_interpreter)
 
         event_stream = StreamMerge(
             _stream_spectrums(to_events),
+            _stream_scope(tones_to_events),
             _stream_morse(morse_to_events),
             _stream_text(transcriptions),
         )
@@ -85,6 +97,13 @@ async def _stream_spectrums(
     async for spectrum in spectrums:
         yield WaterfallFrame(spectrum)
         yield FFTFrame(spectrum)
+
+
+async def _stream_scope(
+    samples: AsyncIterable[ToneSample],
+) -> AsyncIterator[OutboundEvent]:
+    async for group in abatch(samples, _SCOPE_TRACE_SAMPLES):
+        yield ScopeTrace(group)
 
 
 async def _stream_morse(

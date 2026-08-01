@@ -137,6 +137,20 @@ class StreamMerge[T]:
         await asyncio.gather(*pumps, return_exceptions=True)
 
 
+async def abatch[T](
+    source: AsyncIterable[T], size: int
+) -> AsyncIterator[tuple[T, ...]]:
+    """One group per ``size`` items, and a shorter last one for the remainder."""
+    group: list[T] = []
+    async for item in source:
+        group.append(item)
+        if len(group) == size:
+            yield tuple(group)
+            group.clear()
+    if group:
+        yield tuple(group)
+
+
 async def azip[Left, Right, Paired](
     left: AsyncIterable[Left],
     right: AsyncIterable[Right],

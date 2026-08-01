@@ -6,11 +6,12 @@ from dataclasses import dataclass
 from morse_decoder.api.wire import (
     FFTMessage,
     MorseMessage,
+    OscilloscopeMessage,
     ServerMessage,
     TextMessage,
     WaterfallMessage,
 )
-from morse_decoder.pipeline.dto import MorseElement, ToneSpectrum
+from morse_decoder.pipeline.dto import MorseElement, ToneSample, ToneSpectrum
 
 
 class OutboundEvent(ABC):
@@ -43,6 +44,20 @@ class WaterfallFrame(MagnitudeFrame):
 class FFTFrame(MagnitudeFrame):
     def to_message(self) -> FFTMessage:
         return FFTMessage(data=self._data(), ts=self._ts())
+
+
+@dataclass(frozen=True)
+class ScopeTrace(OutboundEvent):
+    """A run of keying readings, appended to the time-domain trace as one step."""
+
+    samples: tuple[ToneSample, ...]
+
+    def to_message(self) -> OscilloscopeMessage:
+        return OscilloscopeMessage(
+            data=[float(sample.on) for sample in self.samples],
+            mode="append",
+            ts=self.samples[-1].ts.timestamp(),
+        )
 
 
 @dataclass(frozen=True)
