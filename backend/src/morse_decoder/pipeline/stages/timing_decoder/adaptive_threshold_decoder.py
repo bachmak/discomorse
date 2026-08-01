@@ -19,6 +19,8 @@ from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
 
 _PARIS_DIT_SECONDS = 1.2
 _DAH_DITS = 3.0
+_INTER_SPACE_DITS = 3.0
+_INTRA_SPACE_DITS = 1.0
 
 
 @dataclass(frozen=True)
@@ -60,7 +62,7 @@ class SpanExtractor:
 
 
 class DitEstimator:
-    """Running dit-length estimate, EMA-updated from observed marks."""
+    """Running dit-length estimate, EMA-updated from observed spans."""
 
     def __init__(self, seed: float, alpha: float) -> None:
         self._dit = seed
@@ -110,7 +112,7 @@ class IntraSpaceClassifier(ElementClassifier):
 
     def claim(self, span: Span, unit: float) -> Classification | None:
         if not span.on and span.duration < self._inter_threshold * unit:
-            return Classification(IntraCharSpace())
+            return Classification(IntraCharSpace(), span.duration / _INTRA_SPACE_DITS)
         return None
 
 
@@ -120,7 +122,7 @@ class InterSpaceClassifier(ElementClassifier):
 
     def claim(self, span: Span, unit: float) -> Classification | None:
         if not span.on and span.duration < self._word_threshold * unit:
-            return Classification(InterCharSpace())
+            return Classification(InterCharSpace(), span.duration / _INTER_SPACE_DITS)
         return None
 
 

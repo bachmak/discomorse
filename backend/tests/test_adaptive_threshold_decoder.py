@@ -20,6 +20,7 @@ from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder imp
 )
 
 _UNIT = 0.06  # seconds; matches the 20 WPM default seed
+_FAST_UNIT = 1.2 / 26  # seconds; a sender running above the seed
 _EPOCH = datetime.datetime(2024, 1, 1)
 
 
@@ -85,6 +86,60 @@ async def test_process_classifies_runs(
     runs: list[tuple[bool, float]], want: list[MorseElement]
 ) -> None:
     assert await _decode(_samples(runs)) == want
+
+
+_HI: list[tuple[bool, float]] = [
+    (True, 1),
+    (False, 1),
+    (True, 1),
+    (False, 1),
+    (True, 1),
+    (False, 1),
+    (True, 1),
+    (False, 3),
+    (True, 1),
+    (False, 1),
+    (True, 1),
+]
+_HI_ELEMENTS = [
+    Dit(),
+    IntraCharSpace(),
+    Dit(),
+    IntraCharSpace(),
+    Dit(),
+    IntraCharSpace(),
+    Dit(),
+    InterCharSpace(),
+    Dit(),
+    IntraCharSpace(),
+    Dit(),
+]
+
+
+def _skewed(runs: list[tuple[bool, float]], skew: float) -> list[tuple[bool, float]]:
+    """Marks stretched and gaps trimmed alike, the way the keying stages leave them."""
+    return [(on, length + skew if on else length - skew) for on, length in runs]
+
+
+@pytest.mark.parametrize(
+    "unit, skew",
+    [
+        pytest.param(_UNIT, 0.0, id="at-seed-speed-unskewed"),
+        pytest.param(_UNIT, 0.4, id="at-seed-speed-skewed"),
+        pytest.param(_FAST_UNIT, 0.0, id="above-seed-speed-unskewed"),
+        pytest.param(_FAST_UNIT, 0.4, id="above-seed-speed-skewed"),
+    ],
+)
+async def test_process_holds_characters_apart_under_keying_skew(
+    unit: float, skew: float
+) -> None:
+    """The three-dit gap has to survive marks that arrive long and gaps short.
+
+    Skew alone the seeded estimate absorbs; it only bites once the sender is
+    quicker than the seed, which is where the estimate has to come down to meet
+    a dit that the marks on their own keep reporting too long.
+    """
+    assert await _decode(_samples(_skewed(_HI, skew), unit)) == _HI_ELEMENTS
 
 
 async def test_process_carries_a_run_across_two_streams() -> None:
