@@ -3,7 +3,8 @@
 import asyncio
 from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Callable
 
-_DEFAULT_ROOM = 64
+# to prevent deadlocks for asymmetrical producers
+_DEFAULT_ROOM = 1024
 
 
 class _Waiting[T]:
