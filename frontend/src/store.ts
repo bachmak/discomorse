@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { WaterfallMessage, FFTMessage } from "./types/ws";
 
 const MAX_WATERFALL_FRAMES = 200;
-export const MAX_SCOPE_SAMPLES = 1024;
+export const MAX_SCOPE_SAMPLES = 1000;
 
 interface State {
   waterfallFrames: WaterfallMessage[];
