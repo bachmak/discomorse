@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.config import CarrierSourceSettings
 from morse_decoder.pipeline.dto import CarrierSample, Tone, ToneSpectrum
@@ -27,10 +28,20 @@ class PeakCarrierSource(CarrierSource):
             candidate=Tone.empty(),
         )
 
-    def transform(self, spectrum: ToneSpectrum) -> CarrierSample:
+    async def process(
+        self, spectrums: AsyncIterable[ToneSpectrum]
+    ) -> AsyncIterator[CarrierSample]:
+        async for spectrum in spectrums:
+            for carrier in self._advance(spectrum):
+                yield carrier
+        for carrier in self._state.flush():
+            yield carrier
+
+    def _advance(self, spectrum: ToneSpectrum) -> tuple[CarrierSample, ...]:
         peak = _loudest_tone_in_spectrum(spectrum)
-        self._state = self._state.update(peak, spectrum)
-        return self._state.get_carrier(peak)
+        transition = self._state.update(peak, spectrum)
+        self._state = transition.state
+        return transition.reported_carriers
 
 
 def _loudest_tone_in_spectrum(spectrum: ToneSpectrum) -> Tone:

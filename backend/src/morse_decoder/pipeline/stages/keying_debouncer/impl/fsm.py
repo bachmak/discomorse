@@ -55,14 +55,14 @@ class PendingState(DebouncedState):
 
     def update(self, sample: ToneSample) -> StateTransition:
         if sample.on == self._settled_is_on:
-            return self._back_to_old_settled(sample)
+            return self._to_old_settled(sample)
 
         if self._policy.is_held(self._first_stray_sample, sample.ts):
             return self._to_new_settled(sample)
 
         return self._stay_in_pending(sample)
 
-    def _back_to_old_settled(self, sample: ToneSample) -> StateTransition:
+    def _to_old_settled(self, sample: ToneSample) -> StateTransition:
         reported_samples = self._postponed_samples + (sample,)
         return StateTransition(
             state=SettledState(self._policy, self._settled_is_on),
