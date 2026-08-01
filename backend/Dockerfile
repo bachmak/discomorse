@@ -14,8 +14,11 @@ COPY config.toml ./
 COPY src/ src/
 RUN uv sync --frozen --no-dev --no-editable
 
+# librosa's numba kernels insist on a writable cache dir
+ENV NUMBA_CACHE_DIR=/app/.numba-cache
+
 # change user to avoid running as root
-RUN useradd -r app-user
+RUN useradd -r app-user && install -d -o app-user $NUMBA_CACHE_DIR
 USER app-user
 
 # to immediately see the logs instead of buffering
