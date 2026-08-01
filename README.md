@@ -25,6 +25,12 @@ uv run uvicorn morse_decoder.api.routes:app --reload
 
 The API is available at `http://localhost:8000`. Copy `config.toml` to `config.local.toml` for local overrides — it is gitignored.
 
+Decode an audio file offline to inspect what the pipeline makes of it:
+
+```bash
+uv run python scripts/decode_file.py path/to/recording.wav
+```
+
 **Frontend**
 
 ```bash
