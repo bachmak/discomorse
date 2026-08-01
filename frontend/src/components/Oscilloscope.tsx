@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useStore, MAX_SCOPE_SAMPLES } from "../store";
-import { WS_SAMPLE_RATE_HZ } from "../audioFormat";
+import { SCOPE_RATE_HZ } from "../audioFormat";
 import { AXIS_HEIGHT, TimeAxis, axisCaption } from "./chartAxis";
 import { useCanvasSize, prepareContext } from "./canvas";
 
@@ -8,7 +8,7 @@ const HEIGHT = 150;
 const PLOT_HEIGHT = HEIGHT - AXIS_HEIGHT;
 const MID = PLOT_HEIGHT / 2;
 const AMPLITUDE = MID * 0.9;
-const WINDOW_MS = (MAX_SCOPE_SAMPLES / WS_SAMPLE_RATE_HZ) * 1000;
+const WINDOW_MS = (MAX_SCOPE_SAMPLES / SCOPE_RATE_HZ) * 1000;
 const TICK_MS = WINDOW_MS / 4;
 const TRACE_COLOR = "#22d3ee";
 const FILL_COLOR = "rgba(34, 211, 238, 0.22)";

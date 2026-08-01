@@ -9,6 +9,7 @@ from morse_decoder.pipeline.dto import (
     InterCharSpace,
     IntraCharSpace,
     ToneMagnitude,
+    ToneSample,
     ToneSpectrum,
     WordSpace,
 )
@@ -17,10 +18,12 @@ from morse_decoder.pipeline.events import (
     DecodedText,
     FFTFrame,
     OutboundEvent,
+    ScopeTrace,
     WaterfallFrame,
 )
 
 _TS = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
+_LATER = _TS + datetime.timedelta(milliseconds=2)
 _SPECTRUM = ToneSpectrum(
     ts=_TS,
     magnitudes=(
@@ -42,6 +45,16 @@ _SPECTRUM = ToneSpectrum(
             FFTFrame(_SPECTRUM),
             {"type": "fft", "data": [0.5, 0.25], "ts": _TS.timestamp()},
             id="fft",
+        ),
+        pytest.param(
+            ScopeTrace((ToneSample(ts=_TS, on=True), ToneSample(ts=_LATER, on=False))),
+            {
+                "type": "oscilloscope",
+                "data": [1.0, 0.0],
+                "mode": "append",
+                "ts": _LATER.timestamp(),
+            },
+            id="oscilloscope",
         ),
         pytest.param(
             DecodedText("SOS"),

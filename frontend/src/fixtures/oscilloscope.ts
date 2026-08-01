@@ -4,7 +4,7 @@ const MORSE: Record<string, string> = {
   C: "-.-.", Q: "--.-", S: "...", O: "---", D: "-..", E: ".",
 };
 const MESSAGE = "CQ CQ CQ";
-const SAMPLES_PER_UNIT = 14;
+const SAMPLES_PER_UNIT = 30; // one dit-unit at 20 WPM, at the scope trace rate
 const ON_LEVEL = 0.82;
 const NOISE_FLOOR = 0.02;
 

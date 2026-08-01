@@ -1,35 +1,19 @@
-import { useRef, useState, type ChangeEvent } from "react";
-
-const UPLOAD_URL = "/upload";
+import { useRef, type ChangeEvent } from "react";
+import { useFileDecoder } from "../hooks/useFileDecoder";
 
 export function FilePicker() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const { status, decode } = useFileDecoder();
 
-  const onSelect = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+  const onSelect = (event: ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0];
-    if (!file) return;
-    setStatus(`Sending ${file.name}…`);
-    const body = new FormData();
-    body.append("file", file);
-    try {
-      const response = await fetch(UPLOAD_URL, { method: "POST", body });
-      setStatus(response.ok ? `Sent ${file.name}` : `Upload failed (${response.status})`);
-    } catch {
-      setStatus(`Upload failed for ${file.name}`);
-    }
+    if (file) void decode(file);
   };
 
   return (
     <div>
       <button onClick={() => inputRef.current?.click()}>Browse audio…</button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="audio/*"
-        hidden
-        onChange={(event) => void onSelect(event)}
-      />
+      <input ref={inputRef} type="file" accept="audio/*" hidden onChange={onSelect} />
       {status && <span role="status">{status}</span>}
     </div>
   );

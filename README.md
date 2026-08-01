@@ -40,7 +40,9 @@ npm install
 npm run dev
 ```
 
-The dev server is available at `http://localhost:5173` with hot reload.
+The dev server is available at `http://localhost:5173` with hot reload. It proxies
+`/api` and `/ws` to the backend on `http://localhost:8000`, the same prefixes Caddy
+serves in Docker, so start the backend first.
 
 ---
 

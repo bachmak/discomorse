@@ -1,28 +1,26 @@
-import { useEffect, useRef } from "react";
-import { useStore } from "../store";
-import type { ServerMessage } from "../types/ws";
+import { useEffect, useRef, useState } from "react";
+import { MessageRouter } from "../messages/messageRouter";
+import { storeSink } from "../messages/storeSink";
 
 export function useWebSocket(url: string) {
-  const ws = useRef<WebSocket | null>(null);
-  const { pushWaterfall, pushFFT, appendScope, setScope, appendText } = useStore();
+  const socketRef = useRef<WebSocket | null>(null);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    ws.current = new WebSocket(url);
-    ws.current.binaryType = "arraybuffer";
+    const socket = new WebSocket(url);
+    const router = new MessageRouter(storeSink());
+    socket.onopen = () => setConnected(true);
+    socket.onclose = () => setConnected(false);
+    socket.onmessage = (event) => router.route(event.data as string);
+    socketRef.current = socket;
 
-    ws.current.onmessage = (ev) => {
-      const msg: ServerMessage = JSON.parse(ev.data as string);
-      if (msg.type === "waterfall") pushWaterfall(msg);
-      else if (msg.type === "fft") pushFFT(msg);
-      else if (msg.type === "oscilloscope")
-        (msg.mode === "append" ? appendScope : setScope)(msg.data);
-      else if (msg.type === "text") appendText(msg.data);
-    };
-
-    return () => ws.current?.close();
+    return () => socket.close();
   }, [url]);
 
-  const send = (data: ArrayBuffer | string) => ws.current?.send(data);
+  const send = (data: ArrayBuffer | string): void => {
+    const socket = socketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(data);
+  };
 
-  return { send };
+  return { send, connected };
 }

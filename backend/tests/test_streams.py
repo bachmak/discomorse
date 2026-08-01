@@ -6,7 +6,12 @@ from collections.abc import AsyncIterable, AsyncIterator
 import pytest
 from stream_fixtures import stream
 
-from morse_decoder.pipeline.stages.streams import StreamFork, StreamMerge, azip
+from morse_decoder.pipeline.stages.streams import (
+    StreamFork,
+    StreamMerge,
+    abatch,
+    azip,
+)
 
 _ITEMS = ("a", "b", "c")
 _ROOM = 2
@@ -206,3 +211,29 @@ async def test_a_merge_left_early_stops_reading_its_branches() -> None:
     await asyncio.sleep(0)
 
     assert len(pulls) == read_so_far
+
+
+@pytest.mark.parametrize(
+    "items, size, want",
+    [
+        pytest.param((), 2, (), id="a-source-holding-nothing"),
+        pytest.param(_ITEMS, 3, (_ITEMS,), id="one-full-group"),
+        pytest.param(_ITEMS, 2, (("a", "b"), ("c",)), id="a-short-last-group"),
+        pytest.param(_ITEMS, 5, (_ITEMS,), id="fewer-items-than-the-size"),
+        pytest.param(_ITEMS, 1, (("a",), ("b",), ("c",)), id="a-group-per-item"),
+    ],
+)
+async def test_batches_hold_every_item_the_source_gave(
+    items: tuple[str, ...], size: int, want: tuple[tuple[str, ...], ...]
+) -> None:
+    assert await _drained(abatch(stream(*items), size)) == want
+
+
+async def test_a_batch_is_given_out_as_soon_as_it_is_full() -> None:
+    """The trace goes out while the source runs on, rather than at the end."""
+    pulls: list[str] = []
+
+    groups = abatch(_counted(_ITEMS, pulls), 2)
+
+    assert await anext(groups) == ("a", "b")
+    assert pulls == ["a", "b"]
