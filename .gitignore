@@ -11,6 +11,7 @@ dist/
 
 # Local config overrides
 backend/config.local.toml
+backend/test_audio/
 
 # Frontend
 frontend/node_modules/
