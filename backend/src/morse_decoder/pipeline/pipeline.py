@@ -1,10 +1,10 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
-    ToneSample,
     ToneSpectrum,
+    Transcription,
 )
 from morse_decoder.pipeline.events import (
     DecodedText,
@@ -19,16 +19,8 @@ from morse_decoder.pipeline.stages.keying_detector.interface import KeyingDetect
 from morse_decoder.pipeline.stages.noise_estimator.interface import NoiseEstimator
 from morse_decoder.pipeline.stages.spectrum_analyzer.interface import SpectrumAnalyzer
 from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLimiter
-from morse_decoder.pipeline.stages.streams import StreamFork, azip
+from morse_decoder.pipeline.stages.streams import StreamFork, StreamMerge, azip
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
-
-
-# TODO(#116): drop once every stage is reactive — the limiter then reads the
-# analyzer's stream and the fork the limiter's, and no stage has to be handed
-# one spectrum at a time.
-async def _stream(spectrum: ToneSpectrum) -> AsyncIterator[ToneSpectrum]:
-    """The one spectrum in hand, as the stream a reactive stage reads."""
-    yield spectrum
 
 
 class Pipeline:
@@ -56,48 +48,43 @@ class Pipeline:
         self._timing_decoder = timing_decoder
         self._interpreter = interpreter
 
-    async def run(self) -> AsyncIterator[OutboundEvent]:
+    def run(self) -> AsyncIterator[OutboundEvent]:
         chunks = self._source.stream()
-        spectrums = self._spectrum_analyzer.process(chunks)
-        async for spectrum in spectrums:
-            async for event in self._process_spectrum(spectrum):
-                yield event
+        raw_spectrums = self._spectrum_analyzer.process(chunks)
+        to_events, to_limiter = StreamFork(raw_spectrums).branches()
 
-    async def _process_spectrum(
-        self, spectrum: ToneSpectrum
-    ) -> AsyncIterator[OutboundEvent]:
-        yield WaterfallFrame(spectrum)
-        yield FFTFrame(spectrum)
-        limited_spectrums = self._spectrum_limiter.process(_stream(spectrum))
-        async for limited_spectrum in limited_spectrums:
-            async for event in self._process_limited(limited_spectrum):
-                yield event
+        limited_spectrums = self._spectrum_limiter.process(to_limiter)
+        to_carrier_source, to_noise_estimator = StreamFork(limited_spectrums).branches()
+        carrier_samples = self._carrier_source.process(to_carrier_source)
+        noise_samples = self._noise_estimator.process(to_noise_estimator)
+        carrier_noise_samples = azip(
+            carrier_samples,
+            noise_samples,
+            transform=lambda carrier, noise: CarrierNoiseSample(carrier, noise),
+        )
+        raw_tones = self._keying_detector.process(carrier_noise_samples)
+        debounced_tones = self._keying_debouncer.process(raw_tones)
+        morse_elements = self._timing_decoder.process(debounced_tones)
+        transcriptions = self._interpreter.process(morse_elements)
 
-    async def _process_limited(
-        self, limited: ToneSpectrum
-    ) -> AsyncIterator[OutboundEvent]:
-        elements = self._timing_decoder.process(self._samples(limited))
-        async for transcription in self._interpreter.process(elements):
-            if transcription.text:
-                yield DecodedText(transcription.text)
-
-    def _samples(self, limited: ToneSpectrum) -> AsyncIterator[ToneSample]:
-        """The key the four stages read, one sample per spectrum they are given."""
-        return self._keying_debouncer.process(
-            self._keying_detector.process(self._readings(limited))
+        event_stream = StreamMerge(
+            _stream_spectrums(to_events),
+            _stream_text(transcriptions),
         )
 
-    async def _readings(
-        self, limited: ToneSpectrum
-    ) -> AsyncIterator[CarrierNoiseSample]:
-        """Carrier and noise off the same spectrums, paired reading by reading.
+        return event_stream.stream()
 
-        Both stages read the one stream, so it is forked: each of them reads a
-        branch of it, neither the other.
-        """
-        lhs, rhs = StreamFork(_stream(limited)).branches()
-        async for carrier, noise in azip(
-            self._carrier_source.process(lhs),
-            self._noise_estimator.process(rhs),
-        ):
-            yield CarrierNoiseSample(carrier=carrier, noise=noise)
+
+async def _stream_spectrums(
+    spectrums: AsyncIterable[ToneSpectrum],
+) -> AsyncIterator[OutboundEvent]:
+    async for spectrum in spectrums:
+        yield WaterfallFrame(spectrum)
+        yield FFTFrame(spectrum)
+
+
+async def _stream_text(
+    transcriptions: AsyncIterable[Transcription],
+) -> AsyncIterator[OutboundEvent]:
+    async for transcription in transcriptions:
+        yield DecodedText(transcription.text)

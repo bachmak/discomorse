@@ -6,7 +6,7 @@ dictionary. Levels are named after where they sit relative to the thresholds
 the default settings put over ``FLOOR``.
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import dataclass, replace
 
 from audio_fixtures import EPOCH
@@ -25,6 +25,7 @@ from morse_decoder.pipeline.dto import (
     ToneSample,
     ToneSpectrum,
 )
+from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
 from morse_decoder.pipeline.stages.keying_detector.adaptive_keying_detector import (
     AdaptiveKeyingDetector,
 )
@@ -33,6 +34,7 @@ from morse_decoder.pipeline.stages.keying_detector.impl.threshold_tracker import
     ThresholdTracker,
 )
 from morse_decoder.pipeline.stages.keying_detector.interface import KeyingDetector
+from morse_decoder.pipeline.stages.noise_estimator.interface import NoiseEstimator
 from morse_decoder.pipeline.stages.streams import StreamFork, azip
 
 SETTINGS = KeyingDetectorSettings()
@@ -110,18 +112,26 @@ async def keyed(
     return flags(await detect(readings, keying_detector=keying_detector))
 
 
-async def _readings_off(
-    spectrums: tuple[ToneSpectrum, ...],
+def readings_off(
+    spectrums: AsyncIterable[ToneSpectrum],
+    carrier_source: CarrierSource,
+    noise_estimator: NoiseEstimator,
 ) -> AsyncIterator[CarrierNoiseSample]:
-    """Carrier and noise off ``spectrums``, paired the way the pipeline pairs them."""
-    lhs, rhs = StreamFork(stream(*spectrums)).branches()
-    async for carrier, noise in azip(source().process(lhs), estimator().process(rhs)):
-        yield CarrierNoiseSample(carrier=carrier, noise=noise)
+    """Carrier and noise off ``spectrums``, paired the way the pipeline pairs them.
+
+    Both stages read the one stream, so it is forked: each of them reads a
+    branch of it, neither the other.
+    """
+    lhs, rhs = StreamFork(spectrums).branches()
+    return azip(
+        carrier_source.process(lhs), noise_estimator.process(rhs), CarrierNoiseSample
+    )
 
 
 async def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[ToneSample, ...]:
     """Read the key off spectrums the way the pipeline does, short of the debouncer."""
-    readings = _readings_off(await limit(spectrums))
+    limited = await limit(spectrums)
+    readings = readings_off(stream(*limited), source(), estimator())
     return tuple([one async for one in detector().process(readings)])
 
 
