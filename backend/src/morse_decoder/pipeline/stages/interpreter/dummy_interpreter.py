@@ -15,4 +15,6 @@ class DummyInterpreter(Interpreter):
         self, elements: AsyncIterable[MorseElement]
     ) -> AsyncIterator[Transcription]:
         async for _ in elements:
-            yield Transcription(text="")
+            pass
+        return
+        yield  # pragma: no cover  # marks process() a generator, nothing is read off it
