@@ -8,14 +8,16 @@ interface State {
   waterfallFrames: WaterfallMessage[];
   fftFrame: FFTMessage | null;
   scopeSamples: number[];
+  decodedMorse: string;
   decodedText: string;
   slowMode: boolean;
   pushWaterfall: (frame: WaterfallMessage) => void;
   pushFFT: (frame: FFTMessage) => void;
   appendScope: (samples: number[]) => void;
   setScope: (samples: number[]) => void;
+  appendMorse: (notation: string) => void;
   appendText: (text: string) => void;
-  clearText: () => void;
+  clearDecoded: () => void;
   setSlowMode: (on: boolean) => void;
 }
 
@@ -23,6 +25,7 @@ export const useStore = create<State>((set) => ({
   waterfallFrames: [],
   fftFrame: null,
   scopeSamples: [],
+  decodedMorse: "",
   decodedText: "",
   slowMode: false,
 
@@ -38,9 +41,11 @@ export const useStore = create<State>((set) => ({
 
   setScope: (samples) => set({ scopeSamples: samples }),
 
+  appendMorse: (notation) => set((s) => ({ decodedMorse: s.decodedMorse + notation })),
+
   appendText: (text) => set((s) => ({ decodedText: s.decodedText + text })),
 
-  clearText: () => set({ decodedText: "" }),
+  clearDecoded: () => set({ decodedMorse: "", decodedText: "" }),
 
   setSlowMode: (on) => set({ slowMode: on }),
 }));

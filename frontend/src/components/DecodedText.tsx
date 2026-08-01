@@ -1,15 +1,29 @@
 import { useStore } from "../store";
 
+interface DecodedLineProps {
+  className: string;
+  value: string;
+  placeholder: string;
+}
+
+function DecodedLine({ className, value, placeholder }: DecodedLineProps) {
+  return (
+    <pre className={className}>
+      {value || <span className="placeholder">{placeholder}</span>}
+    </pre>
+  );
+}
+
 export function DecodedText() {
+  const morse = useStore((s) => s.decodedMorse);
   const text = useStore((s) => s.decodedText);
-  const clearText = useStore((s) => s.clearText);
+  const clearDecoded = useStore((s) => s.clearDecoded);
 
   return (
     <div>
-      <pre style={{ minHeight: "4em", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-        {text || <span style={{ opacity: 0.4 }}>Decoded text will appear here…</span>}
-      </pre>
-      <button onClick={clearText}>Clear</button>
+      <DecodedLine className="text" value={text} placeholder="Decoded text will appear here…" />
+      <DecodedLine className="morse" value={morse} placeholder="Morse elements will appear here…" />
+      <button onClick={clearDecoded}>Clear</button>
     </div>
   );
 }
