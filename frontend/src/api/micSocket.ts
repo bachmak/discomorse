@@ -1,0 +1,41 @@
+import { MessageRouter } from "../messages/messageRouter";
+import { storeSink } from "../messages/storeSink";
+
+export type SocketData = ArrayBuffer | string;
+
+export class MicSocketError extends Error {}
+
+function opened(socket: WebSocket): Promise<void> {
+  return new Promise((resolve, reject) => {
+    socket.addEventListener("open", () => resolve(), { once: true });
+    socket.addEventListener("error", () => reject(new MicSocketError(socket.url)), { once: true });
+  });
+}
+
+// One socket is one decoder session: the backend reads the handshake, streams
+// the events it decodes, and is finished when the socket closes.
+export class MicSocket {
+  private constructor(private readonly socket: WebSocket) {}
+
+  static async open(url: string): Promise<MicSocket> {
+    const socket = new WebSocket(url);
+    const router = new MessageRouter(storeSink());
+    socket.onmessage = (event) => router.route(event.data as string);
+    await opened(socket);
+    return new MicSocket(socket);
+  }
+
+  readonly send = (data: SocketData): void => {
+    if (this.socket.readyState === WebSocket.OPEN) this.socket.send(data);
+  };
+
+  closed(): Promise<void> {
+    return new Promise((resolve) =>
+      this.socket.addEventListener("close", () => resolve(), { once: true }),
+    );
+  }
+
+  close(): void {
+    this.socket.close();
+  }
+}

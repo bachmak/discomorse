@@ -38,7 +38,7 @@ export function App() {
       <div className="signal-grid">
         <Panel
           title="Oscilloscope"
-          hint="Time-domain keying. Short dits, longer dahs, and the gaps between them."
+          hint="Time-domain keying. Scroll to zoom, drag to look back, double-click to follow live."
         >
           <Oscilloscope />
         </Panel>
@@ -50,7 +50,7 @@ export function App() {
         <Panel
           className="span-full"
           title="Waterfall"
-          hint="Frequency over time. Locate the carrier and watch it drift or fade."
+          hint="Frequency over time. Scroll or drag to look back, double-click to follow live."
         >
           <Waterfall />
         </Panel>
