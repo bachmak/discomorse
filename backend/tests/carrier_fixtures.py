@@ -139,14 +139,6 @@ def lock_flags(samples: tuple[CarrierSample, ...]) -> tuple[bool, ...]:
     return tuple(sample.is_locked for sample in samples)
 
 
-def first_locked_index(samples: tuple[CarrierSample, ...]) -> int:
-    """Where the lock closes; ``len(samples)`` when it never does."""
-    return next(
-        (index for index, sample in enumerate(samples) if sample.is_locked),
-        len(samples),
-    )
-
-
 def seconds_since_epoch(ts: datetime.datetime) -> float:
     return (ts - EPOCH).total_seconds()
 

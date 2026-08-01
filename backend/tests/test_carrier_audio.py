@@ -7,13 +7,10 @@ import numpy.typing as npt
 import pytest
 from audio_fixtures import noise_pcm, silence_pcm, sine_pcm
 from carrier_fixtures import (
-    HOP_SECONDS,
-    LOCK_SECONDS,
     MIN_MAGNITUDE,
     SAMPLE_RATE,
     Phase,
     analyze,
-    first_locked_index,
     frequencies,
     lock_flags,
     track,
@@ -27,7 +24,6 @@ _TONE_HZ = 750.0
 _INTRUDER_HZ = 1_000.0
 _BURST_SECONDS = 0.1
 _KEY_DOWN_AMPLITUDE = 0.5
-_FRAMES_TO_LOCK = round(LOCK_SECONDS / HOP_SECONDS)
 
 
 @dataclass(frozen=True)
@@ -77,8 +73,7 @@ async def test_a_keyed_carrier_holds_its_frequency_through_the_gaps(
 ) -> None:
     samples = await _tracked(_keyed_pcm(noise_amplitude))
 
-    assert first_locked_index(samples) == _FRAMES_TO_LOCK
-    assert all(lock_flags(samples)[_FRAMES_TO_LOCK:])
+    assert all(lock_flags(samples))
     assert set(frequencies(samples)) == {_TONE_HZ}
 
 

@@ -11,8 +11,8 @@ from carrier_fixtures import (
     STEP_S,
     TOLERANCE_HZ,
     SpectrumTimeline,
-    first_locked_index,
     frequencies,
+    lock_flags,
     locking_timeline,
     source,
     track,
@@ -92,18 +92,21 @@ async def test_bins_tied_for_loudest_do_not_make_the_carrier_flicker() -> None:
 
 
 @pytest.mark.parametrize(
-    "step_seconds, want_first_locked_index",
+    "step_seconds, want_locked",
     [
-        pytest.param(STEP_S, 2, id="the-usual-grid"),
-        pytest.param(
-            STEP_S / 100, _GRID_SPECTRUMS, id="a-grid-far-finer-than-the-lock"
-        ),
-        pytest.param(STEP_S * 100, 1, id="a-grid-far-coarser-than-the-lock"),
+        pytest.param(STEP_S, True, id="the-usual-grid"),
+        pytest.param(STEP_S / 100, False, id="a-grid-far-finer-than-the-lock"),
+        pytest.param(STEP_S * 100, True, id="a-grid-far-coarser-than-the-lock"),
     ],
 )
 async def test_the_source_reads_the_lock_time_off_any_time_grid(
-    step_seconds: float, want_first_locked_index: int
+    step_seconds: float, want_locked: bool
 ) -> None:
+    """What a grid decides is whether the run reaches the lock time, nothing else.
+
+    A stream that never spans it stays unlocked however many spectrums it holds,
+    and one that spans it is carrier throughout — every spectrum still answered.
+    """
     spectrums = (
         SpectrumTimeline(step_seconds)
         .hold(KEYED, step_seconds * _GRID_SPECTRUMS)
@@ -113,4 +116,4 @@ async def test_the_source_reads_the_lock_time_off_any_time_grid(
     samples = await track(spectrums)
 
     assert len(samples) == _GRID_SPECTRUMS
-    assert first_locked_index(samples) == want_first_locked_index
+    assert lock_flags(samples) == (want_locked,) * _GRID_SPECTRUMS

@@ -1,6 +1,13 @@
+from abc import ABC, abstractmethod
+from collections.abc import AsyncIterable, AsyncIterator
+
 from morse_decoder.pipeline.dto import CarrierSample, ToneSpectrum
-from morse_decoder.pipeline.stages.interface import PipelineStage
 
 
-class CarrierSource(PipelineStage[ToneSpectrum, CarrierSample]):
+class CarrierSource(ABC):
     """Follows the carrier every spectrum carries, if it has one."""
+
+    @abstractmethod
+    def process(
+        self, spectrums: AsyncIterable[ToneSpectrum]
+    ) -> AsyncIterator[CarrierSample]: ...

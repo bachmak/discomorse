@@ -46,12 +46,15 @@ class RecordingCarrierSource(CarrierSource):
         self.seen: list[ToneSpectrum] = []
         self.reported: list[CarrierSample] = []
 
-    def transform(self, spectrum: ToneSpectrum) -> CarrierSample:
-        self.seen.append(spectrum)
-        self.reported.append(
-            CarrierSample(tone=Tone.empty().with_ts(spectrum.ts), is_locked=False)
-        )
-        return self.reported[-1]
+    async def process(
+        self, spectrums: AsyncIterable[ToneSpectrum]
+    ) -> AsyncIterator[CarrierSample]:
+        async for spectrum in spectrums:
+            self.seen.append(spectrum)
+            self.reported.append(
+                CarrierSample(tone=Tone.empty().with_ts(spectrum.ts), is_locked=False)
+            )
+            yield self.reported[-1]
 
 
 class RecordingNoiseEstimator(NoiseEstimator):

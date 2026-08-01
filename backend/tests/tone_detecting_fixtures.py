@@ -5,7 +5,7 @@ pipeline, so a test that wants them together drives the ones a real pipeline
 built, chained here the way ``Pipeline.run`` chains them.
 """
 
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncIterable, AsyncIterator, Iterable
 from dataclasses import dataclass
 
 import numpy.typing as npt
@@ -62,8 +62,15 @@ class ToneDetecting:
             self._pipeline._keying_detector.process(readings)
         )
 
+    async def read_chunks(self, chunks: Iterable[PcmChunk]) -> tuple[ToneSample, ...]:
+        """Every chunk as the one stream ``run`` reads, however many they are."""
+        limited = self._pipeline._spectrum_limiter.process(
+            self._pipeline._spectrum_analyzer.process(stream(*chunks))
+        )
+        return tuple([sample async for sample in self._samples(limited)])
+
     async def feed(self, chunk: PcmChunk) -> tuple[ToneSample, ...]:
-        """One chunk of audio, driven through the pipeline the way ``run`` does."""
+        """One chunk of audio, read as a stream that ends with it."""
         spectrums = await spectrums_of(self._pipeline._spectrum_analyzer, chunk)
         return await self.read(spectrums)
 
@@ -91,11 +98,7 @@ async def read_tone(
     samples: npt.NDArray[PCM16.IntType], chunks: int = 1
 ) -> tuple[ToneSample, ...]:
     """The key one set of stages reads off ``samples`` handed to it in ``chunks``."""
-    detecting = tone_detecting()
-    read: list[ToneSample] = []
-    for chunk in PcmChunks(samples, chunks):
-        read += await detecting.feed(chunk)
-    return tuple(read)
+    return await tone_detecting().read_chunks(PcmChunks(samples, chunks))
 
 
 @dataclass(frozen=True)
