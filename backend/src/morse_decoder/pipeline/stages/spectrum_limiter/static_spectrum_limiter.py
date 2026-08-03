@@ -10,7 +10,7 @@ class StaticSpectrumLimiter(SpectrumLimiter):
         self._min_hz = settings.min_hz
         self._max_hz = settings.max_hz
 
-    def transform(self, spectrum: ToneSpectrum) -> ToneSpectrum:
+    def process_single(self, spectrum: ToneSpectrum) -> ToneSpectrum:
         tones = tuple(tone for tone in spectrum.magnitudes if self._covers(tone))
         if not tones:
             raise ValueError(f"no spectrum bin in {self._min_hz}..{self._max_hz} Hz")
