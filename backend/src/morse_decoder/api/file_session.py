@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
-from morse_decoder.config import global_settings
+from morse_decoder.config import Settings
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
@@ -15,10 +15,10 @@ _NDJSON_MEDIA_TYPE = "application/x-ndjson"
 
 
 async def handle_file_upload(file: UploadFile) -> StreamingResponse:
-    settings = global_settings
+    settings = Settings()
     source = FileSource(
         await file.read(),
-        audio=global_settings.audio,
+        audio=settings.audio,
         decoder=SoundFileDecoder(),
         sample_clock=SampleClock(
             sample_rate=settings.audio.sample_rate,

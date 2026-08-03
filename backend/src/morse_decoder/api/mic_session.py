@@ -9,7 +9,7 @@ from morse_decoder.api.wire import MicHandshake
 from morse_decoder.audio.impl.resampler import Resampler
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.mic_source import EndOfStream, MicSource
-from morse_decoder.config import Settings, global_settings
+from morse_decoder.config import Settings
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
@@ -24,7 +24,7 @@ async def handle_mic_stream(ws: WebSocket) -> None:
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await MicSession(ws, handshake.sample_rate, global_settings).run()
+    await MicSession(ws, handshake.sample_rate, Settings()).run()
 
 
 class Pump(ABC):

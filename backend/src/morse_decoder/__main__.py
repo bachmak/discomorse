@@ -1,6 +1,8 @@
 import uvicorn
 
 from morse_decoder.api.routes import app
-from morse_decoder.config import global_settings
+from morse_decoder.config import Settings
 
-uvicorn.run(app, host=global_settings.server.host, port=global_settings.server.port)
+_server = Settings().server
+
+uvicorn.run(app, host=_server.host, port=_server.port)
