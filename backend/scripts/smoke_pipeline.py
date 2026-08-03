@@ -18,7 +18,7 @@ from morse_signal import MorseSignal
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
-from morse_decoder.config import Settings, global_settings
+from morse_decoder.config import Settings
 from morse_decoder.pipeline.events import (
     DecodedMorse,
     FFTFrame,
@@ -86,7 +86,7 @@ def _run(settings: Settings) -> EventTally:
 
 
 def main() -> int:
-    tally = _run(global_settings)
+    tally = _run(Settings())
     print(tally.report())
     missing = tally.missing(_EXPECTED)
     if missing:

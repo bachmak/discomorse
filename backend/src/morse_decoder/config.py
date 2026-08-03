@@ -1,7 +1,12 @@
 from typing import Self
 
 from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
 
 
 class ServerSettings(BaseSettings):
@@ -126,7 +131,6 @@ class PipelineSettings(BaseSettings):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        toml_file=["config.toml", "config.local.toml"],
         env_nested_delimiter="__",
         extra="forbid",
     )
@@ -134,6 +138,24 @@ class Settings(BaseSettings):
     server: ServerSettings = Field(default_factory=ServerSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
     pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
+
+    # one source per file, highest priority first: pydantic-settings deep-merges
+    # sources, while a single source with several files replaces whole sections
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            env_settings,
+            TomlConfigSettingsSource(settings_cls, "config.local.toml"),
+            TomlConfigSettingsSource(settings_cls, "config.toml"),
+        )
 
     # TODO: not the best way to achieve consistency
     # consider restructuring settings to only have one source of truth
@@ -147,6 +169,3 @@ class Settings(BaseSettings):
                 f"pipeline.spectrum_analyzer_settings.sample_rate ({analyzer_rate})"
             )
         return self
-
-
-global_settings = Settings()

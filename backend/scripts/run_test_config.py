@@ -23,7 +23,7 @@ from tempfile import TemporaryDirectory
 from decode_file import FileDecoding, MorseExcerpt, Report
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from morse_decoder.config import Settings, global_settings
+from morse_decoder.config import Settings
 
 _GENERATOR = Path(__file__).with_name("official_generator.py")
 _QRN_OFF_DB = 35.0  # the generator reads anything from here up as noise-free
@@ -239,7 +239,7 @@ def _parse_config_path() -> Path:
 def main() -> int:
     path = _parse_config_path()
     config = TestConfig.load(path)
-    run = ConfigRun(config, global_settings, MorseGenerator(_GENERATOR))
+    run = ConfigRun(config, Settings(), MorseGenerator(_GENERATOR))
     comparison = asyncio.run(run.compare())
     verdict = comparison.verdict()
     print(RunReport(path, config.signal, comparison).render(verdict))
