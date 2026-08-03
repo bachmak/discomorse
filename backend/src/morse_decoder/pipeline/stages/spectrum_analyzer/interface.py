@@ -1,11 +1,8 @@
-from abc import ABC, abstractmethod
-from collections.abc import AsyncIterable, AsyncIterator
+from abc import ABC
 
 from morse_decoder.pipeline.dto import PcmChunk, ToneSpectrum
+from morse_decoder.pipeline.stages.interface import ManyToManyStage
 
 
-class SpectrumAnalyzer(ABC):
-    @abstractmethod
-    def process(self, chunks: AsyncIterable[PcmChunk]) -> AsyncIterator[ToneSpectrum]:
-        """Turn a stream of PCM chunks into a stream of frequency spectrums."""
-        ...
+class SpectrumAnalyzer(ManyToManyStage[PcmChunk, ToneSpectrum], ABC):
+    """Turn a stream of PCM chunks into a stream of frequency spectrums."""

@@ -15,7 +15,7 @@ class AdaptiveKeyingDetector(KeyingDetector):
         self._thresholds = ThresholdTracker(settings)
         self._state: KeyingState = OffState()
 
-    def transform(self, sample: CarrierNoiseSample) -> ToneSample:
+    def process_single(self, sample: CarrierNoiseSample) -> ToneSample:
         thresholds = self._thresholds.update(sample.noise)
         self._state = self._next_state(sample.carrier, thresholds)
         return ToneSample(ts=sample.carrier.tone.ts, on=self._state.is_on())

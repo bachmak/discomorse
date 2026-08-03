@@ -1,13 +1,8 @@
-from abc import ABC, abstractmethod
-from collections.abc import AsyncIterable, AsyncIterator
+from abc import ABC
 
 from morse_decoder.pipeline.dto import MorseElement, ToneSample
+from morse_decoder.pipeline.stages.interface import ManyToManyStage
 
 
-class TimingDecoder(ABC):
-    @abstractmethod
-    def process(
-        self, samples: AsyncIterable[ToneSample]
-    ) -> AsyncIterator[MorseElement]:
-        """Decode a stream of tone samples into morse timing elements."""
-        ...
+class TimingDecoder(ManyToManyStage[ToneSample, MorseElement], ABC):
+    """Decode a stream of tone samples into morse timing elements."""

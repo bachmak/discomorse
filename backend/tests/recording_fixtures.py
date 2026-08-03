@@ -65,7 +65,7 @@ class RecordingNoiseEstimator(NoiseEstimator):
         self.seen: list[ToneSpectrum] = []
         self.reported: list[NoiseSample] = []
 
-    def transform(self, spectrum: ToneSpectrum) -> NoiseSample:
+    def process_single(self, spectrum: ToneSpectrum) -> NoiseSample:
         self.seen.append(spectrum)
         self.reported.append(NoiseSample(noise=float(len(self.seen))))
         return self.reported[-1]
@@ -83,7 +83,7 @@ class RecordingKeyingDetector(KeyingDetector):
         self.seen: list[CarrierNoiseSample] = []
         self.reported: list[ToneSample] = []
 
-    def transform(self, sample: CarrierNoiseSample) -> ToneSample:
+    def process_single(self, sample: CarrierNoiseSample) -> ToneSample:
         self.seen.append(sample)
         self.reported.append(ToneSample(ts=sample.carrier.tone.ts, on=True))
         return self.reported[-1]
