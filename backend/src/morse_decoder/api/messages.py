@@ -69,9 +69,26 @@ type OutboundMessage = Annotated[
     Field(discriminator="type"),
 ]
 
+type ChannelName = Literal[
+    "spectrums",
+    "limited_spectrums",
+    "carrier_samples",
+    "noise_samples",
+    "raw_tones",
+    "debounced_tones",
+    "morse_elements",
+    "transcriptions",
+]
+
+
+class StreamMessage(_MessageModel):
+    channel: ChannelName
+    payload: OutboundMessage
+
+
 type InboundMessage = MicHandshakeMessage
 
-outbound_message_adapter: TypeAdapter[OutboundMessage] = TypeAdapter(OutboundMessage)
+outbound_message_adapter: TypeAdapter[StreamMessage] = TypeAdapter(StreamMessage)
 inbound_message_adapter: TypeAdapter[InboundMessage] = TypeAdapter(InboundMessage)
 
 
