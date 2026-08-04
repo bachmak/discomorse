@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { MicHandshake } from "../types/ws";
+import type { MicHandshakeMessage } from "../types/ws";
 
 const CHUNK_SAMPLES = 2048;
 const FULL_SCALE = 32768;
@@ -17,7 +17,7 @@ function toPcm16(samples: Float32Array): ArrayBuffer {
 }
 
 function handshake(sampleRate: number): string {
-  const message: MicHandshake = { sample_rate: sampleRate };
+  const message: MicHandshakeMessage = { sample_rate: sampleRate };
   return JSON.stringify(message);
 }
 

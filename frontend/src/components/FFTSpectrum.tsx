@@ -52,7 +52,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, data: number[], width: number)
 
 export function FFTSpectrum() {
   const { ref, size } = useCanvasSize(HEIGHT);
-  const frame = useStore((s) => s.fftFrame);
+  const frame = useStore((s) => s.spectrumFrames[s.spectrumFrames.length - 1]);
 
   useEffect(() => {
     const canvas = ref.current;

@@ -1,10 +1,8 @@
-import type { FFTMessage, WaterfallMessage } from "../types/ws";
+import type { ToneSpectrumMessage } from "../types/ws";
 
 export interface MessageSink {
-  pushWaterfall(frame: WaterfallMessage): void;
-  pushFFT(frame: FFTMessage): void;
-  appendScope(samples: number[]): void;
-  setScope(samples: number[]): void;
-  appendMorse(notation: string): void;
-  appendText(text: string): void;
+  pushSpectrum(frame: ToneSpectrumMessage): void;
+  pushKeying(on: boolean): void;
+  appendMorseElement(notation: string): void;
+  appendTranscription(text: string): void;
 }

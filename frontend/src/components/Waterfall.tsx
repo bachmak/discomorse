@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "../store";
-import type { WaterfallMessage } from "../types/ws";
+import type { ToneSpectrumMessage } from "../types/ws";
 import { NYQUIST_HZ } from "../audioFormat";
 import { AXIS_HEIGHT, FrequencyAxis, axisCaption, type AxisGeometry } from "../charts/axis";
 import { Range } from "../charts/ticks";
@@ -78,11 +78,11 @@ function paintRow(image: ImageData, row: number, magnitudes: number[]): void {
   }
 }
 
-function visibleFrames(frames: WaterfallMessage[], window: ItemWindow): WaterfallMessage[] {
+function visibleFrames(frames: ToneSpectrumMessage[], window: ItemWindow): ToneSpectrumMessage[] {
   return frames.slice(Math.max(0, Math.round(window.from)), Math.max(0, Math.round(window.to)));
 }
 
-function buildSpectrogram(frames: WaterfallMessage[]): ImageData | null {
+function buildSpectrogram(frames: ToneSpectrumMessage[]): ImageData | null {
   const width = frames.length > 0 ? frames[frames.length - 1].data.length : 0;
   if (width === 0) return null;
   const image = new ImageData(width, frames.length);
@@ -114,7 +114,7 @@ function drawHint(ctx: CanvasRenderingContext2D, width: number): void {
 
 function drawWaterfall(
   ctx: CanvasRenderingContext2D,
-  frames: WaterfallMessage[],
+  frames: ToneSpectrumMessage[],
   buffer: HTMLCanvasElement,
   width: number,
 ): void {
@@ -127,7 +127,7 @@ function drawWaterfall(
 export function Waterfall() {
   const { ref, size } = useCanvasSize(HEIGHT);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
-  const frames = useStore((s) => s.waterfallFrames);
+  const frames = useStore((s) => s.spectrumFrames);
   const { view, goLive } = useViewport(ref, frames.length, WATERFALL_VIEW);
 
   useEffect(() => {

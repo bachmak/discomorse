@@ -1,5 +1,6 @@
 import { NYQUIST_HZ } from "../audioFormat";
-import { demoSignalLength, demoSignalLevel } from "./oscilloscope";
+import type { ToneSpectrumMessage } from "../types/ws";
+import { demoSignalLength, demoSignalLevel } from "./keying";
 import { fractNoise } from "./noise";
 
 const BIN_COUNT = 256;
@@ -23,10 +24,14 @@ function binMagnitude(bin: number, center: number, level: number, cursor: number
   return Math.min(1, carrierMagnitude(bin, center, level) + noise);
 }
 
-export function demoSpectrumFrame(cursor: number): number[] {
+function demoSpectrumFrame(cursor: number): number[] {
   const center = carrierBin(cursor);
   const level = demoSignalLevel(cursor);
   return Array.from({ length: BIN_COUNT }, (_unused, bin) =>
     binMagnitude(bin, center, level, cursor),
   );
+}
+
+export function demoSpectrumMessage(cursor: number): ToneSpectrumMessage {
+  return { type: "tone_spectrum", data: demoSpectrumFrame(cursor), ts: cursor };
 }
