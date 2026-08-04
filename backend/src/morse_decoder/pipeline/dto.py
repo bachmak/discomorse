@@ -4,75 +4,64 @@ import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from morse_decoder.api.events import (
+    CarrierSampleEvent,
+    DigitalToneEvent,
+    MorseElementEvent,
+    NoiseSampleEvent,
+    OutboundEvent,
+    ToneEvent,
+    ToneSpectrumEvent,
+    TranscriptionEvent,
+)
+
 
 @dataclass(frozen=True)
-class MorseElement(ABC):
-    """One unit the timing decoder reads from the tone stream: a signal or a space."""
-
-    @property
+class Serializable(ABC):
     @abstractmethod
-    def notation(self) -> str: ...
+    def serialize(self) -> OutboundEvent: ...
 
 
-class Signal(MorseElement, ABC):
-    """A keyed element that contributes to a character's code: a dit or a dah.
+@dataclass(frozen=True)
+class MorseElement(Serializable, ABC):
+    def serialize(self) -> OutboundEvent:
+        return MorseElementEvent(data=self.notation())
 
-    `code_symbol` is its mark in the dot/dash string the letter decoder
-    concatenates and looks up. Spaces carry no symbol, so they don't have it.
-    """
-
-    @property
     @abstractmethod
-    def code_symbol(self) -> str:
-        """This element's mark in a character's code: '.' or '-'."""
-        ...
+    def notation(self): ...
 
-    @property
+
+class Mark(MorseElement, ABC):
+
+
+@dataclass(frozen=True)
+class Dit(Mark):
     def notation(self) -> str:
-        return self.code_symbol
-
-
-class Dit(Signal):
-    """A short signal, written '.' in a character's code."""
-
-    @property
-    def code_symbol(self) -> str:
         return "."
 
 
-class Dah(Signal):
-    """A long signal, written '-' in a character's code."""
-
-    @property
-    def code_symbol(self) -> str:
+class Dah(Mark):
+    def notation(self) -> str:
         return "-"
 
 
-class Space(MorseElement, ABC):
-    """A boundary between signals; it carries no code symbol."""
+class Gap(MorseElement, ABC):
 
 
-class IntraCharSpace(Space):
-    """Gap between the dits and dahs of a single character."""
-
-    @property
+@dataclass(frozen=True)
+class IntraCharGap(Gap):
     def notation(self) -> str:
-        """Written morse runs a character's signals together, so nothing."""
         return ""
 
 
-class InterCharSpace(Space):
-    """Gap that ends one character and begins the next."""
-
-    @property
+@dataclass(frozen=True)
+class InterCharGap(Gap):
     def notation(self) -> str:
         return " "
 
 
-class WordSpace(Space):
-    """Gap that ends one word and begins the next."""
-
-    @property
+@dataclass(frozen=True)
+class WordGap(Gap):
     def notation(self) -> str:
         return " / "
 
@@ -90,13 +79,19 @@ class ToneMagnitude:
 
 
 @dataclass(frozen=True)
-class ToneSpectrum:
+class ToneSpectrum(Serializable):
     ts: datetime.datetime
     magnitudes: tuple[ToneMagnitude, ...]
 
+    def serialize(self) -> OutboundEvent:
+        return ToneSpectrumEvent(
+            data=[float(tone.magnitude) for tone in self.magnitudes],
+            ts=self.ts.timestamp(),
+        )
+
 
 @dataclass(frozen=True)
-class Tone:
+class Tone(Serializable):
     frequency: float
     magnitude: float
     ts: datetime.datetime
@@ -111,22 +106,35 @@ class Tone:
     def with_ts(self, ts: datetime.datetime) -> Tone:
         return Tone(frequency=self.frequency, magnitude=self.magnitude, ts=ts)
 
+    def serialize(self) -> OutboundEvent:
+        return ToneEvent(
+            frequency=self.frequency,
+            magnitude=self.magnitude,
+            ts=self.ts.timestamp(),
+        )
+
 
 @dataclass(frozen=True)
-class CarrierSample:
-    """Where the carrier sits at one spectrum's timestamp, and how loud it is.
-
-    ``is_locked`` separates a frequency the source holds on to from one it merely
-    read off the loudest bin while still searching for a carrier.
-    """
-
+class CarrierSample(Serializable):
     tone: Tone
     is_locked: bool
 
+    def serialize(self) -> OutboundEvent:
+        return CarrierSampleEvent(
+            frequency=self.tone.frequency,
+            magnitude=self.tone.magnitude,
+            is_locked=self.is_locked,
+            ts=self.tone.ts.timestamp(),
+        )
+
 
 @dataclass(frozen=True)
-class NoiseSample:
+class NoiseSample(Serializable):
     noise: float
+    ts: datetime.datetime
+
+    def serialize(self) -> OutboundEvent:
+        return NoiseSampleEvent(magnitude=self.noise, ts=self.ts.timestamp())
 
 
 @dataclass(frozen=True)
@@ -136,11 +144,17 @@ class CarrierNoiseSample:
 
 
 @dataclass(frozen=True)
-class ToneSample:
+class DigitalTone(Serializable):
     ts: datetime.datetime
     on: bool
 
+    def serialize(self) -> OutboundEvent:
+        return DigitalToneEvent(on=self.on, ts=self.ts.timestamp())
+
 
 @dataclass(frozen=True)
-class Transcription:
+class Transcription(Serializable):
     text: str
+
+    def serialize(self) -> OutboundEvent:
+        return TranscriptionEvent(data=self.text)

@@ -8,11 +8,10 @@ from morse_decoder.pipeline.dto import (
     Dah,
     DigitalTone,
     Dit,
-    InterCharSpace,
-    IntraCharSpace,
+    InterCharGap,
+    IntraCharGap,
     MorseElement,
-    ToneSample,
-    WordSpace,
+    WordGap,
 )
 from morse_decoder.pipeline.factory import _build_timing_decoder
 from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder import (
@@ -62,23 +61,23 @@ async def _decode(
         pytest.param([(True, 3)], [Dah()], id="dah"),
         pytest.param(
             [(True, 1), (False, 1), (True, 3)],
-            [Dit(), IntraCharSpace(), Dah()],
+            [Dit(), IntraCharGap(), Dah()],
             id="letter-A",
         ),
         pytest.param(
             [(True, 1), (False, 3), (True, 1)],
-            [Dit(), InterCharSpace(), Dit()],
+            [Dit(), InterCharGap(), Dit()],
             id="inter-char-space",
         ),
         pytest.param(
             [(True, 1), (False, 7), (True, 1)],
-            [Dit(), WordSpace(), Dit()],
+            [Dit(), WordGap(), Dit()],
             id="word-space",
         ),
         pytest.param([], [], id="empty"),
         pytest.param(
             [(True, 1), (False, 1)],
-            [Dit(), IntraCharSpace()],
+            [Dit(), IntraCharGap()],
             id="dit-then-intra-space",
         ),
     ],
@@ -104,15 +103,15 @@ _HI: list[tuple[bool, float]] = [
 ]
 _HI_ELEMENTS = [
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
-    InterCharSpace(),
+    InterCharGap(),
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
 ]
 

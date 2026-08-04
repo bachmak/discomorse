@@ -3,8 +3,8 @@ from fastapi import WebSocketDisconnect, status
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from morse_decoder.api.events import MicHandshakeEvent, inbound_event_json_schema
 from morse_decoder.api.routes import app
-from morse_decoder.api.wire import MicHandshake, client_message_json_schema
 
 
 @pytest.mark.parametrize(
@@ -18,7 +18,7 @@ from morse_decoder.api.wire import MicHandshake, client_message_json_schema
 def test_handshake_accepts_a_positive_sample_rate(sample_rate: int) -> None:
     payload = f'{{"sample_rate": {sample_rate}}}'
 
-    assert MicHandshake.model_validate_json(payload).sample_rate == sample_rate
+    assert MicHandshakeEvent.model_validate_json(payload).sample_rate == sample_rate
 
 
 @pytest.mark.parametrize(
@@ -36,11 +36,11 @@ def test_handshake_accepts_a_positive_sample_rate(sample_rate: int) -> None:
 )
 def test_handshake_rejects_invalid_payload(payload: str) -> None:
     with pytest.raises(ValidationError):
-        MicHandshake.model_validate_json(payload)
+        MicHandshakeEvent.model_validate_json(payload)
 
 
 def test_client_schema_describes_the_handshake() -> None:
-    schema = client_message_json_schema()
+    schema = inbound_event_json_schema()
     properties = schema["properties"]
 
     assert schema["title"] == "MicHandshake"

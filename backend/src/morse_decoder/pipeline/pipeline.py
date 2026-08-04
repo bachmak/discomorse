@@ -1,20 +1,10 @@
 from collections.abc import AsyncIterable, AsyncIterator
 
+from morse_decoder.api.events import OutboundEvent
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
-    MorseElement,
-    ToneSample,
-    ToneSpectrum,
-    Transcription,
-)
-from morse_decoder.pipeline.events import (
-    DecodedMorse,
-    DecodedText,
-    FFTFrame,
-    OutboundEvent,
-    ScopeTrace,
-    WaterfallFrame,
+    Serializable,
 )
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
 from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
@@ -26,13 +16,9 @@ from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLim
 from morse_decoder.pipeline.stages.streams import (
     StreamFork,
     StreamMerge,
-    abatch,
     azip,
 )
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
-
-# One trace step per 25 keying readings: 50 ms at the default hop rate.
-_SCOPE_TRACE_SAMPLES = 25
 
 
 class Pipeline:
@@ -82,39 +68,15 @@ class Pipeline:
         transcriptions = self._interpreter.process(morse_to_interpreter)
 
         event_stream = StreamMerge(
-            _stream_spectrums(to_events),
-            _stream_scope(tones_to_events),
-            _stream_morse(morse_to_events),
-            _stream_text(transcriptions),
+            _stream(to_events),
+            _stream(tones_to_events),
+            _stream(morse_to_events),
+            _stream(transcriptions),
         )
 
         return event_stream.stream()
 
 
-async def _stream_spectrums(
-    spectrums: AsyncIterable[ToneSpectrum],
-) -> AsyncIterator[OutboundEvent]:
-    async for spectrum in spectrums:
-        yield WaterfallFrame(spectrum)
-        yield FFTFrame(spectrum)
-
-
-async def _stream_scope(
-    samples: AsyncIterable[ToneSample],
-) -> AsyncIterator[OutboundEvent]:
-    async for group in abatch(samples, _SCOPE_TRACE_SAMPLES):
-        yield ScopeTrace(group)
-
-
-async def _stream_morse(
-    elements: AsyncIterable[MorseElement],
-) -> AsyncIterator[OutboundEvent]:
-    async for element in elements:
-        yield DecodedMorse(element)
-
-
-async def _stream_text(
-    transcriptions: AsyncIterable[Transcription],
-) -> AsyncIterator[OutboundEvent]:
-    async for transcription in transcriptions:
-        yield DecodedText(transcription.text)
+async def _stream(items: AsyncIterable[Serializable]) -> AsyncIterator[OutboundEvent]:
+    async for item in items:
+        yield item.serialize()

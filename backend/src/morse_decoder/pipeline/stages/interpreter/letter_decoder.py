@@ -1,4 +1,4 @@
-from morse_decoder.pipeline.dto import MorseElement, Signal
+from morse_decoder.pipeline.dto import MorseElement
 from morse_decoder.pipeline.stages.interpreter.tokens import (
     Digit,
     Letter,
@@ -83,7 +83,7 @@ def encode_char(char: str) -> str:
 
 
 def _to_code(elements: list[MorseElement]) -> str:
-    return "".join(e.code_symbol for e in elements if isinstance(e, Signal))
+    return "".join(e.notation() for e in elements)
 
 
 def decode_sequence(elements: list[MorseElement]) -> Token:

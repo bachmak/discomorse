@@ -10,11 +10,10 @@ from morse_decoder.pipeline.dto import (
     Dah,
     DigitalTone,
     Dit,
-    InterCharSpace,
-    IntraCharSpace,
+    InterCharGap,
+    IntraCharGap,
     MorseElement,
-    ToneSample,
-    WordSpace,
+    WordGap,
 )
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
 
@@ -113,7 +112,7 @@ class IntraSpaceClassifier(ElementClassifier):
 
     def claim(self, span: Span, unit: float) -> Classification | None:
         if not span.on and span.duration < self._inter_threshold * unit:
-            return Classification(IntraCharSpace(), span.duration / _INTRA_SPACE_DITS)
+            return Classification(IntraCharGap(), span.duration / _INTRA_SPACE_DITS)
         return None
 
 
@@ -123,14 +122,14 @@ class InterSpaceClassifier(ElementClassifier):
 
     def claim(self, span: Span, unit: float) -> Classification | None:
         if not span.on and span.duration < self._word_threshold * unit:
-            return Classification(InterCharSpace(), span.duration / _INTER_SPACE_DITS)
+            return Classification(InterCharGap(), span.duration / _INTER_SPACE_DITS)
         return None
 
 
 class WordSpaceClassifier(ElementClassifier):
     def claim(self, span: Span, unit: float) -> Classification | None:
         if not span.on:
-            return Classification(WordSpace())
+            return Classification(WordGap())
         return None
 
 

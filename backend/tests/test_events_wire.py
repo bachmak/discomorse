@@ -2,16 +2,16 @@ import datetime
 
 import pytest
 
-from morse_decoder.api.wire import server_message_json_schema
+from morse_decoder.api.events import outbound_event_json_schema
 from morse_decoder.pipeline.dto import (
     Dah,
+    DigitalTone,
     Dit,
-    InterCharSpace,
-    IntraCharSpace,
+    InterCharGap,
+    IntraCharGap,
     ToneMagnitude,
-    ToneSample,
     ToneSpectrum,
-    WordSpace,
+    WordGap,
 )
 from morse_decoder.pipeline.events import (
     DecodedMorse,
@@ -74,17 +74,17 @@ _SPECTRUM = ToneSpectrum(
             id="morse-dah",
         ),
         pytest.param(
-            DecodedMorse(IntraCharSpace()),
+            DecodedMorse(IntraCharGap()),
             {"type": "morse", "data": ""},
             id="morse-intra-char-space",
         ),
         pytest.param(
-            DecodedMorse(InterCharSpace()),
+            DecodedMorse(InterCharGap()),
             {"type": "morse", "data": " "},
             id="morse-inter-char-space",
         ),
         pytest.param(
-            DecodedMorse(WordSpace()),
+            DecodedMorse(WordGap()),
             {"type": "morse", "data": " / "},
             id="morse-word-space",
         ),
@@ -97,7 +97,7 @@ def test_event_serializes_to_wire_message(
 
 
 def test_schema_covers_every_message_type() -> None:
-    schema = server_message_json_schema()
+    schema = outbound_event_json_schema()
     mapping = schema["discriminator"]["mapping"]  # type: ignore[index]  # schema is dict[str, object]
 
     assert set(mapping) == {"waterfall", "fft", "oscilloscope", "text", "morse"}

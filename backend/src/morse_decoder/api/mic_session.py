@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from fastapi import WebSocket, WebSocketDisconnect, status
 from pydantic import ValidationError
 
-from morse_decoder.api.wire import MicHandshake
+from morse_decoder.api.events import MicHandshakeEvent
 from morse_decoder.audio.impl.resampler import Resampler
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.mic_source import EndOfStream, MicSource
@@ -17,7 +17,7 @@ from morse_decoder.pipeline.pipeline import Pipeline
 async def handle_mic_stream(ws: WebSocket) -> None:
     await ws.accept()
     try:
-        handshake = MicHandshake.model_validate_json(await ws.receive_text())
+        handshake = MicHandshakeEvent.model_validate_json(await ws.receive_text())
     except WebSocketDisconnect:
         return
     except (ValidationError, KeyError):  # KeyError: first frame was binary, not text
@@ -83,4 +83,4 @@ class EventOutboundPump(Pump):
 
     async def run(self) -> None:
         async for event in self._pipeline.run():
-            await self._ws.send_text(event.to_message().model_dump_json())
+            await self._ws.send_text(event.model_dump_json())

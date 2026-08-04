@@ -37,4 +37,4 @@ class FileSession:
 
     async def run(self) -> AsyncIterator[str]:
         async for event in self._pipeline.run():
-            yield f"{event.to_message().model_dump_json()}\n"
+            yield f"{event.model_dump_json()}\n"
