@@ -9,11 +9,11 @@ from morse_decoder.pipeline.dto import (
     Dit,
     MorseElement,
     Transcription,
-    WordSpace,
+    WordGap,
 )
 from morse_decoder.pipeline.stages.interpreter.dummy_interpreter import DummyInterpreter
 
-_ELEMENTS: list[MorseElement] = [Dit(), Dah(), WordSpace()]
+_ELEMENTS: list[MorseElement] = [Dit(), Dah(), WordGap()]
 
 
 def _interpreter() -> DummyInterpreter:
@@ -34,7 +34,7 @@ async def _counted(
     [
         pytest.param([], [], id="nothing-at-all"),
         pytest.param([Dit()], [Transcription(text=".")], id="one-signal"),
-        pytest.param([WordSpace()], [], id="one-space"),
+        pytest.param([WordGap()], [], id="one-space"),
         pytest.param(
             _ELEMENTS,
             [Transcription(text="."), Transcription(text="-")],

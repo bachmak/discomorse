@@ -1,6 +1,6 @@
 import datetime
 
-from morse_decoder.pipeline.dto import ToneSample
+from morse_decoder.pipeline.dto import DigitalTone
 
 
 class KeyingDelayPolicy:
@@ -10,8 +10,8 @@ class KeyingDelayPolicy:
         self._rise = rise
         self._fall = fall
 
-    def is_held(self, candidate: ToneSample, ts: datetime.datetime) -> bool:
+    def is_held(self, candidate: DigitalTone, ts: datetime.datetime) -> bool:
         return ts - candidate.ts >= self._delay_of(candidate)
 
-    def _delay_of(self, candidate: ToneSample) -> datetime.timedelta:
+    def _delay_of(self, candidate: DigitalTone) -> datetime.timedelta:
         return self._rise if candidate.on else self._fall

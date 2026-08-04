@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useStore, MAX_SCOPE_SAMPLES } from "../store";
-import { SCOPE_RATE_HZ } from "../audioFormat";
+import { useStore, MAX_KEYING_SAMPLES } from "../store";
+import { HOP_RATE_HZ } from "../audioFormat";
 import { AXIS_HEIGHT, TimeAxis, axisCaption, type AxisGeometry } from "../charts/axis";
 import { Range } from "../charts/ticks";
 import { ZoomAndPan } from "../charts/gestures";
@@ -22,8 +22,8 @@ const TIME_AXIS = new TimeAxis();
 
 const SCOPE_VIEW: ViewportSetup = {
   gesture: new ZoomAndPan(),
-  span: 4 * SCOPE_RATE_HZ,
-  limits: { min: 0.1 * SCOPE_RATE_HZ, max: MAX_SCOPE_SAMPLES },
+  span: 4 * HOP_RATE_HZ,
+  limits: { min: 0.1 * HOP_RATE_HZ, max: MAX_KEYING_SAMPLES },
 };
 
 function geometry(width: number): AxisGeometry {
@@ -37,7 +37,7 @@ function geometry(width: number): AxisGeometry {
 }
 
 function secondsAgo(window: ItemWindow, total: number): Range {
-  return new Range((window.from - total) / SCOPE_RATE_HZ, (window.to - total) / SCOPE_RATE_HZ);
+  return new Range((window.from - total) / HOP_RATE_HZ, (window.to - total) / HOP_RATE_HZ);
 }
 
 function drawBaseline(ctx: CanvasRenderingContext2D, width: number): void {
@@ -49,31 +49,31 @@ function drawBaseline(ctx: CanvasRenderingContext2D, width: number): void {
   ctx.stroke();
 }
 
-function columnPeak(samples: number[], from: number, to: number): number {
+function columnPeak(levels: number[], from: number, to: number): number {
   const start = Math.max(0, Math.floor(from));
-  const end = Math.min(samples.length, Math.max(start + 1, Math.floor(to)));
+  const end = Math.min(levels.length, Math.max(start + 1, Math.floor(to)));
   let peak = 0;
   for (let i = start; i < end; i++) {
-    const magnitude = Math.abs(samples[i]);
+    const magnitude = Math.abs(levels[i]);
     if (magnitude > peak) peak = magnitude;
   }
   return peak;
 }
 
-function columnPeaks(samples: number[], window: ItemWindow, columns: number): number[] {
+function columnPeaks(levels: number[], window: ItemWindow, columns: number): number[] {
   const perColumn = (window.to - window.from) / columns;
   return Array.from({ length: columns }, (_unused, x) =>
-    columnPeak(samples, window.from + x * perColumn, window.from + (x + 1) * perColumn),
+    columnPeak(levels, window.from + x * perColumn, window.from + (x + 1) * perColumn),
   );
 }
 
 function drawWaveform(
   ctx: CanvasRenderingContext2D,
-  samples: number[],
+  levels: number[],
   window: ItemWindow,
   width: number,
 ): void {
-  const peaks = columnPeaks(samples, window, Math.round(width));
+  const peaks = columnPeaks(levels, window, Math.round(width));
   ctx.beginPath();
   peaks.forEach((peak, x) => ctx.lineTo(x, MID - peak * AMPLITUDE));
   for (let x = peaks.length - 1; x >= 0; x--) ctx.lineTo(x, MID + peaks[x] * AMPLITUDE);
@@ -94,28 +94,28 @@ function drawHint(ctx: CanvasRenderingContext2D, width: number): void {
 
 function drawScope(
   ctx: CanvasRenderingContext2D,
-  samples: number[],
+  levels: number[],
   window: ItemWindow,
   width: number,
 ): void {
   drawBaseline(ctx, width);
-  TIME_AXIS.draw(ctx, secondsAgo(window, samples.length), geometry(width));
-  if (samples.length > 0) drawWaveform(ctx, samples, window, width);
+  TIME_AXIS.draw(ctx, secondsAgo(window, levels.length), geometry(width));
+  if (levels.length > 0) drawWaveform(ctx, levels, window, width);
   else drawHint(ctx, width);
-  axisCaption(ctx, "Amplitude");
+  axisCaption(ctx, "Key");
 }
 
 export function Oscilloscope() {
   const { ref, size } = useCanvasSize(HEIGHT);
-  const samples = useStore((s) => s.scopeSamples);
-  const { view, goLive } = useViewport(ref, samples.length, SCOPE_VIEW);
+  const levels = useStore((s) => s.keyingLevels);
+  const { view, goLive } = useViewport(ref, levels.length, SCOPE_VIEW);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || size.width === 0) return;
     const ctx = prepareContext(canvas, size);
-    if (ctx) drawScope(ctx, samples, view.window(samples.length), size.width);
-  }, [ref, samples, view, size.width, size.height]);
+    if (ctx) drawScope(ctx, levels, view.window(levels.length), size.width);
+  }, [ref, levels, view, size.width, size.height]);
 
   return <ChartCanvas canvasRef={ref} height={HEIGHT} goLive={goLive} />;
 }

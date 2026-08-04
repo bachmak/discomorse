@@ -40,6 +40,6 @@ export function demoSignalLevel(cursor: number): number {
   return DEMO_SIGNAL[cursor % DEMO_SIGNAL.length];
 }
 
-export function demoScopeChunk(cursor: number, size: number): number[] {
-  return Array.from({ length: size }, (_unused, i) => demoSignalLevel(cursor + i));
+export function demoKeyingOn(cursor: number): boolean {
+  return demoSignalLevel(cursor) > ON_LEVEL / 2;
 }

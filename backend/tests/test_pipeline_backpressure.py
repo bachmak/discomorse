@@ -47,6 +47,6 @@ async def test_a_lock_longer_than_a_forks_room_still_runs_to_the_end() -> None:
     pipeline = create_pipeline(_UnbrokenTone(), _settings(_LONG_LOCK_SECONDS))
 
     async with asyncio.timeout(_STALL_SECONDS):
-        events = [event async for event in pipeline.run()]
+        messages = [message async for message in pipeline.run()]
 
-    assert events
+    assert messages

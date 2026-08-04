@@ -27,7 +27,7 @@ from tone_fixtures import (
 )
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.pipeline.dto import ToneSample
+from morse_decoder.pipeline.dto import DigitalTone
 
 _LINE = morse_line()
 _PCM = _LINE.pcm()
@@ -43,7 +43,7 @@ _NOISE_FLOORS = [
 
 
 def _read_lengths_by_keyed_length(
-    samples: tuple[ToneSample, ...],
+    samples: tuple[DigitalTone, ...],
 ) -> dict[float, list[float]]:
     """How long each mark read back, gathered under the length it was keyed with."""
     lengths: dict[float, list[float]] = defaultdict(list)

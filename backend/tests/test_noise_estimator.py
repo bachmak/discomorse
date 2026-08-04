@@ -54,15 +54,15 @@ async def test_a_high_enough_percentile_climbs_onto_the_carrier() -> None:
 
 
 async def test_estimator_reports_one_sample_per_spectrum() -> None:
+    levels = (0.1, 0.2, 0.3)
     spectrums = tuple(
-        spectrum({700.0: magnitude}, at_second=index * 0.01)
-        for index, magnitude in enumerate((0.1, 0.2, 0.3))
+        spectrum({700.0: level}, at_second=index * 0.01)
+        for index, level in enumerate(levels)
     )
 
-    assert await estimate(spectrums) == (
-        NoiseSample(noise=0.1),
-        NoiseSample(noise=0.2),
-        NoiseSample(noise=0.3),
+    assert await estimate(spectrums) == tuple(
+        NoiseSample(noise=level, ts=one.ts)
+        for one, level in zip(spectrums, levels, strict=True)
     )
 
 

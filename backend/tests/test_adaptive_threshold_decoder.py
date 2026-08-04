@@ -6,12 +6,12 @@ from stream_fixtures import stream
 from morse_decoder.config import PipelineSettings, TimingDecoderSettings
 from morse_decoder.pipeline.dto import (
     Dah,
+    DigitalTone,
     Dit,
-    InterCharSpace,
-    IntraCharSpace,
+    InterCharGap,
+    IntraCharGap,
     MorseElement,
-    ToneSample,
-    WordSpace,
+    WordGap,
 )
 from morse_decoder.pipeline.factory import _build_timing_decoder
 from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder import (
@@ -26,17 +26,17 @@ _EPOCH = datetime.datetime(2024, 1, 1)
 
 def _samples(
     runs: list[tuple[bool, float]], unit: float = _UNIT
-) -> tuple[ToneSample, ...]:
+) -> tuple[DigitalTone, ...]:
     if not runs:
         return ()
-    samples: list[ToneSample] = []
+    samples: list[DigitalTone] = []
     elapsed = 0.0
     for on, length in runs:
         ts = _EPOCH + datetime.timedelta(seconds=elapsed)
-        samples.append(ToneSample(ts=ts, on=on))
+        samples.append(DigitalTone(ts=ts, on=on))
         elapsed += length * unit
     closing = _EPOCH + datetime.timedelta(seconds=elapsed)
-    samples.append(ToneSample(ts=closing, on=not runs[-1][0]))
+    samples.append(DigitalTone(ts=closing, on=not runs[-1][0]))
     return tuple(samples)
 
 
@@ -45,7 +45,7 @@ def _decoder() -> AdaptiveThresholdDecoder:
 
 
 async def _decode(
-    samples: tuple[ToneSample, ...],
+    samples: tuple[DigitalTone, ...],
     *,
     timing_decoder: AdaptiveThresholdDecoder | None = None,
 ) -> list[MorseElement]:
@@ -61,23 +61,23 @@ async def _decode(
         pytest.param([(True, 3)], [Dah()], id="dah"),
         pytest.param(
             [(True, 1), (False, 1), (True, 3)],
-            [Dit(), IntraCharSpace(), Dah()],
+            [Dit(), IntraCharGap(), Dah()],
             id="letter-A",
         ),
         pytest.param(
             [(True, 1), (False, 3), (True, 1)],
-            [Dit(), InterCharSpace(), Dit()],
+            [Dit(), InterCharGap(), Dit()],
             id="inter-char-space",
         ),
         pytest.param(
             [(True, 1), (False, 7), (True, 1)],
-            [Dit(), WordSpace(), Dit()],
+            [Dit(), WordGap(), Dit()],
             id="word-space",
         ),
         pytest.param([], [], id="empty"),
         pytest.param(
             [(True, 1), (False, 1)],
-            [Dit(), IntraCharSpace()],
+            [Dit(), IntraCharGap()],
             id="dit-then-intra-space",
         ),
     ],
@@ -103,15 +103,15 @@ _HI: list[tuple[bool, float]] = [
 ]
 _HI_ELEMENTS = [
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
-    InterCharSpace(),
+    InterCharGap(),
     Dit(),
-    IntraCharSpace(),
+    IntraCharGap(),
     Dit(),
 ]
 
@@ -144,9 +144,9 @@ async def test_process_holds_characters_apart_under_keying_skew(
 
 async def test_process_carries_a_run_across_two_streams() -> None:
     decoder = _decoder()
-    opening = (ToneSample(ts=_EPOCH, on=True),)
+    opening = (DigitalTone(ts=_EPOCH, on=True),)
     closing_ts = _EPOCH + datetime.timedelta(seconds=_UNIT)
-    closing = (ToneSample(ts=closing_ts, on=False),)
+    closing = (DigitalTone(ts=closing_ts, on=False),)
 
     assert await _decode(opening, timing_decoder=decoder) == []
     assert await _decode(closing, timing_decoder=decoder) == [Dit()]

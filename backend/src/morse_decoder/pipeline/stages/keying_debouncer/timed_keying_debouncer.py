@@ -2,7 +2,7 @@ import datetime
 from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.config import KeyingDebouncerSettings
-from morse_decoder.pipeline.dto import ToneSample
+from morse_decoder.pipeline.dto import DigitalTone
 from morse_decoder.pipeline.stages.keying_debouncer.impl.fsm import (
     DebouncedState,
     SettledState,
@@ -27,8 +27,8 @@ class TimedKeyingDebouncer(KeyingDebouncer):
         )
 
     async def process(
-        self, samples: AsyncIterable[ToneSample]
-    ) -> AsyncIterator[ToneSample]:
+        self, samples: AsyncIterable[DigitalTone]
+    ) -> AsyncIterator[DigitalTone]:
         async for sample in samples:
             transition = self._state.update(sample)
             self._state = transition.state

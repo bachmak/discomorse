@@ -16,7 +16,7 @@ from key_fixtures import flags
 from stream_fixtures import stream
 
 from morse_decoder.config import KeyingDebouncerSettings
-from morse_decoder.pipeline.dto import ToneSample
+from morse_decoder.pipeline.dto import DigitalTone
 from morse_decoder.pipeline.stages.keying_debouncer.interface import KeyingDebouncer
 from morse_decoder.pipeline.stages.keying_debouncer.timed_keying_debouncer import (
     TimedKeyingDebouncer,
@@ -55,16 +55,16 @@ class KeyTimeline:
     def steps_in(self, seconds: float) -> int:
         return round(datetime.timedelta(seconds=seconds) / self._step)
 
-    def build(self) -> tuple[ToneSample, ...]:
+    def build(self) -> tuple[DigitalTone, ...]:
         return tuple(
-            ToneSample(ts=EPOCH + index * self._step, on=is_on)
+            DigitalTone(ts=EPOCH + index * self._step, on=is_on)
             for index, is_on in enumerate(self._flags)
         )
 
 
 def blip(
     is_on: bool, seconds: float, step_seconds: float = STEP_S
-) -> tuple[ToneSample, ...]:
+) -> tuple[DigitalTone, ...]:
     """A run of one side of ``seconds``, on a line resting on the other side."""
     return (
         KeyTimeline(step_seconds)
@@ -80,17 +80,17 @@ def debouncer(settings: KeyingDebouncerSettings | None = None) -> TimedKeyingDeb
 
 
 async def debounce(
-    readings: tuple[ToneSample, ...],
+    readings: tuple[DigitalTone, ...],
     *,
     keying_debouncer: KeyingDebouncer | None = None,
-) -> tuple[ToneSample, ...]:
+) -> tuple[DigitalTone, ...]:
     """Feed ``readings`` to one debouncer the way the pipeline would."""
     reader = keying_debouncer or debouncer()
     return tuple([one async for one in reader.process(stream(*readings))])
 
 
 async def debounced(
-    readings: tuple[ToneSample, ...],
+    readings: tuple[DigitalTone, ...],
     *,
     keying_debouncer: KeyingDebouncer | None = None,
 ) -> tuple[bool, ...]:
@@ -103,7 +103,7 @@ def edges(keys: tuple[bool, ...]) -> int:
     return sum(one != other for one, other in pairwise(keys))
 
 
-async def keyed_seconds(readings: tuple[ToneSample, ...]) -> float:
+async def keyed_seconds(readings: tuple[DigitalTone, ...]) -> float:
     """How long the debounced key stays down over ``readings`` of one grid."""
     step = (readings[1].ts - readings[0].ts).total_seconds()
     return sum(await debounced(readings)) * step

@@ -10,7 +10,7 @@ const outFile = resolve(here, "../src/types/ws.ts");
 
 const BANNER = [
     "/**",
-    " * AUTO-GENERATED from the backend pydantic wire models (morse_decoder.api.wire).",
+    " * AUTO-GENERATED from the backend pydantic wire models (morse_decoder.api.messages).",
     " * Do not edit by hand — run `npm run gen:ws-types`.",
     " */",
 ].join("\n");

@@ -13,4 +13,5 @@ class PercentileNoiseEstimator(NoiseEstimator):
 
     def process_single(self, spectrum: ToneSpectrum) -> NoiseSample:
         magnitudes = [tone.magnitude for tone in spectrum.magnitudes]
-        return NoiseSample(noise=float(np.percentile(magnitudes, self._percentile)))
+        noise = float(np.percentile(magnitudes, self._percentile))
+        return NoiseSample(noise=noise, ts=spectrum.ts)

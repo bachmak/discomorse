@@ -191,4 +191,5 @@ def create_pipeline(
         keying_debouncer=_build_keying_debouncer(pipeline_settings),
         timing_decoder=_build_timing_decoder(pipeline_settings),
         interpreter=_build_interpreter(pipeline_settings),
+        stream_settings=pipeline_settings.stream_settings,
     )

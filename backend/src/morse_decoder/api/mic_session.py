@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from fastapi import WebSocket, WebSocketDisconnect, status
 from pydantic import ValidationError
 
-from morse_decoder.api.wire import MicHandshake
+from morse_decoder.api.messages import MicHandshakeMessage
 from morse_decoder.audio.impl.resampler import Resampler
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.mic_source import EndOfStream, MicSource
@@ -17,7 +17,7 @@ from morse_decoder.pipeline.pipeline import Pipeline
 async def handle_mic_stream(ws: WebSocket) -> None:
     await ws.accept()
     try:
-        handshake = MicHandshake.model_validate_json(await ws.receive_text())
+        handshake = MicHandshakeMessage.model_validate_json(await ws.receive_text())
     except WebSocketDisconnect:
         return
     except (ValidationError, KeyError):  # KeyError: first frame was binary, not text
@@ -35,7 +35,7 @@ class Pump(ABC):
 
 
 class MicSession:
-    """Drives a mic stream: audio in, decoded events out, over one socket."""
+    """Drives a mic stream: audio in, decoded messages out, over one socket."""
 
     def __init__(self, ws: WebSocket, source_rate: int, settings: Settings) -> None:
         source = MicSource(
@@ -49,7 +49,7 @@ class MicSession:
         )
         self._pumps: tuple[Pump, Pump] = (
             AudioInboundPump(ws, source),
-            EventOutboundPump(ws, create_pipeline(source, settings.pipeline)),
+            MessageOutboundPump(ws, create_pipeline(source, settings.pipeline)),
         )
 
     async def run(self) -> None:
@@ -74,13 +74,13 @@ class AudioInboundPump(Pump):
         await self._source.push(EndOfStream())
 
 
-class EventOutboundPump(Pump):
-    """Streams decoded pipeline events out to the socket as JSON text."""
+class MessageOutboundPump(Pump):
+    """Streams decoded pipeline messages out to the socket as JSON text."""
 
     def __init__(self, ws: WebSocket, pipeline: Pipeline) -> None:
         self._ws = ws
         self._pipeline = pipeline
 
     async def run(self) -> None:
-        async for event in self._pipeline.run():
-            await self._ws.send_text(event.to_message().model_dump_json())
+        async for message in self._pipeline.run():
+            await self._ws.send_text(message.model_dump_json())

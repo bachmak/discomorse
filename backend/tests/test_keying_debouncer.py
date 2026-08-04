@@ -17,7 +17,7 @@ from debounce_fixtures import (
 from key_fixtures import flags
 
 from morse_decoder.config import KeyingDebouncerSettings
-from morse_decoder.pipeline.dto import ToneSample
+from morse_decoder.pipeline.dto import DigitalTone
 
 _DIT_SECONDS = 1.2 / 20  # a dit at the speed the timing stage is seeded with
 _INTER_CHAR_DITS = 3  # the gap that holds two characters apart
@@ -196,6 +196,6 @@ async def test_a_stream_read_in_two_parts_reads_as_one_stream() -> None:
     ],
 )
 async def test_every_reading_yields_exactly_one_sample(
-    readings: tuple[ToneSample, ...],
+    readings: tuple[DigitalTone, ...],
 ) -> None:
     assert len(await debounced(readings)) == len(readings)

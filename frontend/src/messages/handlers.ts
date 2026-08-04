@@ -1,10 +1,9 @@
 import type {
-  FFTMessage,
-  MorseMessage,
-  OscilloscopeMessage,
+  DigitalToneMessage,
+  MorseElementMessage,
   ServerMessage,
-  TextMessage,
-  WaterfallMessage,
+  ToneSpectrumMessage,
+  TranscriptionMessage,
 } from "../types/ws";
 import type { MessageSink } from "./sink";
 
@@ -14,67 +13,47 @@ export interface MessageHandler<M extends ServerMessage> {
   handle(message: M, sink: MessageSink): void;
 }
 
-interface ScopeMode {
-  write(samples: number[], sink: MessageSink): void;
-}
-
-class AppendScope implements ScopeMode {
-  write(samples: number[], sink: MessageSink): void {
-    sink.appendScope(samples);
+class ToneSpectrumHandler implements MessageHandler<ToneSpectrumMessage> {
+  handle(message: ToneSpectrumMessage, sink: MessageSink): void {
+    sink.pushSpectrum(message);
   }
 }
 
-class ReplaceScope implements ScopeMode {
-  write(samples: number[], sink: MessageSink): void {
-    sink.setScope(samples);
+class DigitalToneHandler implements MessageHandler<DigitalToneMessage> {
+  handle(message: DigitalToneMessage, sink: MessageSink): void {
+    sink.pushKeying(message.on);
   }
 }
 
-const SCOPE_MODES = {
-  append: new AppendScope(),
-  replace: new ReplaceScope(),
-} satisfies Record<string, ScopeMode>;
-
-const DEFAULT_SCOPE_MODE = "replace";
-
-class WaterfallHandler implements MessageHandler<WaterfallMessage> {
-  handle(message: WaterfallMessage, sink: MessageSink): void {
-    sink.pushWaterfall(message);
+class MorseElementHandler implements MessageHandler<MorseElementMessage> {
+  handle(message: MorseElementMessage, sink: MessageSink): void {
+    sink.appendMorseElement(message.data);
   }
 }
 
-class FFTHandler implements MessageHandler<FFTMessage> {
-  handle(message: FFTMessage, sink: MessageSink): void {
-    sink.pushFFT(message);
+class TranscriptionHandler implements MessageHandler<TranscriptionMessage> {
+  handle(message: TranscriptionMessage, sink: MessageSink): void {
+    sink.appendTranscription(message.data);
   }
 }
 
-class OscilloscopeHandler implements MessageHandler<OscilloscopeMessage> {
-  handle(message: OscilloscopeMessage, sink: MessageSink): void {
-    SCOPE_MODES[message.mode ?? DEFAULT_SCOPE_MODE].write(message.data, sink);
-  }
+// Diagnostic streams the backend can be configured to send but no chart reads.
+class IgnoredHandler implements MessageHandler<ServerMessage> {
+  handle(): void {}
 }
 
-class MorseHandler implements MessageHandler<MorseMessage> {
-  handle(message: MorseMessage, sink: MessageSink): void {
-    sink.appendMorse(message.data);
-  }
-}
-
-class TextHandler implements MessageHandler<TextMessage> {
-  handle(message: TextMessage, sink: MessageSink): void {
-    sink.appendText(message.data);
-  }
-}
+const IGNORED = new IgnoredHandler();
 
 type HandlerTable = {
   [T in MessageType]: MessageHandler<Extract<ServerMessage, { type: T }>>;
 };
 
 export const HANDLERS: HandlerTable = {
-  waterfall: new WaterfallHandler(),
-  fft: new FFTHandler(),
-  oscilloscope: new OscilloscopeHandler(),
-  morse: new MorseHandler(),
-  text: new TextHandler(),
+  tone_spectrum: new ToneSpectrumHandler(),
+  digital_tone: new DigitalToneHandler(),
+  morse_element: new MorseElementHandler(),
+  transcription: new TranscriptionHandler(),
+  tone: IGNORED,
+  carrier_sample: IGNORED,
+  noise_sample: IGNORED,
 };
