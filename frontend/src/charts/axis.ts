@@ -1,9 +1,7 @@
+import type { ChartSurface } from "./surface";
 import type { Range } from "./ticks";
 
 const AXIS_FONT = "12px ui-monospace, monospace";
-const LABEL_COLOR = "rgba(148, 163, 184, 0.9)";
-const TICK_COLOR = "rgba(34, 211, 238, 0.16)";
-const CAPTION_BG = "rgba(8, 11, 17, 0.7)";
 const CAPTION_PAD = 5;
 const CAPTION_TOP = 8;
 const LABEL_PITCH = 52;
@@ -21,29 +19,29 @@ export interface AxisGeometry {
 }
 
 export function axisLabel(
-  ctx: CanvasRenderingContext2D,
+  { ctx, palette }: ChartSurface,
   text: string,
   x: number,
   y: number,
   align: CanvasTextAlign = "center",
 ): void {
-  ctx.fillStyle = LABEL_COLOR;
+  ctx.fillStyle = palette.label;
   ctx.font = AXIS_FONT;
   ctx.textAlign = align;
   ctx.textBaseline = "alphabetic";
   ctx.fillText(text, x, y);
 }
 
-export function axisCaption(ctx: CanvasRenderingContext2D, text: string, left = 8): void {
+export function axisCaption({ ctx, palette }: ChartSurface, text: string, left = 8): void {
   ctx.font = AXIS_FONT;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   const width = ctx.measureText(text).width + CAPTION_PAD * 2;
-  ctx.fillStyle = CAPTION_BG;
+  ctx.fillStyle = palette.captionBackground;
   ctx.beginPath();
   ctx.roundRect(left, CAPTION_TOP, width, 11 + CAPTION_PAD * 2, 4);
   ctx.fill();
-  ctx.fillStyle = LABEL_COLOR;
+  ctx.fillStyle = palette.label;
   ctx.fillText(text, left + CAPTION_PAD, CAPTION_TOP + CAPTION_PAD);
   ctx.textBaseline = "alphabetic";
 }
@@ -62,7 +60,7 @@ function labelX(x: number, align: CanvasTextAlign, geometry: AxisGeometry): numb
 
 class AxisPainter {
   constructor(
-    private readonly ctx: CanvasRenderingContext2D,
+    private readonly surface: ChartSurface,
     private readonly range: Range,
     private readonly geometry: AxisGeometry,
   ) {}
@@ -76,7 +74,7 @@ class AxisPainter {
     const x = this.x(value);
     this.tick(x, this.geometry.tickTop);
     const align = alignAt(x, this.geometry);
-    axisLabel(this.ctx, text, labelX(x, align, this.geometry), this.geometry.labelY, align);
+    axisLabel(this.surface, text, labelX(x, align, this.geometry), this.geometry.labelY, align);
   }
 
   private x(value: number): number {
@@ -84,20 +82,21 @@ class AxisPainter {
   }
 
   private tick(x: number, top: number): void {
-    this.ctx.strokeStyle = TICK_COLOR;
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    this.ctx.moveTo(x, top);
-    this.ctx.lineTo(x, this.geometry.tickBottom);
-    this.ctx.stroke();
+    const { ctx, palette } = this.surface;
+    ctx.strokeStyle = palette.tick;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, this.geometry.tickBottom);
+    ctx.stroke();
   }
 }
 
 abstract class LabeledAxis {
   protected abstract format(value: number, last: boolean): string;
 
-  draw(ctx: CanvasRenderingContext2D, range: Range, geometry: AxisGeometry): void {
-    const painter = new AxisPainter(ctx, range, geometry);
+  draw(surface: ChartSurface, range: Range, geometry: AxisGeometry): void {
+    const painter = new AxisPainter(surface, range, geometry);
     const step = range.step(Math.floor(geometry.width / LABEL_PITCH));
     range.ticks(step / MINORS_PER_MAJOR).forEach((value) => painter.minorTick(value));
     const labelled = range.ticks(step);

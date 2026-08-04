@@ -1,4 +1,5 @@
 import { SlowModeToggle } from "./SlowModeToggle";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface AppHeaderProps {
   demo: boolean;
@@ -9,12 +10,15 @@ export function AppHeader({ demo }: AppHeaderProps) {
     <header className="app-header">
       <h1>Discomorse</h1>
       <span className="tagline">Morse and CW audio, decoded to text.</span>
-      {demo && (
-        <div className="header-actions">
-          <SlowModeToggle />
-          <span className="demo-badge">DEMO</span>
-        </div>
-      )}
+      <div className="header-actions">
+        {demo && (
+          <>
+            <SlowModeToggle />
+            <span className="demo-badge">DEMO</span>
+          </>
+        )}
+        <ThemeToggle />
+      </div>
     </header>
   );
 }
