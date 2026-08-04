@@ -170,7 +170,7 @@ async def test_a_merge_gives_out_everything_its_branches_hold(
     left: tuple[str, ...], right: tuple[str, ...], want: tuple[str, ...]
 ) -> None:
     """Which branch goes out first is nobody's business, so the reading is sorted."""
-    merged = StreamMerge(stream(*left), stream(*right)).stream()
+    merged = StreamMerge([stream(*left), stream(*right)]).stream()
 
     assert tuple(sorted(await _drained(merged))) == tuple(sorted(want))
 
@@ -178,14 +178,14 @@ async def test_a_merge_gives_out_everything_its_branches_hold(
 async def test_a_merge_keeps_the_order_each_branch_holds_its_items_in() -> None:
     lefts, rights = ("a1", "a2", "a3"), ("b1", "b2", "b3")
 
-    read = await _drained(StreamMerge(stream(*lefts), stream(*rights)).stream())
+    read = await _drained(StreamMerge([stream(*lefts), stream(*rights)]).stream())
 
     assert tuple(item for item in read if item.startswith("a")) == lefts
     assert tuple(item for item in read if item.startswith("b")) == rights
 
 
 async def test_a_branch_that_never_answers_holds_none_of_the_others_back() -> None:
-    merged = StreamMerge(_silent(), stream(*_ITEMS)).stream()
+    merged = StreamMerge([_silent(), stream(*_ITEMS)]).stream()
 
     read = [await asyncio.wait_for(anext(merged), timeout=1.0) for _ in _ITEMS]
     await merged.aclose()
@@ -195,7 +195,7 @@ async def test_a_branch_that_never_answers_holds_none_of_the_others_back() -> No
 
 async def test_a_branch_that_gives_up_takes_the_merge_down_with_it() -> None:
     """The consumer is told what went wrong, rather than left waiting for items."""
-    merged = StreamMerge(_giving_up(), stream(*_ITEMS)).stream()
+    merged = StreamMerge([_giving_up(), stream(*_ITEMS)]).stream()
 
     with pytest.raises(RuntimeError, match="this branch is broken"):
         await _drained(merged)
@@ -203,7 +203,7 @@ async def test_a_branch_that_gives_up_takes_the_merge_down_with_it() -> None:
 
 async def test_a_merge_left_early_stops_reading_its_branches() -> None:
     pulls: list[str] = []
-    merged = StreamMerge(_endless(pulls)).stream()
+    merged = StreamMerge([_endless(pulls)]).stream()
 
     await anext(merged)
     await merged.aclose()

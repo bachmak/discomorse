@@ -99,7 +99,7 @@ class StreamMerge[T]:
     the merge from running further ahead of its consumer than that.
     """
 
-    def __init__(self, *branches: AsyncIterable[T]) -> None:
+    def __init__(self, branches: list[AsyncIterable[T]]) -> None:
         self._branches = branches
         self._items: asyncio.Queue[T | _Spent] = asyncio.Queue(maxsize=1)
 

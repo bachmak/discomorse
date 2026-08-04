@@ -51,38 +51,94 @@ class Pipeline:
 
     def run(self) -> AsyncIterator[OutboundMessage]:
         chunks = self._source.stream()
-        raw_spectrums = self._spectrum_analyzer.process(chunks)
-        to_messages, to_limiter = StreamFork(raw_spectrums).branches()
+        streams: list[AsyncIterator[OutboundMessage]] = []
 
-        limited_spectrums = self._spectrum_limiter.process(to_limiter)
+        spectrums = self._spectrum_analyzer.process(chunks)
+        spectrums = _maybe_stream(
+            spectrums,
+            streams,
+            self._stream_settings.spectrums,
+        )
+
+        limited_spectrums = self._spectrum_limiter.process(spectrums)
+        limited_spectrums = _maybe_stream(
+            limited_spectrums,
+            streams,
+            self._stream_settings.limited_spectrums,
+        )
+
         to_carrier_source, to_noise_estimator = StreamFork(limited_spectrums).branches()
+
         carrier_samples = self._carrier_source.process(to_carrier_source)
+        carrier_samples = _maybe_stream(
+            carrier_samples,
+            streams,
+            self._stream_settings.carrier_samples,
+        )
+
         noise_samples = self._noise_estimator.process(to_noise_estimator)
+        noise_samples = _maybe_stream(
+            noise_samples,
+            streams,
+            self._stream_settings.noise_samples,
+        )
+
         carrier_noise_samples = azip(
             carrier_samples,
             noise_samples,
             transform=lambda carrier, noise: CarrierNoiseSample(carrier, noise),
         )
-        raw_tones = self._keying_detector.process(carrier_noise_samples)
-        debounced_tones = self._keying_debouncer.process(raw_tones)
-        tones_to_decoder, tones_to_messages = StreamFork(debounced_tones).branches()
-        morse_elements = self._timing_decoder.process(tones_to_decoder)
-        morse_to_interpreter, morse_to_messages = StreamFork(morse_elements).branches()
-        transcriptions = self._interpreter.process(morse_to_interpreter)
 
-        message_stream = StreamMerge(
-            _stream(to_messages, self._stream_settings.spectrums),
-            _stream(tones_to_messages, self._stream_settings.debounced_tones),
-            _stream(morse_to_messages, self._stream_settings.morse_elements),
-            _stream(transcriptions, self._stream_settings.transcriptions),
+        raw_tones = self._keying_detector.process(carrier_noise_samples)
+        raw_tones = _maybe_stream(
+            raw_tones,
+            streams,
+            self._stream_settings.raw_tones,
         )
 
-        return message_stream.stream()
+        debounced_tones = self._keying_debouncer.process(raw_tones)
+        debounced_tones = _maybe_stream(
+            debounced_tones,
+            streams,
+            self._stream_settings.debounced_tones,
+        )
+
+        tones_to_decoder, tones_to_messages = StreamFork(debounced_tones).branches()
+
+        morse_elements = self._timing_decoder.process(tones_to_decoder)
+        morse_elements = _maybe_stream(
+            morse_elements,
+            streams,
+            self._stream_settings.morse_elements,
+        )
+
+        morse_to_interpreter, morse_to_messages = StreamFork(morse_elements).branches()
+
+        transcriptions = self._interpreter.process(morse_to_interpreter)
+        _maybe_stream(
+            transcriptions,
+            streams,
+            self._stream_settings.transcriptions,
+        )
+
+        return StreamMerge(streams).stream()
 
 
-async def _stream(
-    items: AsyncIterable[Serializable], is_enabled: bool
+def _maybe_stream(
+    items: AsyncIterator[Serializable],
+    streams: list[AsyncIterator[OutboundMessage]],
+    is_enabled: bool,
+) -> AsyncIterator[Serializable]:
+    if not is_enabled:
+        return items
+
+    left_branch, right_branch = StreamFork(items).branches()
+    streams.append(_serialize(left_branch))
+    return right_branch
+
+
+async def _serialize(
+    items: AsyncIterable[Serializable],
 ) -> AsyncIterator[OutboundMessage]:
-    if is_enabled:
-        async for item in items:
-            yield item.to_message()
+    async for item in items:
+        yield item.to_message()
