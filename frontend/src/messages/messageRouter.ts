@@ -6,7 +6,7 @@ export class MessageRouter {
   constructor(private readonly sink: MessageSink) {}
 
   // The channel the payload came in on is dropped: the charts read one stream
-  // per payload shape, which is what the default stream settings send.
+  // per payload shape, which is exactly what the subscription asks for.
   route(envelope: string): void {
     this.dispatch((JSON.parse(envelope) as ServerMessage).payload);
   }

@@ -5,11 +5,12 @@ from abc import ABC, abstractmethod
 from fastapi import WebSocket, WebSocketDisconnect, status
 from pydantic import ValidationError
 
+from morse_decoder.api.helpers import subscription_to_settings
 from morse_decoder.api.messages import MicHandshakeMessage
 from morse_decoder.audio.impl.resampler import Resampler
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.audio.mic_source import EndOfStream, MicSource
-from morse_decoder.config import Settings
+from morse_decoder.config import PipelineSettings, Settings
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
@@ -24,7 +25,9 @@ async def handle_mic_stream(ws: WebSocket) -> None:
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await MicSession(ws, handshake.sample_rate, Settings()).run()
+    stream_settings = subscription_to_settings(handshake.subscription)
+    settings = Settings(pipeline=PipelineSettings(stream_settings=stream_settings))
+    await MicSession(ws, handshake.sample_rate, settings).run()
 
 
 class Pump(ABC):

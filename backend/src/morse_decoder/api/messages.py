@@ -11,8 +11,25 @@ class _MessageModel(BaseModel):
     )
 
 
+type ChannelName = Literal[
+    "spectrums",
+    "limited_spectrums",
+    "carrier_samples",
+    "noise_samples",
+    "raw_tones",
+    "debounced_tones",
+    "morse_elements",
+    "transcriptions",
+]
+
+
+class SubscriptionMessage(_MessageModel):
+    channels: set[ChannelName]
+
+
 class MicHandshakeMessage(_MessageModel):
     sample_rate: int = Field(gt=0)
+    subscription: SubscriptionMessage
 
 
 class ToneSpectrumMessage(_MessageModel):
@@ -67,17 +84,6 @@ type OutboundMessage = Annotated[
     | MorseElementMessage
     | TranscriptionMessage,
     Field(discriminator="type"),
-]
-
-type ChannelName = Literal[
-    "spectrums",
-    "limited_spectrums",
-    "carrier_samples",
-    "noise_samples",
-    "raw_tones",
-    "debounced_tones",
-    "morse_elements",
-    "transcriptions",
 ]
 
 

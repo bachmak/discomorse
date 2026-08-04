@@ -23,7 +23,7 @@ from morse_decoder.api.messages import (
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
-from morse_decoder.config import Settings
+from morse_decoder.config import PipelineSettings, Settings, StreamSettings
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
@@ -87,8 +87,25 @@ def _run(settings: Settings) -> MessageTally:
         return asyncio.run(SmokeRun(path, settings).tally())
 
 
+def _settings() -> Settings:
+    return Settings(
+        pipeline=PipelineSettings(
+            stream_settings=StreamSettings(
+                spectrums=True,
+                limited_spectrums=True,
+                carrier_samples=True,
+                noise_samples=True,
+                raw_tones=True,
+                debounced_tones=True,
+                morse_elements=True,
+                transcriptions=True,
+            )
+        )
+    )
+
+
 def main() -> int:
-    tally = _run(Settings())
+    tally = _run(_settings())
     print(tally.report())
     missing = tally.missing(_EXPECTED)
     if missing:

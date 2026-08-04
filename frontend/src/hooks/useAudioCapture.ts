@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { SUBSCRIPTION } from "../api/subscription";
 import type { MicHandshakeMessage } from "../types/ws";
 
 const CHUNK_SAMPLES = 2048;
@@ -17,7 +18,10 @@ function toPcm16(samples: Float32Array): ArrayBuffer {
 }
 
 function handshake(sampleRate: number): string {
-  const message: MicHandshakeMessage = { sample_rate: sampleRate };
+  const message: MicHandshakeMessage = {
+    sample_rate: sampleRate,
+    subscription: SUBSCRIPTION,
+  };
   return JSON.stringify(message);
 }
 

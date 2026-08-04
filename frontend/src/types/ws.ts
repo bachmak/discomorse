@@ -60,7 +60,10 @@ export interface TranscriptionMessage {
   data: string;
   type: "transcription";
 }
-
 export interface MicHandshakeMessage {
   sample_rate: number;
+  subscription: SubscriptionMessage;
+}
+export interface SubscriptionMessage {
+  channels: ChannelName[];
 }

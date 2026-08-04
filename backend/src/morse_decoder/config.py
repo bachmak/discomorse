@@ -20,14 +20,14 @@ class AudioSettings(BaseSettings):
 
 
 class StreamSettings(BaseSettings):
-    spectrums: bool = True
+    spectrums: bool = False
     limited_spectrums: bool = False
     carrier_samples: bool = False
     noise_samples: bool = False
     raw_tones: bool = False
-    debounced_tones: bool = True
-    morse_elements: bool = True
-    transcriptions: bool = True
+    debounced_tones: bool = False
+    morse_elements: bool = False
+    transcriptions: bool = False
 
 
 class SpectrumAnalyzerSettings(BaseSettings):
