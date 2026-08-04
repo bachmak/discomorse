@@ -1,8 +1,8 @@
 import json
 from collections.abc import AsyncIterator
 
+from morse_decoder.api.events import OutboundEvent, TranscriptionEvent
 from morse_decoder.api.file_session import FileSession
-from morse_decoder.pipeline.events import DecodedText, OutboundEvent
 from morse_decoder.pipeline.pipeline import Pipeline
 
 
@@ -21,12 +21,14 @@ async def _lines(events: list[OutboundEvent]) -> list[str]:
 
 
 async def test_stream_emits_one_ndjson_line_per_event() -> None:
-    lines = await _lines([DecodedText("SOS"), DecodedText("OK")])
+    lines = await _lines(
+        [TranscriptionEvent(data="SOS"), TranscriptionEvent(data="OK")]
+    )
 
     assert all(line.endswith("\n") for line in lines)
     assert [json.loads(line) for line in lines] == [
-        {"type": "text", "data": "SOS"},
-        {"type": "text", "data": "OK"},
+        {"type": "transcription", "data": "SOS"},
+        {"type": "transcription", "data": "OK"},
     ]
 
 

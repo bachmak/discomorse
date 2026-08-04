@@ -67,7 +67,7 @@ class Step:
         )
 
     def _noise(self) -> NoiseSample:
-        return NoiseSample(noise=self.floor)
+        return NoiseSample(noise=self.floor, ts=EPOCH)
 
 
 def steps(
@@ -144,7 +144,7 @@ def track(
 ) -> tuple[KeyingThresholds, ...]:
     """Feed ``floors`` to one tracker the way the keying detector would."""
     reader = threshold_tracker or tracker()
-    return tuple(reader.update(NoiseSample(noise=floor)) for floor in floors)
+    return tuple(reader.update(NoiseSample(noise=floor, ts=EPOCH)) for floor in floors)
 
 
 def ons(bands: tuple[KeyingThresholds, ...]) -> tuple[float, ...]:

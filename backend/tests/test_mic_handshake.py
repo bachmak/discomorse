@@ -43,7 +43,7 @@ def test_client_schema_describes_the_handshake() -> None:
     schema = inbound_event_json_schema()
     properties = schema["properties"]
 
-    assert schema["title"] == "MicHandshake"
+    assert schema["title"] == "MicHandshakeEvent"
     assert schema["required"] == ["sample_rate"]
     assert schema["additionalProperties"] is False
     assert isinstance(properties, dict)

@@ -28,9 +28,10 @@ class MorseElement(Serializable, ABC):
         return MorseElementEvent(data=self.notation())
 
     @abstractmethod
-    def notation(self): ...
+    def notation(self) -> str: ...
 
 
+@dataclass(frozen=True)
 class Mark(MorseElement, ABC):
 
 
@@ -40,11 +41,13 @@ class Dit(Mark):
         return "."
 
 
+@dataclass(frozen=True)
 class Dah(Mark):
     def notation(self) -> str:
         return "-"
 
 
+@dataclass(frozen=True)
 class Gap(MorseElement, ABC):
 
 

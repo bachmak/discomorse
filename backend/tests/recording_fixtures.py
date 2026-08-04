@@ -67,7 +67,7 @@ class RecordingNoiseEstimator(NoiseEstimator):
 
     def process_single(self, spectrum: ToneSpectrum) -> NoiseSample:
         self.seen.append(spectrum)
-        self.reported.append(NoiseSample(noise=float(len(self.seen))))
+        self.reported.append(NoiseSample(noise=float(len(self.seen)), ts=spectrum.ts))
         return self.reported[-1]
 
 

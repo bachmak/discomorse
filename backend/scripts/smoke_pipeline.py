@@ -15,22 +15,21 @@ from tempfile import TemporaryDirectory
 
 from morse_signal import MorseSignal
 
+from morse_decoder.api.events import (
+    MorseElementEvent,
+    OutboundEvent,
+    ToneSpectrumEvent,
+)
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.config import Settings
-from morse_decoder.pipeline.events import (
-    DecodedMorse,
-    FFTFrame,
-    OutboundEvent,
-    WaterfallFrame,
-)
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
 _MESSAGE = "SOS DE SMOKE TEST"
 _EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
-_EXPECTED: tuple[type[OutboundEvent], ...] = (WaterfallFrame, FFTFrame, DecodedMorse)
+_EXPECTED: tuple[type[OutboundEvent], ...] = (ToneSpectrumEvent, MorseElementEvent)
 
 
 @dataclass(frozen=True)
@@ -57,7 +56,7 @@ class SmokeRun:
     async def tally(self) -> EventTally:
         counts: Counter[type[OutboundEvent]] = Counter()
         async for event in self._pipeline().run():
-            event.to_message().model_dump_json()  # serialization is under test too
+            event.model_dump_json()  # serialization is under test too
             counts[type(event)] += 1
         return EventTally(counts)
 

@@ -12,11 +12,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
 
+from morse_decoder.api.events import (
+    MorseElementEvent,
+    OutboundEvent,
+    TranscriptionEvent,
+)
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
 from morse_decoder.config import Settings
-from morse_decoder.pipeline.events import DecodedMorse, DecodedText, OutboundEvent
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
@@ -57,7 +61,7 @@ class MorseExcerpt(Excerpt):
         return "morse"
 
     def _fragments(self, event: OutboundEvent) -> tuple[str, ...]:
-        return (event.element.notation,) if isinstance(event, DecodedMorse) else ()
+        return (event.data,) if isinstance(event, MorseElementEvent) else ()
 
 
 class TextExcerpt(Excerpt):
@@ -68,7 +72,7 @@ class TextExcerpt(Excerpt):
         return "text"
 
     def _fragments(self, event: OutboundEvent) -> tuple[str, ...]:
-        return (event.text,) if isinstance(event, DecodedText) else ()
+        return (event.data,) if isinstance(event, TranscriptionEvent) else ()
 
 
 class Report:

@@ -4,26 +4,22 @@ import pytest
 
 from morse_decoder.api.events import outbound_event_json_schema
 from morse_decoder.pipeline.dto import (
+    CarrierSample,
     Dah,
     DigitalTone,
     Dit,
     InterCharGap,
     IntraCharGap,
+    NoiseSample,
+    Serializable,
+    Tone,
     ToneMagnitude,
     ToneSpectrum,
+    Transcription,
     WordGap,
-)
-from morse_decoder.pipeline.events import (
-    DecodedMorse,
-    DecodedText,
-    FFTFrame,
-    OutboundEvent,
-    ScopeTrace,
-    WaterfallFrame,
 )
 
 _TS = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
-_LATER = _TS + datetime.timedelta(milliseconds=2)
 _SPECTRUM = ToneSpectrum(
     ts=_TS,
     magnitudes=(
@@ -31,73 +27,82 @@ _SPECTRUM = ToneSpectrum(
         ToneMagnitude(frequency=20.0, magnitude=0.25),
     ),
 )
+_TONE = Tone(frequency=600.0, magnitude=0.75, ts=_TS)
 
 
 @pytest.mark.parametrize(
-    "event, want",
+    "dto, want",
     [
         pytest.param(
-            WaterfallFrame(_SPECTRUM),
-            {"type": "waterfall", "data": [0.5, 0.25], "ts": _TS.timestamp()},
-            id="waterfall",
+            _SPECTRUM,
+            {"type": "tone_spectrum", "data": [0.5, 0.25], "ts": _TS.timestamp()},
+            id="tone-spectrum",
         ),
         pytest.param(
-            FFTFrame(_SPECTRUM),
-            {"type": "fft", "data": [0.5, 0.25], "ts": _TS.timestamp()},
-            id="fft",
-        ),
-        pytest.param(
-            ScopeTrace(
-                (DigitalTone(ts=_TS, on=True), DigitalTone(ts=_LATER, on=False))
-            ),
+            _TONE,
             {
-                "type": "oscilloscope",
-                "data": [1.0, 0.0],
-                "mode": "append",
-                "ts": _LATER.timestamp(),
+                "type": "tone",
+                "frequency": 600.0,
+                "magnitude": 0.75,
+                "ts": _TS.timestamp(),
             },
-            id="oscilloscope",
+            id="tone",
         ),
         pytest.param(
-            DecodedText("SOS"),
-            {"type": "text", "data": "SOS"},
-            id="text",
+            CarrierSample(tone=_TONE, is_locked=True),
+            {
+                "type": "carrier_sample",
+                "frequency": 600.0,
+                "magnitude": 0.75,
+                "is_locked": True,
+                "ts": _TS.timestamp(),
+            },
+            id="carrier-sample",
         ),
         pytest.param(
-            DecodedMorse(Dit()),
-            {"type": "morse", "data": "."},
-            id="morse-dit",
+            NoiseSample(noise=0.125, ts=_TS),
+            {"type": "noise_sample", "magnitude": 0.125, "ts": _TS.timestamp()},
+            id="noise-sample",
         ),
         pytest.param(
-            DecodedMorse(Dah()),
-            {"type": "morse", "data": "-"},
-            id="morse-dah",
+            DigitalTone(ts=_TS, on=True),
+            {"type": "digital_tone", "on": True, "ts": _TS.timestamp()},
+            id="digital-tone",
         ),
         pytest.param(
-            DecodedMorse(IntraCharGap()),
-            {"type": "morse", "data": ""},
-            id="morse-intra-char-space",
+            Transcription("SOS"),
+            {"type": "transcription", "data": "SOS"},
+            id="transcription",
+        ),
+        pytest.param(Dit(), {"type": "morse_element", "data": "."}, id="dit"),
+        pytest.param(Dah(), {"type": "morse_element", "data": "-"}, id="dah"),
+        pytest.param(
+            IntraCharGap(), {"type": "morse_element", "data": ""}, id="intra-char-gap"
         ),
         pytest.param(
-            DecodedMorse(InterCharGap()),
-            {"type": "morse", "data": " "},
-            id="morse-inter-char-space",
+            InterCharGap(), {"type": "morse_element", "data": " "}, id="inter-char-gap"
         ),
         pytest.param(
-            DecodedMorse(WordGap()),
-            {"type": "morse", "data": " / "},
-            id="morse-word-space",
+            WordGap(), {"type": "morse_element", "data": " / "}, id="word-gap"
         ),
     ],
 )
-def test_event_serializes_to_wire_message(
-    event: OutboundEvent, want: dict[str, object]
+def test_dto_serializes_to_its_wire_event(
+    dto: Serializable, want: dict[str, object]
 ) -> None:
-    assert event.to_message().model_dump() == want
+    assert dto.serialize().model_dump() == want
 
 
-def test_schema_covers_every_message_type() -> None:
+def test_schema_covers_every_event_type() -> None:
     schema = outbound_event_json_schema()
     mapping = schema["discriminator"]["mapping"]  # type: ignore[index]  # schema is dict[str, object]
 
-    assert set(mapping) == {"waterfall", "fft", "oscilloscope", "text", "morse"}
+    assert set(mapping) == {
+        "tone_spectrum",
+        "tone",
+        "carrier_sample",
+        "noise_sample",
+        "digital_tone",
+        "morse_element",
+        "transcription",
+    }

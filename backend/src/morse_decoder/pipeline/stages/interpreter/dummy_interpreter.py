@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.config import InterpreterSettings
-from morse_decoder.pipeline.dto import MorseElement, Transcription
+from morse_decoder.pipeline.dto import Mark, MorseElement, Transcription
 from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
 
 
@@ -15,4 +15,5 @@ class DummyInterpreter(Interpreter):
         self, elements: AsyncIterable[MorseElement]
     ) -> AsyncIterator[Transcription]:
         async for element in elements:
-            yield Transcription(text=element.notation())
+            if isinstance(element, Mark):
+                yield Transcription(text=element.notation())
