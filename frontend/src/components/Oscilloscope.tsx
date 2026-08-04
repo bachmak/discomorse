@@ -4,19 +4,17 @@ import { HOP_RATE_HZ } from "../audioFormat";
 import { AXIS_HEIGHT, TimeAxis, axisCaption, type AxisGeometry } from "../charts/axis";
 import { Range } from "../charts/ticks";
 import { ZoomAndPan } from "../charts/gestures";
+import { useChartPalette } from "../charts/palette";
+import type { ChartSurface } from "../charts/surface";
 import type { ItemWindow } from "../charts/viewport";
 import { useViewport, type ViewportSetup } from "../hooks/useViewport";
-import { useCanvasSize, prepareContext } from "./canvas";
+import { useCanvasSize, prepareSurface } from "./canvas";
 import { ChartCanvas } from "./ChartCanvas";
 
 const HEIGHT = 150;
 const PLOT_HEIGHT = HEIGHT - AXIS_HEIGHT;
 const MID = PLOT_HEIGHT / 2;
 const AMPLITUDE = MID * 0.9;
-const TRACE_COLOR = "#22d3ee";
-const FILL_COLOR = "rgba(34, 211, 238, 0.22)";
-const GUIDE_COLOR = "rgba(34, 211, 238, 0.16)";
-const HINT_COLOR = "rgba(148, 163, 184, 0.75)";
 
 const TIME_AXIS = new TimeAxis();
 
@@ -40,8 +38,8 @@ function secondsAgo(window: ItemWindow, total: number): Range {
   return new Range((window.from - total) / HOP_RATE_HZ, (window.to - total) / HOP_RATE_HZ);
 }
 
-function drawBaseline(ctx: CanvasRenderingContext2D, width: number): void {
-  ctx.strokeStyle = GUIDE_COLOR;
+function drawBaseline({ ctx, palette }: ChartSurface, width: number): void {
+  ctx.strokeStyle = palette.guide;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, MID);
@@ -68,7 +66,7 @@ function columnPeaks(levels: number[], window: ItemWindow, columns: number): num
 }
 
 function drawWaveform(
-  ctx: CanvasRenderingContext2D,
+  { ctx, palette }: ChartSurface,
   levels: number[],
   window: ItemWindow,
   width: number,
@@ -78,44 +76,45 @@ function drawWaveform(
   peaks.forEach((peak, x) => ctx.lineTo(x, MID - peak * AMPLITUDE));
   for (let x = peaks.length - 1; x >= 0; x--) ctx.lineTo(x, MID + peaks[x] * AMPLITUDE);
   ctx.closePath();
-  ctx.fillStyle = FILL_COLOR;
+  ctx.fillStyle = palette.fill;
   ctx.fill();
-  ctx.strokeStyle = TRACE_COLOR;
+  ctx.strokeStyle = palette.trace;
   ctx.lineWidth = 1;
   ctx.stroke();
 }
 
-function drawHint(ctx: CanvasRenderingContext2D, width: number): void {
-  ctx.fillStyle = HINT_COLOR;
+function drawHint({ ctx, palette }: ChartSurface, width: number): void {
+  ctx.fillStyle = palette.hint;
   ctx.font = "13px ui-monospace, monospace";
   ctx.textAlign = "center";
   ctx.fillText("Waiting for signal…", width / 2, MID - 8);
 }
 
 function drawScope(
-  ctx: CanvasRenderingContext2D,
+  surface: ChartSurface,
   levels: number[],
   window: ItemWindow,
   width: number,
 ): void {
-  drawBaseline(ctx, width);
-  TIME_AXIS.draw(ctx, secondsAgo(window, levels.length), geometry(width));
-  if (levels.length > 0) drawWaveform(ctx, levels, window, width);
-  else drawHint(ctx, width);
-  axisCaption(ctx, "Key");
+  drawBaseline(surface, width);
+  TIME_AXIS.draw(surface, secondsAgo(window, levels.length), geometry(width));
+  if (levels.length > 0) drawWaveform(surface, levels, window, width);
+  else drawHint(surface, width);
+  axisCaption(surface, "Key");
 }
 
 export function Oscilloscope() {
   const { ref, size } = useCanvasSize(HEIGHT);
+  const palette = useChartPalette();
   const levels = useStore((s) => s.keyingLevels);
   const { view, goLive } = useViewport(ref, levels.length, SCOPE_VIEW);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || size.width === 0) return;
-    const ctx = prepareContext(canvas, size);
-    if (ctx) drawScope(ctx, levels, view.window(levels.length), size.width);
-  }, [ref, levels, view, size.width, size.height]);
+    const surface = prepareSurface(canvas, size, palette);
+    if (surface) drawScope(surface, levels, view.window(levels.length), size.width);
+  }, [ref, levels, view, size.width, size.height, palette]);
 
   return <ChartCanvas canvasRef={ref} height={HEIGHT} goLive={goLive} />;
 }

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import type { ChartPalette } from "../charts/palette";
+import type { ChartSurface } from "../charts/surface";
 
 export interface CanvasSize {
   width: number;
@@ -26,15 +28,16 @@ export function useCanvasSize(height: number): ResponsiveCanvas {
   return { ref, size: { width, height } };
 }
 
-export function prepareContext(
+export function prepareSurface(
   canvas: HTMLCanvasElement,
   size: CanvasSize,
-): CanvasRenderingContext2D | null {
+  palette: ChartPalette,
+): ChartSurface | null {
   const ratio = window.devicePixelRatio || 1;
   canvas.width = size.width * ratio;
   canvas.height = size.height * ratio;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  return ctx;
+  return { ctx, palette };
 }

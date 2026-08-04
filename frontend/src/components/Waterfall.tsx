@@ -5,15 +5,16 @@ import { NYQUIST_HZ } from "../audioFormat";
 import { AXIS_HEIGHT, FrequencyAxis, axisCaption, type AxisGeometry } from "../charts/axis";
 import { Range } from "../charts/ticks";
 import { VerticalScroll } from "../charts/gestures";
+import { useChartPalette } from "../charts/palette";
+import type { ChartSurface } from "../charts/surface";
 import type { ItemWindow } from "../charts/viewport";
 import { useViewport, type ViewportSetup } from "../hooks/useViewport";
-import { useCanvasSize, prepareContext } from "./canvas";
+import { useCanvasSize, prepareSurface } from "./canvas";
 import { ChartCanvas } from "./ChartCanvas";
 
 const HEIGHT = 300;
 const PLOT_HEIGHT = HEIGHT - AXIS_HEIGHT;
 const VISIBLE_FRAMES = 200;
-const HINT_COLOR = "rgba(148, 163, 184, 0.75)";
 
 const FREQUENCY_AXIS = new FrequencyAxis();
 const FREQUENCY_RANGE = new Range(0, NYQUIST_HZ);
@@ -34,9 +35,9 @@ function geometry(width: number): AxisGeometry {
   };
 }
 
-function drawAxis(ctx: CanvasRenderingContext2D, width: number): void {
-  FREQUENCY_AXIS.draw(ctx, FREQUENCY_RANGE, geometry(width));
-  axisCaption(ctx, "Time (newer ↓)");
+function drawAxis(surface: ChartSurface, width: number): void {
+  FREQUENCY_AXIS.draw(surface, FREQUENCY_RANGE, geometry(width));
+  axisCaption(surface, "Time (newer ↓)");
 }
 
 type Rgb = readonly [number, number, number];
@@ -105,27 +106,28 @@ function scaleOnto(
   ctx.drawImage(buffer, 0, 0, width, PLOT_HEIGHT);
 }
 
-function drawHint(ctx: CanvasRenderingContext2D, width: number): void {
-  ctx.fillStyle = HINT_COLOR;
+function drawHint({ ctx, palette }: ChartSurface, width: number): void {
+  ctx.fillStyle = palette.hint;
   ctx.font = "13px ui-monospace, monospace";
   ctx.textAlign = "center";
   ctx.fillText("Waiting for signal…", width / 2, PLOT_HEIGHT / 2);
 }
 
 function drawWaterfall(
-  ctx: CanvasRenderingContext2D,
+  surface: ChartSurface,
   frames: ToneSpectrumMessage[],
   buffer: HTMLCanvasElement,
   width: number,
 ): void {
   const image = buildSpectrogram(frames);
-  if (image) scaleOnto(ctx, image, buffer, width);
-  else drawHint(ctx, width);
-  drawAxis(ctx, width);
+  if (image) scaleOnto(surface.ctx, image, buffer, width);
+  else drawHint(surface, width);
+  drawAxis(surface, width);
 }
 
 export function Waterfall() {
   const { ref, size } = useCanvasSize(HEIGHT);
+  const palette = useChartPalette();
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
   const frames = useStore((s) => s.spectrumFrames);
   const { view, goLive } = useViewport(ref, frames.length, WATERFALL_VIEW);
@@ -133,11 +135,11 @@ export function Waterfall() {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || size.width === 0) return;
-    const ctx = prepareContext(canvas, size);
+    const surface = prepareSurface(canvas, size, palette);
     bufferRef.current ??= document.createElement("canvas");
     const visible = visibleFrames(frames, view.window(frames.length));
-    if (ctx) drawWaterfall(ctx, visible, bufferRef.current, size.width);
-  }, [ref, frames, view, size.width, size.height]);
+    if (surface) drawWaterfall(surface, visible, bufferRef.current, size.width);
+  }, [ref, frames, view, size.width, size.height, palette]);
 
   return <ChartCanvas canvasRef={ref} height={HEIGHT} goLive={goLive} />;
 }

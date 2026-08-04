@@ -1,21 +1,36 @@
 :root {
-  --bg: #080b11;
-  --bg-glow: #0f1726;
-  --panel-top: #121925;
-  --panel-bottom: #0d131d;
-  --border: #1e2a3a;
-  --border-strong: #2a3a4f;
-  --text: #e6edf3;
-  --muted: #8b9bb4;
-  --accent: #22d3ee;
-  --accent-dim: #0e7490;
-  --screen: #060a10;
+  color-scheme: light dark;
+
+  --bg: light-dark(#f2f6fb, #080b11);
+  --bg-glow: light-dark(#dfeaf7, #0f1726);
+  --panel-top: light-dark(#ffffff, #121925);
+  --panel-bottom: light-dark(#f1f5fa, #0d131d);
+  --border: light-dark(#dbe3ee, #1e2a3a);
+  --border-strong: light-dark(#c2d0e0, #2a3a4f);
+  --text: light-dark(#101a26, #e6edf3);
+  --muted: light-dark(#5a6b81, #8b9bb4);
+  --accent: light-dark(#0e7490, #22d3ee);
+  --accent-dim: light-dark(#22d3ee, #0e7490);
+  --screen: light-dark(#f8fbfe, #060a10);
+  --control: light-dark(#e7eef6, #182230);
+  --control-hover: light-dark(#dce6f1, #1c2838);
+  --screen-wash: light-dark(rgba(14, 116, 144, 0.07), rgba(34, 211, 238, 0.05));
+  --screen-grid: light-dark(rgba(14, 116, 144, 0.1), rgba(34, 211, 238, 0.04));
+  --shadow-inset: light-dark(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.03));
+  --shadow-drop: light-dark(rgba(15, 23, 42, 0.22), rgba(0, 0, 0, 0.9));
   --radius: 14px;
   --radius-sm: 9px;
-  --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 30px -18px rgba(0, 0, 0, 0.9);
+  --shadow: inset 0 1px 0 var(--shadow-inset), 0 10px 30px -18px var(--shadow-drop);
   --maxw: 1080px;
   --gap: clamp(14px, 2.2vw, 22px);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
 }
 
@@ -93,7 +108,7 @@ body {
   width: 36px;
   height: 20px;
   border-radius: 999px;
-  background: #182230;
+  background: var(--control);
   border: 1px solid var(--border-strong);
   position: relative;
   cursor: pointer;
@@ -139,6 +154,27 @@ body {
   box-shadow: 0 0 0 1px var(--accent-dim), 0 0 18px -4px var(--accent);
 }
 
+.theme-toggle {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.theme-toggle:hover {
+  color: var(--accent);
+}
+
+.theme-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+
 .panel {
   background: linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
   border: 1px solid var(--border);
@@ -167,7 +203,7 @@ body {
 button {
   font: inherit;
   color: var(--text);
-  background: #182230;
+  background: var(--control);
   border: 1px solid var(--border-strong);
   padding: 9px 15px;
   border-radius: var(--radius-sm);
@@ -177,7 +213,7 @@ button {
 
 button:hover {
   border-color: var(--accent-dim);
-  background: #1c2838;
+  background: var(--control-hover);
 }
 
 button:active {
@@ -231,8 +267,8 @@ button:focus-visible {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background:
-    linear-gradient(180deg, rgba(34, 211, 238, 0.05), transparent 40%),
-    repeating-linear-gradient(90deg, transparent 0 39px, rgba(34, 211, 238, 0.04) 39px 40px),
+    linear-gradient(180deg, var(--screen-wash), transparent 40%),
+    repeating-linear-gradient(90deg, transparent 0 39px, var(--screen-grid) 39px 40px),
     var(--screen);
 }
 
@@ -251,7 +287,7 @@ button:focus-visible {
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, rgba(34, 211, 238, 0.05), transparent 60%), var(--screen);
+  background: linear-gradient(180deg, var(--screen-wash), transparent 60%), var(--screen);
   font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
   font-size: clamp(16px, 2.6vw, 20px);
   line-height: 1.5;
