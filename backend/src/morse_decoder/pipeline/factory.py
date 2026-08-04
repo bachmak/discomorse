@@ -17,8 +17,10 @@ from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
 from morse_decoder.pipeline.stages.carrier_source.peak_carrier_source import (
     PeakCarrierSource,
 )
-from morse_decoder.pipeline.stages.interpreter.dummy_interpreter import DummyInterpreter
 from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
+from morse_decoder.pipeline.stages.interpreter.lettering_interpreter import (
+    LetteringInterpreter,
+)
 from morse_decoder.pipeline.stages.interpreter.normalizing_interpreter import (
     NormalizingInterpreter,
 )
@@ -87,8 +89,8 @@ _TIMING_DECODERS: dict[str, _StageConstructor[TimingDecoderSettings, TimingDecod
     "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
 }
 _INTERPRETERS: dict[str, _StageConstructor[InterpreterSettings, Interpreter]] = {
-    "DummyInterpreter": DummyInterpreter,
     "NormalizingInterpreter": NormalizingInterpreter,
+    "LetteringInterpreter": LetteringInterpreter,
 }
 
 

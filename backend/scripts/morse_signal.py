@@ -10,7 +10,7 @@ import numpy.typing as npt
 import soundfile as sf  # type: ignore[import-untyped]  # no stubs
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.pipeline.stages.interpreter.letter_decoder import encode_char
+from morse_decoder.pipeline.stages.interpreter.itu import encode_char
 
 _DIT_UNITS = {".": 1, "-": 3}
 _INTRA_CHAR_UNITS = 1

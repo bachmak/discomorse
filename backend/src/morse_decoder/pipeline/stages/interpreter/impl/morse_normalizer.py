@@ -1,7 +1,6 @@
 from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.pipeline.dto import MorseElement
-from morse_decoder.pipeline.stages.interface import ManyToManyStage
 from morse_decoder.pipeline.stages.interpreter.dto import MorseSymbol
 from morse_decoder.pipeline.stages.interpreter.impl.events import event_of
 from morse_decoder.pipeline.stages.interpreter.impl.fsm import (
@@ -11,7 +10,7 @@ from morse_decoder.pipeline.stages.interpreter.impl.fsm import (
 )
 
 
-class MorseNormalizer(ManyToManyStage[MorseElement, MorseSymbol]):
+class MorseNormalizer:
     """Gathers loose elements into whole character codes, spacing and all.
 
     Drives the normalizing machine: each element moves it into its next state.

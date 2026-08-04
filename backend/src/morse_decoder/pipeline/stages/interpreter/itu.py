@@ -1,13 +1,6 @@
-from morse_decoder.pipeline.dto import Mark, MorseElement
-from morse_decoder.pipeline.stages.interpreter.tokens import (
-    Digit,
-    Letter,
-    Prosign,
-    Token,
-    Unknown,
-)
+"""The ITU morse alphabet: the codes and the characters they stand for."""
 
-_ITU_TABLE: dict[str, str] = {
+ITU_TABLE: dict[str, str] = {
     ".-": "A",
     "-...": "B",
     "-.-.": "C",
@@ -70,11 +63,8 @@ _ITU_TABLE: dict[str, str] = {
     "-.---.": "KN",
 }
 
-_CODE_BY_CHAR: dict[str, str] = {char: code for code, char in _ITU_TABLE.items()}
 
-# Asked in order; the first kind that claims the code wins. `Unknown` and
-# `Letter` bracket the chain, so every code yields exactly one token.
-_TOKEN_TYPES: tuple[type[Token], ...] = (Unknown, Prosign, Digit, Letter)
+_CODE_BY_CHAR: dict[str, str] = {char: code for code, char in ITU_TABLE.items()}
 
 
 def encode_char(char: str) -> str:
@@ -82,16 +72,6 @@ def encode_char(char: str) -> str:
     return _CODE_BY_CHAR.get(char.upper(), "")
 
 
-def _to_code(elements: list[MorseElement]) -> str:
-    """Only marks carry code; a gap's notation is spacing, not a symbol."""
-    return "".join(e.notation() for e in elements if isinstance(e, Mark))
-
-
-def decode_sequence(elements: list[MorseElement]) -> Token:
-    code = _to_code(elements)
-    char = _ITU_TABLE.get(code)
-    for token_type in _TOKEN_TYPES:
-        token = token_type.claim(code, char)
-        if token is not None:
-            return token
-    raise AssertionError("Letter is a catch-all; the chain always yields a token")
+def character_for(code: str) -> str | None:
+    """The character `code` spells, or None when the table has no entry."""
+    return ITU_TABLE.get(code)
