@@ -101,7 +101,16 @@ class TimingDecoderSettings(BaseSettings):
 
 
 class InterpreterSettings(BaseSettings):
-    pass
+    """How much the decoder's own spacing is worth against what a language says.
+
+    Both penalties are in nats, the same currency the word costs are quoted in.
+    Raise them to keep more of the spacing the timing stage reported; lower
+    them to let the language have the last word.
+    """
+
+    language: str = "en"
+    join_penalty: float = Field(default=5.0, ge=0)
+    split_penalty: float = Field(default=5.0, ge=0)
 
 
 class PipelineSettings(BaseSettings):
@@ -112,8 +121,7 @@ class PipelineSettings(BaseSettings):
     keying_detector: str = "AdaptiveKeyingDetector"
     keying_debouncer: str = "TimedKeyingDebouncer"
     timing_decoder: str = "AdaptiveThresholdDecoder"
-    interpreter: str = "LetteringInterpreter"
-    language: str = "en"
+    interpreter: str = "WordingInterpreter"
 
     stream_settings: StreamSettings = Field(default_factory=StreamSettings)
 

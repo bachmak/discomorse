@@ -15,6 +15,7 @@ from morse_decoder.pipeline.dto import (
     MorseElement,
     WordGap,
 )
+from morse_decoder.pipeline.stages.interpreter.itu import encode_char
 
 _MARKS: dict[str, MorseElement] = {".": Dit(), "-": Dah()}
 
@@ -34,6 +35,20 @@ def word(*codes: str) -> list[MorseElement]:
 def words(*codes: tuple[str, ...]) -> list[MorseElement]:
     """Several words, held apart by word gaps."""
     return _joined([word(*group) for group in codes], WordGap())
+
+
+def keyed(message: str) -> list[MorseElement]:
+    """The elements a clean fist would send for `message`."""
+    return words(*(tuple(encode_char(char) for char in w) for w in message.split()))
+
+
+def spelled(message: str) -> list[MorseElement]:
+    """The same characters, but with a word gap standing between every one.
+
+    What a character gap stretched past the word threshold makes the timing
+    stage report: each character arrives looking like a word of its own.
+    """
+    return words(*((encode_char(char),) for char in message if not char.isspace()))
 
 
 def _joined(

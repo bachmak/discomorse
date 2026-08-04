@@ -114,5 +114,7 @@ async def test_process_transcribes_one_character_at_a_time() -> None:
     ]
 
 
-def test_factory_builds_the_default_interpreter() -> None:
-    assert isinstance(_build_interpreter(PipelineSettings()), LetteringInterpreter)
+def test_factory_builds_the_interpreter_by_name() -> None:
+    settings = PipelineSettings(interpreter="LetteringInterpreter")
+
+    assert isinstance(_build_interpreter(settings), LetteringInterpreter)
