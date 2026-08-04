@@ -2,7 +2,16 @@
  * AUTO-GENERATED from the backend pydantic wire models (morse_decoder.api.messages).
  * Do not edit by hand — run `npm run gen:ws-types`.
  */
-export type ServerMessage =
+export type ChannelName =
+  | "spectrums"
+  | "limited_spectrums"
+  | "carrier_samples"
+  | "noise_samples"
+  | "raw_tones"
+  | "debounced_tones"
+  | "morse_elements"
+  | "transcriptions";
+export type OutboundMessage =
   | ToneSpectrumMessage
   | ToneMessage
   | CarrierSampleMessage
@@ -11,6 +20,10 @@ export type ServerMessage =
   | MorseElementMessage
   | TranscriptionMessage;
 
+export interface ServerMessage {
+  channel: ChannelName;
+  payload: OutboundMessage;
+}
 export interface ToneSpectrumMessage {
   data: number[];
   ts: number;
