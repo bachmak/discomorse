@@ -20,9 +20,9 @@ from morse_decoder.config import KeyingDetectorSettings
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
     CarrierSample,
+    DigitalTone,
     NoiseSample,
     Tone,
-    ToneSample,
     ToneSpectrum,
 )
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
@@ -96,7 +96,7 @@ async def detect(
     readings: tuple[Step, ...],
     *,
     keying_detector: KeyingDetector | None = None,
-) -> tuple[ToneSample, ...]:
+) -> tuple[DigitalTone, ...]:
     """Feed ``readings`` to one detector the way the pipeline would."""
     reader = keying_detector or detector()
     read = stream(*(step.reading() for step in readings))
@@ -128,7 +128,7 @@ def readings_off(
     )
 
 
-async def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[ToneSample, ...]:
+async def key_off(spectrums: tuple[ToneSpectrum, ...]) -> tuple[DigitalTone, ...]:
     """Read the key off spectrums the way the pipeline does, short of the debouncer."""
     limited = await limit(spectrums)
     readings = readings_off(stream(*limited), source(), estimator())

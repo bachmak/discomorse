@@ -6,6 +6,7 @@ from stream_fixtures import stream
 from morse_decoder.config import PipelineSettings, TimingDecoderSettings
 from morse_decoder.pipeline.dto import (
     Dah,
+    DigitalTone,
     Dit,
     InterCharSpace,
     IntraCharSpace,
@@ -26,17 +27,17 @@ _EPOCH = datetime.datetime(2024, 1, 1)
 
 def _samples(
     runs: list[tuple[bool, float]], unit: float = _UNIT
-) -> tuple[ToneSample, ...]:
+) -> tuple[DigitalTone, ...]:
     if not runs:
         return ()
-    samples: list[ToneSample] = []
+    samples: list[DigitalTone] = []
     elapsed = 0.0
     for on, length in runs:
         ts = _EPOCH + datetime.timedelta(seconds=elapsed)
-        samples.append(ToneSample(ts=ts, on=on))
+        samples.append(DigitalTone(ts=ts, on=on))
         elapsed += length * unit
     closing = _EPOCH + datetime.timedelta(seconds=elapsed)
-    samples.append(ToneSample(ts=closing, on=not runs[-1][0]))
+    samples.append(DigitalTone(ts=closing, on=not runs[-1][0]))
     return tuple(samples)
 
 
@@ -45,7 +46,7 @@ def _decoder() -> AdaptiveThresholdDecoder:
 
 
 async def _decode(
-    samples: tuple[ToneSample, ...],
+    samples: tuple[DigitalTone, ...],
     *,
     timing_decoder: AdaptiveThresholdDecoder | None = None,
 ) -> list[MorseElement]:
@@ -144,9 +145,9 @@ async def test_process_holds_characters_apart_under_keying_skew(
 
 async def test_process_carries_a_run_across_two_streams() -> None:
     decoder = _decoder()
-    opening = (ToneSample(ts=_EPOCH, on=True),)
+    opening = (DigitalTone(ts=_EPOCH, on=True),)
     closing_ts = _EPOCH + datetime.timedelta(seconds=_UNIT)
-    closing = (ToneSample(ts=closing_ts, on=False),)
+    closing = (DigitalTone(ts=closing_ts, on=False),)
 
     assert await _decode(opening, timing_decoder=decoder) == []
     assert await _decode(closing, timing_decoder=decoder) == [Dit()]

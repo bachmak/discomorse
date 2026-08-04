@@ -19,7 +19,7 @@ from recording_fixtures import (
 from tone_detecting_fixtures import ToneDetecting, detect, tone_detecting
 
 from morse_decoder.config import PipelineSettings
-from morse_decoder.pipeline.dto import CarrierNoiseSample, ToneSample, ToneSpectrum
+from morse_decoder.pipeline.dto import CarrierNoiseSample, DigitalTone, ToneSpectrum
 from morse_decoder.pipeline.stages.carrier_source.peak_carrier_source import (
     PeakCarrierSource,
 )
@@ -71,7 +71,7 @@ def _debouncing_stage(detecting: ToneDetecting) -> RecordingKeyingDebouncer:
     return detecting.stage("keying_debouncer", RecordingKeyingDebouncer)
 
 
-def _reported_keys(reported: list[ToneSample]) -> tuple[bool, ...]:
+def _reported_keys(reported: list[DigitalTone]) -> tuple[bool, ...]:
     return flags(tuple(reported))
 
 

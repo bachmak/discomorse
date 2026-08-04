@@ -21,9 +21,9 @@ from morse_decoder.pipeline import factory
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
     CarrierSample,
+    DigitalTone,
     NoiseSample,
     Tone,
-    ToneSample,
     ToneSpectrum,
 )
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
@@ -81,11 +81,11 @@ class RecordingKeyingDetector(KeyingDetector):
     def __init__(self, settings: KeyingDetectorSettings) -> None:
         self._settings = settings
         self.seen: list[CarrierNoiseSample] = []
-        self.reported: list[ToneSample] = []
+        self.reported: list[DigitalTone] = []
 
-    def process_single(self, sample: CarrierNoiseSample) -> ToneSample:
+    def process_single(self, sample: CarrierNoiseSample) -> DigitalTone:
         self.seen.append(sample)
-        self.reported.append(ToneSample(ts=sample.carrier.tone.ts, on=True))
+        self.reported.append(DigitalTone(ts=sample.carrier.tone.ts, on=True))
         return self.reported[-1]
 
 
@@ -98,15 +98,15 @@ class RecordingKeyingDebouncer(KeyingDebouncer):
 
     def __init__(self, settings: KeyingDebouncerSettings) -> None:
         self._settings = settings
-        self.seen: list[ToneSample] = []
-        self.reported: list[ToneSample] = []
+        self.seen: list[DigitalTone] = []
+        self.reported: list[DigitalTone] = []
 
     async def process(
-        self, samples: AsyncIterable[ToneSample]
-    ) -> AsyncIterator[ToneSample]:
+        self, samples: AsyncIterable[DigitalTone]
+    ) -> AsyncIterator[DigitalTone]:
         async for sample in samples:
             self.seen.append(sample)
-            self.reported.append(ToneSample(ts=sample.ts, on=len(self.seen) % 2 == 0))
+            self.reported.append(DigitalTone(ts=sample.ts, on=len(self.seen) % 2 == 0))
             yield self.reported[-1]
 
 

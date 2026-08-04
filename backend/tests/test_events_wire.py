@@ -47,7 +47,9 @@ _SPECTRUM = ToneSpectrum(
             id="fft",
         ),
         pytest.param(
-            ScopeTrace((ToneSample(ts=_TS, on=True), ToneSample(ts=_LATER, on=False))),
+            ScopeTrace(
+                (DigitalTone(ts=_TS, on=True), DigitalTone(ts=_LATER, on=False))
+            ),
             {
                 "type": "oscilloscope",
                 "data": [1.0, 0.0],

@@ -24,7 +24,7 @@ from carrier_fixtures import FRAME_SECONDS, HOP_SECONDS, SAMPLE_RATE, Phase
 from debounce_fixtures import FALL_SECONDS
 
 from morse_decoder.audio.pcm16 import PCM16
-from morse_decoder.pipeline.dto import PcmChunk, ToneSample
+from morse_decoder.pipeline.dto import DigitalTone, PcmChunk
 
 TONE_HZ = 750.0
 KEY_DOWN_AMPLITUDE = 0.5
@@ -166,7 +166,7 @@ def morse_line() -> KeyedLine:
     return KeyedLine().mark().gap().mark(3).gap(3).mark(3).gap().mark().gap(7).mark(3)
 
 
-def runs(samples: tuple[ToneSample, ...]) -> tuple[Run, ...]:
+def runs(samples: tuple[DigitalTone, ...]) -> tuple[Run, ...]:
     """The samples gathered into the stretches the key held one side over."""
     return tuple(
         Run(is_on=is_on, seconds=len(tuple(group)) * HOP_SECONDS)
@@ -174,13 +174,13 @@ def runs(samples: tuple[ToneSample, ...]) -> tuple[Run, ...]:
     )
 
 
-def keyed_runs(samples: tuple[ToneSample, ...]) -> tuple[Run, ...]:
+def keyed_runs(samples: tuple[DigitalTone, ...]) -> tuple[Run, ...]:
     return tuple(run for run in runs(samples) if run.is_on)
 
 
 def inside(
-    samples: tuple[ToneSample, ...], phase: KeyedPhase
-) -> tuple[ToneSample, ...]:
+    samples: tuple[DigitalTone, ...], phase: KeyedPhase
+) -> tuple[DigitalTone, ...]:
     """The samples of the frames that lie wholly inside ``phase``."""
     return tuple(sample for sample in samples if phase.covers(sample.ts))
 
