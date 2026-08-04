@@ -30,6 +30,12 @@ class MorseElementHandler implements MessageHandler<TextMessage> {
   }
 }
 
+class DecodedSymbolHandler implements MessageHandler<TextMessage> {
+  handle(message: TextMessage, sink: MessageSink): void {
+    sink.appendDecodedSymbol(message.data);
+  }
+}
+
 class CorrectedTextHandler implements MessageHandler<TextMessage> {
   handle(message: TextMessage, sink: MessageSink): void {
     sink.appendCorrectedText(message.data);
@@ -52,10 +58,10 @@ export const HANDLERS: HandlerTable = {
   spectrums: new ToneSpectrumHandler(),
   debounced_tones: new DigitalToneHandler(),
   morse_elements: new MorseElementHandler(),
+  decoded_symbols: new DecodedSymbolHandler(),
   corrected_text: new CorrectedTextHandler(),
   limited_spectrums: IGNORED,
   carrier_samples: IGNORED,
   noise_samples: IGNORED,
   raw_tones: IGNORED,
-  decoded_symbols: IGNORED,
 };
