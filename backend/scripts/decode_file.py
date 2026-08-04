@@ -8,14 +8,13 @@ Debugging aid: the production pipeline minus the frontend and the HTTP layer.
 import argparse
 import asyncio
 import datetime
-from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
 
 from morse_decoder.api.messages import (
-    MorseElementMessage,
-    OutboundMessage,
-    TranscriptionMessage,
+    ChannelName,
+    StreamMessage,
+    TextMessage,
 )
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
@@ -27,13 +26,15 @@ from morse_decoder.pipeline.pipeline import Pipeline
 _EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
 
 
-class Excerpt(ABC):
-    """One labelled line of the report, fed by the messages it recognizes."""
+class Excerpt:
+    """One labelled line of the report, fed by the channel it listens to."""
 
-    def __init__(self) -> None:
+    def __init__(self, label: str, channel: ChannelName) -> None:
+        self._label = label
+        self._channel = channel
         self._parts: list[str] = []
 
-    def absorb(self, message: OutboundMessage) -> None:
+    def absorb(self, message: StreamMessage) -> None:
         self._parts.extend(self._fragments(message))
 
     def text(self) -> str:
@@ -43,36 +44,12 @@ class Excerpt(ABC):
     def render(self) -> str:
         return f"{self._label}: {self.text()}"
 
-    @property
-    @abstractmethod
-    def _label(self) -> str: ...
-
-    @abstractmethod
-    def _fragments(self, message: OutboundMessage) -> tuple[str, ...]:
+    def _fragments(self, message: StreamMessage) -> tuple[str, ...]:
         """What this excerpt reads off the message; empty when it isn't its business."""
-        ...
-
-
-class MorseExcerpt(Excerpt):
-    """The dits, dahs and spaces the timing decoder emitted."""
-
-    @property
-    def _label(self) -> str:
-        return "morse"
-
-    def _fragments(self, message: OutboundMessage) -> tuple[str, ...]:
-        return (message.data,) if isinstance(message, MorseElementMessage) else ()
-
-
-class TextExcerpt(Excerpt):
-    """The text the interpreter made of those elements."""
-
-    @property
-    def _label(self) -> str:
-        return "text"
-
-    def _fragments(self, message: OutboundMessage) -> tuple[str, ...]:
-        return (message.data,) if isinstance(message, TranscriptionMessage) else ()
+        if message.channel != self._channel:
+            return ()
+        payload = message.payload
+        return (payload.data,) if isinstance(payload, TextMessage) else ()
 
 
 class Report:
@@ -81,7 +58,7 @@ class Report:
     def __init__(self, excerpts: Sequence[Excerpt]) -> None:
         self._excerpts = excerpts
 
-    def absorb(self, message: OutboundMessage) -> None:
+    def absorb(self, message: StreamMessage) -> None:
         for excerpt in self._excerpts:
             excerpt.absorb(message)
 
@@ -99,7 +76,7 @@ class FileDecoding:
 
     async def run(self) -> Report:
         async for message in self._pipeline().run():
-            self._report.absorb(message.payload)
+            self._report.absorb(message)
         return self._report
 
     def _pipeline(self) -> Pipeline:
@@ -130,14 +107,16 @@ def _settings() -> Settings:
         pipeline=PipelineSettings(
             stream_settings=StreamSettings(
                 morse_elements=True,
-                transcriptions=True,
+                corrected_text=True,
             )
         )
     )
 
 
 def main() -> None:
-    report = Report((MorseExcerpt(), TextExcerpt()))
+    report = Report(
+        (Excerpt("morse", "morse_elements"), Excerpt("text", "corrected_text"))
+    )
     decoding = FileDecoding(_parse_path(), _settings(), report)
     print(asyncio.run(decoding.run()).render())
 

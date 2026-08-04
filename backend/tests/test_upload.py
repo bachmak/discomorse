@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from morse_decoder.api.file_session import FileSession
-from morse_decoder.api.messages import StreamMessage, TranscriptionMessage
+from morse_decoder.api.messages import StreamMessage, TextMessage
 from morse_decoder.api.routes import app
 from morse_decoder.pipeline.pipeline import Pipeline
 
@@ -19,16 +19,14 @@ class _StubPipeline(Pipeline):
             yield message
 
 
-def _transcription(text: str) -> StreamMessage:
-    return StreamMessage(
-        channel="transcriptions", payload=TranscriptionMessage(data=text)
-    )
+def _corrected_text(text: str) -> StreamMessage:
+    return StreamMessage(channel="corrected_text", payload=TextMessage(data=text))
 
 
 def _wire(text: str) -> dict[str, object]:
     return {
-        "channel": "transcriptions",
-        "payload": {"type": "transcription", "data": text},
+        "channel": "corrected_text",
+        "payload": {"type": "text", "data": text},
     }
 
 
@@ -38,7 +36,7 @@ async def _lines(messages: list[StreamMessage]) -> list[str]:
 
 
 async def test_stream_emits_one_ndjson_line_per_message() -> None:
-    lines = await _lines([_transcription("SOS"), _transcription("OK")])
+    lines = await _lines([_corrected_text("SOS"), _corrected_text("OK")])
 
     assert all(line.endswith("\n") for line in lines)
     assert [json.loads(line) for line in lines] == [

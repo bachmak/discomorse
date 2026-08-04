@@ -10,15 +10,15 @@ export type ChannelName =
   | "raw_tones"
   | "debounced_tones"
   | "morse_elements"
-  | "transcriptions";
+  | "decoded_symbols"
+  | "corrected_text";
 export type OutboundMessage =
   | ToneSpectrumMessage
   | ToneMessage
   | CarrierSampleMessage
   | NoiseSampleMessage
   | DigitalToneMessage
-  | MorseElementMessage
-  | TranscriptionMessage;
+  | TextMessage;
 
 export interface ServerMessage {
   channel: ChannelName;
@@ -52,13 +52,9 @@ export interface DigitalToneMessage {
   ts: number;
   type: "digital_tone";
 }
-export interface MorseElementMessage {
+export interface TextMessage {
   data: string;
-  type: "morse_element";
-}
-export interface TranscriptionMessage {
-  data: string;
-  type: "transcription";
+  type: "text";
 }
 export interface MicHandshakeMessage {
   sample_rate: number;

@@ -19,7 +19,8 @@ type ChannelName = Literal[
     "raw_tones",
     "debounced_tones",
     "morse_elements",
-    "transcriptions",
+    "decoded_symbols",
+    "corrected_text",
 ]
 
 
@@ -65,13 +66,8 @@ class DigitalToneMessage(_MessageModel):
     ts: float
 
 
-class MorseElementMessage(_MessageModel):
-    type: Literal["morse_element"] = "morse_element"
-    data: str
-
-
-class TranscriptionMessage(_MessageModel):
-    type: Literal["transcription"] = "transcription"
+class TextMessage(_MessageModel):
+    type: Literal["text"] = "text"
     data: str
 
 
@@ -81,8 +77,7 @@ type OutboundMessage = Annotated[
     | CarrierSampleMessage
     | NoiseSampleMessage
     | DigitalToneMessage
-    | MorseElementMessage
-    | TranscriptionMessage,
+    | TextMessage,
     Field(discriminator="type"),
 ]
 

@@ -16,7 +16,7 @@ function DecodedLine({ className, value, placeholder }: DecodedLineProps) {
 
 export function DecodedText() {
   const morse = useStore((s) => s.decodedMorse);
-  const text = useStore((s) => s.decodedText);
+  const text = useStore((s) => s.correctedText);
   const clearDecoded = useStore((s) => s.clearDecoded);
 
   return (

@@ -27,8 +27,8 @@ def test_every_channel_names_a_stream_flag() -> None:
         pytest.param((), set(), id="nothing-subscribed"),
         pytest.param(("spectrums",), {"spectrums"}, id="one-channel"),
         pytest.param(
-            ("morse_elements", "transcriptions"),
-            {"morse_elements", "transcriptions"},
+            ("morse_elements", "corrected_text"),
+            {"morse_elements", "corrected_text"},
             id="two-channels",
         ),
         pytest.param(_ALL_CHANNELS, set(_ALL_CHANNELS), id="everything"),

@@ -31,7 +31,8 @@ _CATALOGS = [
     pytest.param(factory._KEYING_DETECTORS, id="keying-detectors"),
     pytest.param(factory._KEYING_DEBOUNCERS, id="keying-debouncers"),
     pytest.param(factory._TIMING_DECODERS, id="timing-decoders"),
-    pytest.param(factory._INTERPRETERS, id="interpreters"),
+    pytest.param(factory._SYMBOL_DECODERS, id="symbol-decoders"),
+    pytest.param(factory._TEXT_CORRECTORS, id="text-correctors"),
 ]
 
 

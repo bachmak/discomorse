@@ -5,6 +5,7 @@ import pytest
 from morse_decoder.api.messages import outbound_message_json_schema
 from morse_decoder.pipeline.dto import (
     CarrierSample,
+    CorrectedText,
     Dah,
     DigitalTone,
     Dit,
@@ -12,10 +13,10 @@ from morse_decoder.pipeline.dto import (
     IntraCharGap,
     NoiseSample,
     Serializable,
+    Token,
     Tone,
     ToneMagnitude,
     ToneSpectrum,
-    Transcription,
     WordGap,
 )
 
@@ -70,21 +71,18 @@ _TONE = Tone(frequency=600.0, magnitude=0.75, ts=_TS)
             id="digital-tone",
         ),
         pytest.param(
-            Transcription("SOS"),
-            {"type": "transcription", "data": "SOS"},
-            id="transcription",
+            CorrectedText("SOS"),
+            {"type": "text", "data": "SOS"},
+            id="corrected-text",
         ),
-        pytest.param(Dit(), {"type": "morse_element", "data": "."}, id="dit"),
-        pytest.param(Dah(), {"type": "morse_element", "data": "-"}, id="dah"),
+        pytest.param(Token("SOS"), {"type": "text", "data": "SOS"}, id="token"),
+        pytest.param(Dit(), {"type": "text", "data": "."}, id="dit"),
+        pytest.param(Dah(), {"type": "text", "data": "-"}, id="dah"),
+        pytest.param(IntraCharGap(), {"type": "text", "data": ""}, id="intra-char-gap"),
         pytest.param(
-            IntraCharGap(), {"type": "morse_element", "data": ""}, id="intra-char-gap"
+            InterCharGap(), {"type": "text", "data": " "}, id="inter-char-gap"
         ),
-        pytest.param(
-            InterCharGap(), {"type": "morse_element", "data": " "}, id="inter-char-gap"
-        ),
-        pytest.param(
-            WordGap(), {"type": "morse_element", "data": " / "}, id="word-gap"
-        ),
+        pytest.param(WordGap(), {"type": "text", "data": " / "}, id="word-gap"),
     ],
 )
 def test_dto_serializes_to_its_wire_message(
@@ -103,6 +101,5 @@ def test_schema_covers_every_message_type() -> None:
         "carrier_sample",
         "noise_sample",
         "digital_tone",
-        "morse_element",
-        "transcription",
+        "text",
     }
