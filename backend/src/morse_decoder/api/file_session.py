@@ -1,21 +1,29 @@
 import datetime
 from collections.abc import AsyncIterator
+from typing import Annotated
 
-from fastapi import UploadFile
+from fastapi import Form, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import Json
 
+from morse_decoder.api.helpers import subscription_to_settings
+from morse_decoder.api.messages import SubscriptionMessage
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
-from morse_decoder.config import Settings
+from morse_decoder.config import PipelineSettings, Settings
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
 _NDJSON_MEDIA_TYPE = "application/x-ndjson"
 
 
-async def handle_file_upload(file: UploadFile) -> StreamingResponse:
-    settings = Settings()
+async def handle_file_upload(
+    file: UploadFile,
+    subscription: Annotated[Json[SubscriptionMessage], Form()],
+) -> StreamingResponse:
+    stream_settings = subscription_to_settings(subscription)
+    settings = Settings(pipeline=PipelineSettings(stream_settings=stream_settings))
     source = FileSource(
         await file.read(),
         audio=settings.audio,

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { UPLOAD_URL } from "../api/endpoints";
+import { SUBSCRIPTION } from "../api/subscription";
 import { MessageRouter } from "../messages/messageRouter";
 import { NdjsonStream } from "../messages/ndjsonStream";
 import { storeSink } from "../messages/storeSink";
@@ -15,6 +16,7 @@ export interface FileDecoder {
 function uploadBody(file: File): FormData {
   const body = new FormData();
   body.append("file", file);
+  body.append("subscription", JSON.stringify(SUBSCRIPTION));
   return body;
 }
 

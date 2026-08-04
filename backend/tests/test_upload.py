@@ -1,8 +1,12 @@
 import json
 from collections.abc import AsyncIterator
 
+import pytest
+from fastapi.testclient import TestClient
+
 from morse_decoder.api.file_session import FileSession
 from morse_decoder.api.messages import StreamMessage, TranscriptionMessage
+from morse_decoder.api.routes import app
 from morse_decoder.pipeline.pipeline import Pipeline
 
 
@@ -45,3 +49,24 @@ async def test_stream_emits_one_ndjson_line_per_message() -> None:
 
 async def test_stream_is_empty_when_no_messages() -> None:
     assert await _lines([]) == []
+
+
+@pytest.mark.parametrize(
+    "form",
+    [
+        pytest.param({}, id="no-subscription"),
+        pytest.param({"subscription": "not json"}, id="malformed-subscription"),
+        pytest.param({"subscription": "{}"}, id="missing-channels"),
+        pytest.param(
+            {"subscription": '{"channels": ["gossip"]}'}, id="unknown-channel"
+        ),
+    ],
+)
+def test_upload_rejects_a_request_without_a_usable_subscription(
+    form: dict[str, str],
+) -> None:
+    response = TestClient(app).post(
+        "/upload", files={"file": ("silence.wav", b"")}, data=form
+    )
+
+    assert response.status_code == 422

@@ -14,7 +14,11 @@ from carrier_fixtures import ANALYZER_SETTINGS, SAMPLE_RATE
 from tone_fixtures import KEY_DOWN_AMPLITUDE, TONE_HZ, PcmChunks
 
 from morse_decoder.audio.source import AudioSource
-from morse_decoder.config import CarrierSourceSettings, PipelineSettings
+from morse_decoder.config import (
+    CarrierSourceSettings,
+    PipelineSettings,
+    StreamSettings,
+)
 from morse_decoder.pipeline.dto import PcmChunk
 from morse_decoder.pipeline.factory import create_pipeline
 
@@ -40,6 +44,7 @@ def _settings(lock_seconds: float) -> PipelineSettings:
         carrier_source_settings=CarrierSourceSettings(
             carrier_lock_seconds=lock_seconds
         ),
+        stream_settings=StreamSettings(spectrums=True),
     )
 
 

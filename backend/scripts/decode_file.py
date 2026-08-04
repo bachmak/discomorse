@@ -20,7 +20,7 @@ from morse_decoder.api.messages import (
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
 from morse_decoder.audio.impl.sample_clock import SampleClock
-from morse_decoder.config import Settings
+from morse_decoder.config import PipelineSettings, Settings, StreamSettings
 from morse_decoder.pipeline.factory import create_pipeline
 from morse_decoder.pipeline.pipeline import Pipeline
 
@@ -125,9 +125,20 @@ def _parse_path() -> Path:
     return path
 
 
+def _settings() -> Settings:
+    return Settings(
+        pipeline=PipelineSettings(
+            stream_settings=StreamSettings(
+                morse_elements=True,
+                transcriptions=True,
+            )
+        )
+    )
+
+
 def main() -> None:
     report = Report((MorseExcerpt(), TextExcerpt()))
-    decoding = FileDecoding(_parse_path(), Settings(), report)
+    decoding = FileDecoding(_parse_path(), _settings(), report)
     print(asyncio.run(decoding.run()).render())
 
 

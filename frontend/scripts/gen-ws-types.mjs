@@ -38,15 +38,33 @@ function stripPropertyTitles(schema) {
     }
 }
 
+// A declaration starts a line, optionally behind its own doc comment.
+const DECLARATION_START = /^(?=\/\*\*$|export )/m;
+const DECLARED_NAME = /export (?:type|interface) (\w+)/;
+
+// The two schemas share definitions - a channel name is one - and each compile
+// spells its own out, so the second copy of a name is dropped.
+function withoutRedeclarations(sources) {
+    const seen = new Set();
+    const kept = [];
+    for (const block of sources.flatMap((source) => source.split(DECLARATION_START))) {
+        const name = block.match(DECLARED_NAME)?.[1];
+        if (seen.has(name)) continue;
+        if (name) seen.add(name);
+        kept.push(block);
+    }
+    return kept;
+}
+
 const {server, client} = exportedSchemas();
 
-const declarations = [];
+const compiled = [];
 for (const [fallbackName, schema] of [
     ["ServerMessage", server],
     ["ClientMessage", client],
 ]) {
     stripPropertyTitles(schema);
-    declarations.push(await compile(schema, fallbackName, COMPILE_OPTIONS));
+    compiled.push(await compile(schema, fallbackName, COMPILE_OPTIONS));
 }
 
-writeFileSync(outFile, [BANNER, ...declarations].join("\n"));
+writeFileSync(outFile, [BANNER, withoutRedeclarations(compiled).join("")].join("\n"));

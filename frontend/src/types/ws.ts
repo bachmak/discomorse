@@ -60,7 +60,13 @@ export interface TranscriptionMessage {
   data: string;
   type: "transcription";
 }
-
 export interface MicHandshakeMessage {
   sample_rate: number;
+  subscription: SubscriptionMessage;
+}
+/**
+ * The channels a client wants a session to stream; it gets no others.
+ */
+export interface SubscriptionMessage {
+  channels: ChannelName[];
 }

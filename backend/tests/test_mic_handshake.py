@@ -6,6 +6,12 @@ from pydantic import ValidationError
 from morse_decoder.api.messages import MicHandshakeMessage, inbound_message_json_schema
 from morse_decoder.api.routes import app
 
+_SUBSCRIPTION = '"subscription": {"channels": ["spectrums"]}'
+
+
+def _handshake(*fields: str) -> str:
+    return f"{{{', '.join(fields)}}}"
+
 
 @pytest.mark.parametrize(
     "sample_rate",
@@ -16,20 +22,57 @@ from morse_decoder.api.routes import app
     ],
 )
 def test_handshake_accepts_a_positive_sample_rate(sample_rate: int) -> None:
-    payload = f'{{"sample_rate": {sample_rate}}}'
+    payload = _handshake(f'"sample_rate": {sample_rate}', _SUBSCRIPTION)
 
     assert MicHandshakeMessage.model_validate_json(payload).sample_rate == sample_rate
 
 
 @pytest.mark.parametrize(
+    "channels",
+    [
+        pytest.param("[]", id="no-channel"),
+        pytest.param('["transcriptions"]', id="one-channel"),
+        pytest.param('["spectrums", "spectrums"]', id="channel-named-twice"),
+    ],
+)
+def test_handshake_accepts_the_channels_it_is_given(channels: str) -> None:
+    payload = _handshake(
+        '"sample_rate": 48000', f'"subscription": {{"channels": {channels}}}'
+    )
+
+    assert MicHandshakeMessage.model_validate_json(payload).subscription.channels <= {
+        "spectrums",
+        "transcriptions",
+    }
+
+
+@pytest.mark.parametrize(
     "payload",
     [
-        pytest.param('{"sample_rate": 0}', id="zero"),
-        pytest.param('{"sample_rate": -48000}', id="negative"),
-        pytest.param('{"sample_rate": 48000.5}', id="fractional"),
-        pytest.param('{"sample_rate": "fast"}', id="not-a-number"),
-        pytest.param("{}", id="missing-field"),
-        pytest.param('{"sample_rate": 48000, "channels": 1}', id="unknown-field"),
+        pytest.param(_handshake('"sample_rate": 0', _SUBSCRIPTION), id="zero"),
+        pytest.param(_handshake('"sample_rate": -48000', _SUBSCRIPTION), id="negative"),
+        pytest.param(
+            _handshake('"sample_rate": 48000.5', _SUBSCRIPTION), id="fractional"
+        ),
+        pytest.param(
+            _handshake('"sample_rate": "fast"', _SUBSCRIPTION), id="not-a-number"
+        ),
+        pytest.param(_handshake(_SUBSCRIPTION), id="missing-sample-rate"),
+        pytest.param(_handshake('"sample_rate": 48000'), id="missing-subscription"),
+        pytest.param(
+            _handshake('"sample_rate": 48000', '"subscription": {}'),
+            id="missing-channels",
+        ),
+        pytest.param(
+            _handshake(
+                '"sample_rate": 48000', '"subscription": {"channels": ["gossip"]}'
+            ),
+            id="unknown-channel",
+        ),
+        pytest.param(
+            _handshake('"sample_rate": 48000', _SUBSCRIPTION, '"channels": 1'),
+            id="unknown-field",
+        ),
         pytest.param("48000", id="bare-value"),
         pytest.param("not json", id="malformed-json"),
     ],
@@ -44,15 +87,15 @@ def test_client_schema_describes_the_handshake() -> None:
     properties = schema["properties"]
 
     assert schema["title"] == "MicHandshakeMessage"
-    assert schema["required"] == ["sample_rate"]
+    assert schema["required"] == ["sample_rate", "subscription"]
     assert schema["additionalProperties"] is False
     assert isinstance(properties, dict)
-    assert set(properties) == {"sample_rate"}
+    assert set(properties) == {"sample_rate", "subscription"}
 
 
 def test_mic_socket_closes_when_the_handshake_is_invalid() -> None:
     with TestClient(app).websocket_connect("/ws/mic") as ws:
-        ws.send_text('{"sample_rate": 0}')
+        ws.send_text(_handshake('"sample_rate": 0', _SUBSCRIPTION))
 
         with pytest.raises(WebSocketDisconnect) as disconnect:
             ws.receive_text()
