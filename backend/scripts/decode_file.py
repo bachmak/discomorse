@@ -99,7 +99,7 @@ class FileDecoding:
 
     async def run(self) -> Report:
         async for message in self._pipeline().run():
-            self._report.absorb(message)
+            self._report.absorb(message.payload)
         return self._report
 
     def _pipeline(self) -> Pipeline:

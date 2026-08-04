@@ -1,15 +1,15 @@
 import type {
   DigitalToneMessage,
   MorseElementMessage,
-  ServerMessage,
+  OutboundMessage,
   ToneSpectrumMessage,
   TranscriptionMessage,
 } from "../types/ws";
 import type { MessageSink } from "./sink";
 
-export type MessageType = ServerMessage["type"];
+export type MessageType = OutboundMessage["type"];
 
-export interface MessageHandler<M extends ServerMessage> {
+export interface MessageHandler<M extends OutboundMessage> {
   handle(message: M, sink: MessageSink): void;
 }
 
@@ -38,14 +38,14 @@ class TranscriptionHandler implements MessageHandler<TranscriptionMessage> {
 }
 
 // Diagnostic streams the backend can be configured to send but no chart reads.
-class IgnoredHandler implements MessageHandler<ServerMessage> {
+class IgnoredHandler implements MessageHandler<OutboundMessage> {
   handle(): void {}
 }
 
 const IGNORED = new IgnoredHandler();
 
 type HandlerTable = {
-  [T in MessageType]: MessageHandler<Extract<ServerMessage, { type: T }>>;
+  [T in MessageType]: MessageHandler<Extract<OutboundMessage, { type: T }>>;
 };
 
 export const HANDLERS: HandlerTable = {

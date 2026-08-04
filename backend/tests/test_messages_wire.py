@@ -94,8 +94,8 @@ def test_dto_serializes_to_its_wire_message(
 
 
 def test_schema_covers_every_message_type() -> None:
-    schema = outbound_message_json_schema()
-    mapping = schema["discriminator"]["mapping"]  # type: ignore[index]  # schema is dict[str, object]
+    definitions = outbound_message_json_schema()["$defs"]
+    mapping = definitions["OutboundMessage"]["discriminator"]["mapping"]  # type: ignore[index]  # schema is dict[str, object]
 
     assert set(mapping) == {
         "tone_spectrum",

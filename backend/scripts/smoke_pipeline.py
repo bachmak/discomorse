@@ -60,7 +60,7 @@ class SmokeRun:
         counts: Counter[type[OutboundMessage]] = Counter()
         async for message in self._pipeline().run():
             message.model_dump_json()  # serialization is under test too
-            counts[type(message)] += 1
+            counts[type(message.payload)] += 1
         return MessageTally(counts)
 
     def _pipeline(self) -> Pipeline:
