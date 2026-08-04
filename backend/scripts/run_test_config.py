@@ -20,7 +20,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from decode_file import FileDecoding, MorseExcerpt, Report
+from decode_file import Excerpt, FileDecoding, Report
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from morse_decoder.config import PipelineSettings, Settings, StreamSettings
@@ -191,7 +191,7 @@ class ConfigRun:
             return self._against(await self._decode(path))
 
     async def _decode(self, path: Path) -> Transcript:
-        excerpt = MorseExcerpt()
+        excerpt = Excerpt("morse", "morse_elements")
         await FileDecoding(path, self._settings, Report((excerpt,))).run()
         return Transcript.of(excerpt.text())
 

@@ -2,9 +2,8 @@ import pytest
 from morse_element_fixtures import keyed, spelled, word, words
 from stream_fixtures import stream
 
-from morse_decoder.config import InterpreterSettings, PipelineSettings
-from morse_decoder.pipeline.dto import MorseElement, Transcription
-from morse_decoder.pipeline.factory import _build_interpreter
+from morse_decoder.config import InterpreterSettings
+from morse_decoder.pipeline.dto import CorrectedText, MorseElement
 from morse_decoder.pipeline.stages.interpreter.wording_interpreter import (
     WordingInterpreter,
 )
@@ -102,15 +101,11 @@ async def test_process_publishes_a_word_before_the_message_ends() -> None:
     published = [text async for text in interpreter.process(stream(*spelled(_PANGRAM)))]
 
     assert published[:3] == [
-        Transcription(text="THE"),
-        Transcription(text=" QUICK"),
-        Transcription(text=" BROWN"),
+        CorrectedText(text="THE"),
+        CorrectedText(text=" QUICK"),
+        CorrectedText(text=" BROWN"),
     ]
 
 
 async def test_process_says_nothing_about_an_empty_stream() -> None:
     assert await _transcribe([]) == ""
-
-
-def test_factory_builds_the_default_interpreter() -> None:
-    assert isinstance(_build_interpreter(PipelineSettings()), WordingInterpreter)

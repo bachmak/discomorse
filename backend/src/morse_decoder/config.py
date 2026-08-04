@@ -27,7 +27,8 @@ class StreamSettings(BaseSettings):
     raw_tones: bool = False
     debounced_tones: bool = False
     morse_elements: bool = False
-    transcriptions: bool = False
+    decoded_symbols: bool = False
+    corrected_text: bool = False
 
 
 class SpectrumAnalyzerSettings(BaseSettings):
@@ -113,6 +114,14 @@ class InterpreterSettings(BaseSettings):
     split_penalty: float = Field(default=5.0, ge=0)
 
 
+class SymbolDecoderSettings(BaseSettings):
+    pass
+
+
+class TextCorrectorSettings(BaseSettings):
+    pass
+
+
 class PipelineSettings(BaseSettings):
     spectrum_analyzer: str = "STFTSpectrumAnalyzer"
     spectrum_limiter: str = "StaticSpectrumLimiter"
@@ -121,7 +130,8 @@ class PipelineSettings(BaseSettings):
     keying_detector: str = "AdaptiveKeyingDetector"
     keying_debouncer: str = "TimedKeyingDebouncer"
     timing_decoder: str = "AdaptiveThresholdDecoder"
-    interpreter: str = "WordingInterpreter"
+    symbol_decoder: str = "DummySymbolDecoder"
+    text_corrector: str = "DummyTextCorrector"
 
     stream_settings: StreamSettings = Field(default_factory=StreamSettings)
 
@@ -146,8 +156,11 @@ class PipelineSettings(BaseSettings):
     timing_decoder_settings: TimingDecoderSettings = Field(
         default_factory=TimingDecoderSettings
     )
-    interpreter_settings: InterpreterSettings = Field(
-        default_factory=InterpreterSettings
+    symbol_decoder_settings: SymbolDecoderSettings = Field(
+        default_factory=SymbolDecoderSettings
+    )
+    text_corrector_settings: TextCorrectorSettings = Field(
+        default_factory=TextCorrectorSettings
     )
 
 

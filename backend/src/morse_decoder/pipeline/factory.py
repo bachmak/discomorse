@@ -3,23 +3,20 @@ from typing import Protocol
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.config import (
     CarrierSourceSettings,
-    InterpreterSettings,
     KeyingDebouncerSettings,
     KeyingDetectorSettings,
     NoiseEstimatorSettings,
     PipelineSettings,
     SpectrumAnalyzerSettings,
     SpectrumLimiterSettings,
+    SymbolDecoderSettings,
+    TextCorrectorSettings,
     TimingDecoderSettings,
 )
 from morse_decoder.pipeline.pipeline import Pipeline
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
 from morse_decoder.pipeline.stages.carrier_source.peak_carrier_source import (
     PeakCarrierSource,
-)
-from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
-from morse_decoder.pipeline.stages.interpreter.wording_interpreter import (
-    WordingInterpreter,
 )
 from morse_decoder.pipeline.stages.keying_debouncer.interface import KeyingDebouncer
 from morse_decoder.pipeline.stages.keying_debouncer.timed_keying_debouncer import (
@@ -41,6 +38,14 @@ from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLim
 from morse_decoder.pipeline.stages.spectrum_limiter.static_spectrum_limiter import (
     StaticSpectrumLimiter,
 )
+from morse_decoder.pipeline.stages.symbol_decoder.dummy_symbol_decoder import (
+    DummySymbolDecoder,
+)
+from morse_decoder.pipeline.stages.symbol_decoder.interface import SymbolDecoder
+from morse_decoder.pipeline.stages.text_corrector.dummy_text_corrector import (
+    DummyTextCorrector,
+)
+from morse_decoder.pipeline.stages.text_corrector.interface import TextCorrector
 from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder import (
     AdaptiveThresholdDecoder,
 )
@@ -85,8 +90,11 @@ _KEYING_DEBOUNCERS: dict[
 _TIMING_DECODERS: dict[str, _StageConstructor[TimingDecoderSettings, TimingDecoder]] = {
     "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
 }
-_INTERPRETERS: dict[str, _StageConstructor[InterpreterSettings, Interpreter]] = {
-    "WordingInterpreter": WordingInterpreter,
+_SYMBOL_DECODERS: dict[str, _StageConstructor[SymbolDecoderSettings, SymbolDecoder]] = {
+    "DummySymbolDecoder": DummySymbolDecoder,
+}
+_TEXT_CORRECTORS: dict[str, _StageConstructor[TextCorrectorSettings, TextCorrector]] = {
+    "DummyTextCorrector": DummyTextCorrector,
 }
 
 
@@ -171,12 +179,21 @@ def _build_timing_decoder(settings: PipelineSettings) -> TimingDecoder:
     )
 
 
-def _build_interpreter(settings: PipelineSettings) -> Interpreter:
+def _build_symbol_decoder(settings: PipelineSettings) -> SymbolDecoder:
     return _build(
-        _INTERPRETERS,
-        settings.interpreter,
-        "interpreter",
-        settings.interpreter_settings,
+        _SYMBOL_DECODERS,
+        settings.symbol_decoder,
+        "symbol decoder",
+        settings.symbol_decoder_settings,
+    )
+
+
+def _build_text_corrector(settings: PipelineSettings) -> TextCorrector:
+    return _build(
+        _TEXT_CORRECTORS,
+        settings.text_corrector,
+        "text corrector",
+        settings.text_corrector_settings,
     )
 
 
@@ -192,6 +209,7 @@ def create_pipeline(
         keying_detector=_build_keying_detector(pipeline_settings),
         keying_debouncer=_build_keying_debouncer(pipeline_settings),
         timing_decoder=_build_timing_decoder(pipeline_settings),
-        interpreter=_build_interpreter(pipeline_settings),
+        symbol_decoder=_build_symbol_decoder(pipeline_settings),
+        text_corrector=_build_text_corrector(pipeline_settings),
         stream_settings=pipeline_settings.stream_settings,
     )

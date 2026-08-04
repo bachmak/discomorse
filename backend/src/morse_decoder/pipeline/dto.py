@@ -7,12 +7,11 @@ from dataclasses import dataclass
 from morse_decoder.api.messages import (
     CarrierSampleMessage,
     DigitalToneMessage,
-    MorseElementMessage,
     NoiseSampleMessage,
     OutboundMessage,
+    TextMessage,
     ToneMessage,
     ToneSpectrumMessage,
-    TranscriptionMessage,
 )
 
 
@@ -25,7 +24,7 @@ class Serializable(ABC):
 @dataclass(frozen=True)
 class MorseElement(Serializable, ABC):
     def to_message(self) -> OutboundMessage:
-        return MorseElementMessage(data=self.notation())
+        return TextMessage(data=self.notation())
 
     @abstractmethod
     def notation(self) -> str: ...
@@ -158,8 +157,16 @@ class DigitalTone(Serializable):
 
 
 @dataclass(frozen=True)
-class Transcription(Serializable):
+class Token(Serializable):
+    value: str
+
+    def to_message(self) -> OutboundMessage:
+        return TextMessage(data=self.value)
+
+
+@dataclass(frozen=True)
+class CorrectedText(Serializable):
     text: str
 
     def to_message(self) -> OutboundMessage:
-        return TranscriptionMessage(data=self.text)
+        return TextMessage(data=self.text)

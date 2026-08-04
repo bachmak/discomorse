@@ -31,7 +31,7 @@ def test_handshake_accepts_a_positive_sample_rate(sample_rate: int) -> None:
     "channels",
     [
         pytest.param("[]", id="no-channel"),
-        pytest.param('["transcriptions"]', id="one-channel"),
+        pytest.param('["corrected_text"]', id="one-channel"),
         pytest.param('["spectrums", "spectrums"]', id="channel-named-twice"),
     ],
 )
@@ -42,7 +42,7 @@ def test_handshake_accepts_the_channels_it_is_given(channels: str) -> None:
 
     assert MicHandshakeMessage.model_validate_json(payload).subscription.channels <= {
         "spectrums",
-        "transcriptions",
+        "corrected_text",
     }
 
 

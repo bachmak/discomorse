@@ -16,8 +16,8 @@ from tempfile import TemporaryDirectory
 from morse_signal import MorseSignal
 
 from morse_decoder.api.messages import (
-    MorseElementMessage,
     OutboundMessage,
+    TextMessage,
     ToneSpectrumMessage,
 )
 from morse_decoder.audio.file_source import FileSource
@@ -31,7 +31,7 @@ _MESSAGE = "SOS DE SMOKE TEST"
 _EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
 _EXPECTED: tuple[type[OutboundMessage], ...] = (
     ToneSpectrumMessage,
-    MorseElementMessage,
+    TextMessage,
 )
 
 
@@ -98,7 +98,8 @@ def _settings() -> Settings:
                 raw_tones=True,
                 debounced_tones=True,
                 morse_elements=True,
-                transcriptions=True,
+                decoded_symbols=True,
+                corrected_text=True,
             )
         )
     )

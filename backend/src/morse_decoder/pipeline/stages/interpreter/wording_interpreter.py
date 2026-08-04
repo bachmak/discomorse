@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.config import InterpreterSettings
-from morse_decoder.pipeline.dto import MorseElement, Transcription
+from morse_decoder.pipeline.dto import CorrectedText, MorseElement
 from morse_decoder.pipeline.stages.interpreter.impl.assembly import (
     TextAssembler,
     role_of,
@@ -36,9 +36,9 @@ class WordingInterpreter(Interpreter):
 
     async def process(
         self, elements: AsyncIterable[MorseElement]
-    ) -> AsyncIterator[Transcription]:
+    ) -> AsyncIterator[CorrectedText]:
         async for piece in self._pieces(elements):
-            yield Transcription(text=self._writer.write(piece))
+            yield CorrectedText(text=self._writer.write(piece))
 
     async def _pieces(
         self, elements: AsyncIterable[MorseElement]

@@ -8,7 +8,6 @@ from morse_decoder.pipeline.dto import (
     Serializable,
 )
 from morse_decoder.pipeline.stages.carrier_source.interface import CarrierSource
-from morse_decoder.pipeline.stages.interpreter.interface import Interpreter
 from morse_decoder.pipeline.stages.keying_debouncer.interface import KeyingDebouncer
 from morse_decoder.pipeline.stages.keying_detector.interface import KeyingDetector
 from morse_decoder.pipeline.stages.noise_estimator.interface import NoiseEstimator
@@ -19,11 +18,13 @@ from morse_decoder.pipeline.stages.streams import (
     StreamMerge,
     azip,
 )
+from morse_decoder.pipeline.stages.symbol_decoder.interface import SymbolDecoder
+from morse_decoder.pipeline.stages.text_corrector.interface import TextCorrector
 from morse_decoder.pipeline.stages.timing_decoder.interface import TimingDecoder
 
 
 class Pipeline:
-    """Streams audio through analyzer → keying stages → decoder → interpreter."""
+    """Streams audio through analyzer → keying stages → decoder → corrector."""
 
     def __init__(
         self,
@@ -35,7 +36,8 @@ class Pipeline:
         keying_detector: KeyingDetector,
         keying_debouncer: KeyingDebouncer,
         timing_decoder: TimingDecoder,
-        interpreter: Interpreter,
+        symbol_decoder: SymbolDecoder,
+        text_corrector: TextCorrector,
         stream_settings: StreamSettings,
     ) -> None:
         self._source = source
@@ -46,7 +48,8 @@ class Pipeline:
         self._keying_detector = keying_detector
         self._keying_debouncer = keying_debouncer
         self._timing_decoder = timing_decoder
-        self._interpreter = interpreter
+        self._symbol_decoder = symbol_decoder
+        self._text_corrector = text_corrector
         self._stream_settings = stream_settings
 
     def run(self) -> AsyncIterator[StreamMessage]:
@@ -117,12 +120,20 @@ class Pipeline:
             self._stream_settings.morse_elements,
         )
 
-        transcriptions = self._interpreter.process(morse_elements)
-        _maybe_stream(
-            transcriptions,
+        decoded_symbols = self._symbol_decoder.process(morse_elements)
+        decoded_symbols = _maybe_stream(
+            decoded_symbols,
             streams,
-            "transcriptions",
-            self._stream_settings.transcriptions,
+            "decoded_symbols",
+            self._stream_settings.decoded_symbols,
+        )
+
+        corrected_text = self._text_corrector.process(decoded_symbols)
+        _maybe_stream(
+            corrected_text,
+            streams,
+            "corrected_text",
+            self._stream_settings.corrected_text,
         )
 
         return StreamMerge(streams).stream()
