@@ -19,12 +19,12 @@ from morse_decoder.api.messages import (
 @dataclass(frozen=True)
 class Serializable(ABC):
     @abstractmethod
-    def serialize(self) -> OutboundMessage: ...
+    def to_message(self) -> OutboundMessage: ...
 
 
 @dataclass(frozen=True)
 class MorseElement(Serializable, ABC):
-    def serialize(self) -> OutboundMessage:
+    def to_message(self) -> OutboundMessage:
         return MorseElementMessage(data=self.notation())
 
     @abstractmethod
@@ -88,7 +88,7 @@ class ToneSpectrum(Serializable):
     ts: datetime.datetime
     magnitudes: tuple[ToneMagnitude, ...]
 
-    def serialize(self) -> OutboundMessage:
+    def to_message(self) -> OutboundMessage:
         return ToneSpectrumMessage(
             data=[float(tone.magnitude) for tone in self.magnitudes],
             ts=self.ts.timestamp(),
@@ -111,7 +111,7 @@ class Tone(Serializable):
     def with_ts(self, ts: datetime.datetime) -> Tone:
         return Tone(frequency=self.frequency, magnitude=self.magnitude, ts=ts)
 
-    def serialize(self) -> OutboundMessage:
+    def to_message(self) -> OutboundMessage:
         return ToneMessage(
             frequency=self.frequency,
             magnitude=self.magnitude,
@@ -124,7 +124,7 @@ class CarrierSample(Serializable):
     tone: Tone
     is_locked: bool
 
-    def serialize(self) -> OutboundMessage:
+    def to_message(self) -> OutboundMessage:
         return CarrierSampleMessage(
             frequency=self.tone.frequency,
             magnitude=self.tone.magnitude,
@@ -138,7 +138,7 @@ class NoiseSample(Serializable):
     noise: float
     ts: datetime.datetime
 
-    def serialize(self) -> OutboundMessage:
+    def to_message(self) -> OutboundMessage:
         return NoiseSampleMessage(magnitude=self.noise, ts=self.ts.timestamp())
 
 
@@ -153,7 +153,7 @@ class DigitalTone(Serializable):
     ts: datetime.datetime
     on: bool
 
-    def serialize(self) -> OutboundMessage:
+    def to_message(self) -> OutboundMessage:
         return DigitalToneMessage(on=self.on, ts=self.ts.timestamp())
 
 
@@ -161,5 +161,5 @@ class DigitalTone(Serializable):
 class Transcription(Serializable):
     text: str
 
-    def serialize(self) -> OutboundMessage:
+    def to_message(self) -> OutboundMessage:
         return TranscriptionMessage(data=self.text)

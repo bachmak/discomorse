@@ -85,4 +85,4 @@ async def _stream(
 ) -> AsyncIterator[OutboundMessage]:
     if is_enabled:
         async for item in items:
-            yield item.serialize()
+            yield item.to_message()

@@ -90,7 +90,7 @@ _TONE = Tone(frequency=600.0, magnitude=0.75, ts=_TS)
 def test_dto_serializes_to_its_wire_message(
     dto: Serializable, want: dict[str, object]
 ) -> None:
-    assert dto.serialize().model_dump() == want
+    assert dto.to_message().model_dump() == want
 
 
 def test_schema_covers_every_message_type() -> None:
