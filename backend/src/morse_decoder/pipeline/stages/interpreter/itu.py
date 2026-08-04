@@ -1,9 +1,6 @@
-from morse_decoder.pipeline.stages.interface import OneToOneStage
-from morse_decoder.pipeline.stages.interpreter.dto import MorseSymbol, SymbolDecoder
-from morse_decoder.pipeline.stages.interpreter.impl.classifiers import classify
-from morse_decoder.pipeline.stages.interpreter.tokens import Token, WordSpace
+"""The ITU morse alphabet: the codes and the characters they stand for."""
 
-_ITU_TABLE: dict[str, str] = {
+ITU_TABLE: dict[str, str] = {
     ".-": "A",
     "-...": "B",
     "-.-.": "C",
@@ -66,7 +63,8 @@ _ITU_TABLE: dict[str, str] = {
     "-.---.": "KN",
 }
 
-_CODE_BY_CHAR: dict[str, str] = {char: code for code, char in _ITU_TABLE.items()}
+
+_CODE_BY_CHAR: dict[str, str] = {char: code for code, char in ITU_TABLE.items()}
 
 
 def encode_char(char: str) -> str:
@@ -74,18 +72,6 @@ def encode_char(char: str) -> str:
     return _CODE_BY_CHAR.get(char.upper(), "")
 
 
-class LetterDecoder(OneToOneStage[MorseSymbol, Token], SymbolDecoder):
-    """Reads each normalized symbol as the character the ITU table gives it.
-
-    Holds nothing: the normalizer hands over whole codes, so a lookup settles
-    each one on its own and every symbol yields exactly one token.
-    """
-
-    def process_single(self, symbol: MorseSymbol) -> Token:
-        return symbol.decoded_by(self)
-
-    def decode_code(self, code: str) -> Token:
-        return classify(code, _ITU_TABLE.get(code))
-
-    def decode_break(self) -> Token:
-        return WordSpace()
+def character_for(code: str) -> str | None:
+    """The character `code` spells, or None when the table has no entry."""
+    return ITU_TABLE.get(code)

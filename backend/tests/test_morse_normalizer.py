@@ -14,7 +14,9 @@ from morse_decoder.pipeline.stages.interpreter.dto import (
     WordBreak,
 )
 from morse_decoder.pipeline.stages.interpreter.impl.events import _EVENTS, event_of
-from morse_decoder.pipeline.stages.interpreter.morse_normalizer import MorseNormalizer
+from morse_decoder.pipeline.stages.interpreter.impl.morse_normalizer import (
+    MorseNormalizer,
+)
 
 
 async def _normalize(

@@ -1,16 +1,12 @@
 import pytest
-from stream_fixtures import stream
 
 from morse_decoder.pipeline.stages.interpreter.dto import (
     CharacterCode,
     MorseSymbol,
     WordBreak,
 )
-from morse_decoder.pipeline.stages.interpreter.letter_decoder import (
-    _ITU_TABLE,
-    LetterDecoder,
-    encode_char,
-)
+from morse_decoder.pipeline.stages.interpreter.impl.letter_decoder import LetterDecoder
+from morse_decoder.pipeline.stages.interpreter.itu import ITU_TABLE, encode_char
 from morse_decoder.pipeline.stages.interpreter.tokens import (
     Digit,
     Letter,
@@ -20,37 +16,30 @@ from morse_decoder.pipeline.stages.interpreter.tokens import (
     WordSpace,
 )
 
+_TABLE = sorted(ITU_TABLE.items())
 
-async def _decode(symbols: list[MorseSymbol]) -> list[Token]:
-    """Feed ``symbols`` to one decoder the way the interpreter would."""
-    return [token async for token in LetterDecoder().process(stream(*symbols))]
+
+def _decode(symbol: MorseSymbol) -> Token:
+    return LetterDecoder().decode(symbol)
 
 
 @pytest.mark.parametrize(
-    "symbols, want",
+    "symbol, want",
     [
-        pytest.param([], [], id="empty"),
-        pytest.param([CharacterCode(".-")], [Letter("A")], id="letter"),
-        pytest.param([CharacterCode(".----")], [Digit("1")], id="digit"),
-        pytest.param([CharacterCode(".-.-.-")], [Letter(".")], id="punctuation"),
-        pytest.param([CharacterCode("...-.-")], [Prosign("SK")], id="prosign"),
+        pytest.param(CharacterCode(".-"), Letter("A"), id="letter"),
+        pytest.param(CharacterCode(".----"), Digit("1"), id="digit"),
+        pytest.param(CharacterCode(".-.-.-"), Letter("."), id="punctuation"),
+        pytest.param(CharacterCode("...-.-"), Prosign("SK"), id="prosign"),
         pytest.param(
-            [CharacterCode("........")],
-            [Unknown("........")],
+            CharacterCode("........"),
+            Unknown("........"),
             id="code-outside-the-table",
         ),
-        pytest.param([WordBreak()], [WordSpace()], id="word-break"),
-        pytest.param(
-            [CharacterCode("...."), CharacterCode(".."), WordBreak()],
-            [Letter("H"), Letter("I"), WordSpace()],
-            id="several-symbols",
-        ),
+        pytest.param(WordBreak(), WordSpace(), id="word-break"),
     ],
 )
-async def test_process_reads_each_symbol_as_its_token(
-    symbols: list[MorseSymbol], want: list[Token]
-) -> None:
-    assert await _decode(symbols) == want
+def test_decode_reads_the_symbol_as_its_token(symbol: MorseSymbol, want: Token) -> None:
+    assert _decode(symbol) == want
 
 
 @pytest.mark.parametrize(
@@ -67,23 +56,23 @@ def test_text_renders_the_token(token: Token, want: str) -> None:
     assert token.text() == want
 
 
-@pytest.mark.parametrize("code, char", sorted(_ITU_TABLE.items()))
-async def test_every_table_code_decodes_to_its_character(code: str, char: str) -> None:
+@pytest.mark.parametrize("code, char", _TABLE)
+def test_every_table_code_decodes_to_its_character(code: str, char: str) -> None:
     """No entry falls through to `Unknown`, and each reads back as itself."""
-    (token,) = await _decode([CharacterCode(code)])
+    token = _decode(CharacterCode(code))
 
     assert not isinstance(token, Unknown)
     assert token.text().strip("<>") == char
 
 
-@pytest.mark.parametrize("code, char", sorted(_ITU_TABLE.items()))
+@pytest.mark.parametrize("code, char", _TABLE)
 def test_prosigns_are_the_entries_spelled_with_several_letters(
     code: str, char: str
 ) -> None:
     """The table decides which codes are prosigns; nothing lists them twice."""
-    assert isinstance(LetterDecoder().decode_code(code), Prosign) == (len(char) > 1)
+    assert isinstance(_decode(CharacterCode(code)), Prosign) == (len(char) > 1)
 
 
-@pytest.mark.parametrize("code, char", sorted(_ITU_TABLE.items()))
+@pytest.mark.parametrize("code, char", _TABLE)
 def test_encode_char_inverts_the_table(code: str, char: str) -> None:
     assert encode_char(char) == code
