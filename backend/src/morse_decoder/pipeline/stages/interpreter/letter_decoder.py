@@ -1,11 +1,7 @@
-from morse_decoder.pipeline.dto import Mark, MorseElement
-from morse_decoder.pipeline.stages.interpreter.tokens import (
-    Digit,
-    Letter,
-    Prosign,
-    Token,
-    Unknown,
-)
+from morse_decoder.pipeline.stages.interface import OneToOneStage
+from morse_decoder.pipeline.stages.interpreter.dto import MorseSymbol, SymbolDecoder
+from morse_decoder.pipeline.stages.interpreter.impl.classifiers import classify
+from morse_decoder.pipeline.stages.interpreter.tokens import Token, WordSpace
 
 _ITU_TABLE: dict[str, str] = {
     ".-": "A",
@@ -72,26 +68,24 @@ _ITU_TABLE: dict[str, str] = {
 
 _CODE_BY_CHAR: dict[str, str] = {char: code for code, char in _ITU_TABLE.items()}
 
-# Asked in order; the first kind that claims the code wins. `Unknown` and
-# `Letter` bracket the chain, so every code yields exactly one token.
-_TOKEN_TYPES: tuple[type[Token], ...] = (Unknown, Prosign, Digit, Letter)
-
 
 def encode_char(char: str) -> str:
     """The ITU code for `char`, or an empty code when it has no entry."""
     return _CODE_BY_CHAR.get(char.upper(), "")
 
 
-def _to_code(elements: list[MorseElement]) -> str:
-    """Only marks carry code; a gap's notation is spacing, not a symbol."""
-    return "".join(e.notation() for e in elements if isinstance(e, Mark))
+class LetterDecoder(OneToOneStage[MorseSymbol, Token], SymbolDecoder):
+    """Reads each normalized symbol as the character the ITU table gives it.
 
+    Holds nothing: the normalizer hands over whole codes, so a lookup settles
+    each one on its own and every symbol yields exactly one token.
+    """
 
-def decode_sequence(elements: list[MorseElement]) -> Token:
-    code = _to_code(elements)
-    char = _ITU_TABLE.get(code)
-    for token_type in _TOKEN_TYPES:
-        token = token_type.claim(code, char)
-        if token is not None:
-            return token
-    raise AssertionError("Letter is a catch-all; the chain always yields a token")
+    def process_single(self, symbol: MorseSymbol) -> Token:
+        return symbol.decoded_by(self)
+
+    def decode_code(self, code: str) -> Token:
+        return classify(code, _ITU_TABLE.get(code))
+
+    def decode_break(self) -> Token:
+        return WordSpace()

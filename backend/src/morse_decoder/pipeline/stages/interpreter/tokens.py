@@ -1,61 +1,48 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class Token(ABC):
-    """A decoded morse symbol; the subclass is its kind, `value` its text.
+    @abstractmethod
+    def text(self) -> str: ...
 
-    Each subclass owns the rule for the codes it claims: `claim` builds an
-    instance from a decoded code and its ITU character, or returns `None`.
-    """
+
+@dataclass(frozen=True)
+class Plain(Token, ABC):
+    value: str
+
+    def text(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True)
+class Bracketed(Token, ABC):
+    """Set apart in angle brackets: carried by the message but not said in it."""
 
     value: str
 
-    @staticmethod
-    @abstractmethod
-    def claim(code: str, char: str | None) -> Token | None:
-        """Build this kind from a decoded code, or `None` if it doesn't apply."""
-        ...
+    def text(self) -> str:
+        return f"<{self.value}>"
 
 
-class Unknown(Token):
-    """A code with no ITU entry; `value` holds the raw dots and dashes."""
-
-    @staticmethod
-    def claim(code: str, char: str | None) -> Unknown | None:
-        return Unknown(code) if char is None else None
+class Letter(Plain):
+    pass
 
 
-class Prosign(Token):
-    """A procedural signal such as AA, SK, or KN."""
-
-    _MEMBERS = frozenset({"AA", "CT", "SK", "SN", "BT", "KN", "OS"})
-
-    @staticmethod
-    def claim(code: str, char: str | None) -> Prosign | None:
-        if char is not None and char in Prosign._MEMBERS:
-            return Prosign(char)
-        return None
+class Digit(Plain):
+    pass
 
 
-class Digit(Token):
-    """A numeric digit."""
-
-    _MEMBERS = frozenset("0123456789")
-
-    @staticmethod
-    def claim(code: str, char: str | None) -> Digit | None:
-        if char is not None and char in Digit._MEMBERS:
-            return Digit(char)
-        return None
+class Prosign(Bracketed):
+    pass
 
 
-class Letter(Token):
-    """Catch-all: any ITU character that no other kind claimed."""
+class Unknown(Bracketed):
+    pass
 
-    @staticmethod
-    def claim(code: str, char: str | None) -> Letter | None:
-        return Letter(char) if char is not None else None
+
+@dataclass(frozen=True)
+class WordSpace(Token):
+    def text(self) -> str:
+        return " "

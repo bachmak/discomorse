@@ -48,4 +48,6 @@ async def test_process_transcribes_one_symbol_at_a_time() -> None:
 
 
 def test_factory_builds_registered_interpreter() -> None:
-    assert isinstance(_build_interpreter(PipelineSettings()), NormalizingInterpreter)
+    settings = PipelineSettings(interpreter="NormalizingInterpreter")
+
+    assert isinstance(_build_interpreter(settings), NormalizingInterpreter)

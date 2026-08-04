@@ -112,7 +112,7 @@ class PipelineSettings(BaseSettings):
     keying_detector: str = "AdaptiveKeyingDetector"
     keying_debouncer: str = "TimedKeyingDebouncer"
     timing_decoder: str = "AdaptiveThresholdDecoder"
-    interpreter: str = "NormalizingInterpreter"
+    interpreter: str = "LetteringInterpreter"
     language: str = "en"
 
     stream_settings: StreamSettings = Field(default_factory=StreamSettings)
