@@ -17,7 +17,7 @@ interface Signals {
 
 interface Decoded {
   decodedMorse: string;
-  decodedText: string;
+  correctedText: string;
 }
 
 interface State extends Signals, Decoded {
@@ -25,14 +25,14 @@ interface State extends Signals, Decoded {
   pushSpectrum: (frame: ToneSpectrumMessage) => void;
   pushKeying: (on: boolean) => void;
   appendMorseElement: (notation: string) => void;
-  appendTranscription: (text: string) => void;
+  appendCorrectedText: (text: string) => void;
   clearDecoded: () => void;
   reset: () => void;
   setSlowMode: (on: boolean) => void;
 }
 
 const NO_SIGNALS: Signals = { spectrumFrames: [], keyingLevels: [] };
-const NO_DECODED: Decoded = { decodedMorse: "", decodedText: "" };
+const NO_DECODED: Decoded = { decodedMorse: "", correctedText: "" };
 
 export const useStore = create<State>((set) => ({
   ...NO_SIGNALS,
@@ -51,7 +51,7 @@ export const useStore = create<State>((set) => ({
 
   appendMorseElement: (notation) => set((s) => ({ decodedMorse: s.decodedMorse + notation })),
 
-  appendTranscription: (text) => set((s) => ({ decodedText: s.decodedText + text })),
+  appendCorrectedText: (text) => set((s) => ({ correctedText: s.correctedText + text })),
 
   clearDecoded: () => set({ ...NO_DECODED }),
 

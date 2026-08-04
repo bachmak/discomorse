@@ -1,13 +1,12 @@
 import type {
+  ChannelName,
   DigitalToneMessage,
-  MorseElementMessage,
   OutboundMessage,
+  TextMessage,
   ToneSpectrumMessage,
-  TranscriptionMessage,
 } from "../types/ws";
+import type { ChannelPayload } from "./channels";
 import type { MessageSink } from "./sink";
-
-export type MessageType = OutboundMessage["type"];
 
 export interface MessageHandler<M extends OutboundMessage> {
   handle(message: M, sink: MessageSink): void;
@@ -25,35 +24,38 @@ class DigitalToneHandler implements MessageHandler<DigitalToneMessage> {
   }
 }
 
-class MorseElementHandler implements MessageHandler<MorseElementMessage> {
-  handle(message: MorseElementMessage, sink: MessageSink): void {
+class MorseElementHandler implements MessageHandler<TextMessage> {
+  handle(message: TextMessage, sink: MessageSink): void {
     sink.appendMorseElement(message.data);
   }
 }
 
-class TranscriptionHandler implements MessageHandler<TranscriptionMessage> {
-  handle(message: TranscriptionMessage, sink: MessageSink): void {
-    sink.appendTranscription(message.data);
+class CorrectedTextHandler implements MessageHandler<TextMessage> {
+  handle(message: TextMessage, sink: MessageSink): void {
+    sink.appendCorrectedText(message.data);
   }
 }
 
-// Diagnostic streams the backend can be configured to send but no chart reads.
+// Diagnostic streams the backend can be configured to send but no view reads.
 class IgnoredHandler implements MessageHandler<OutboundMessage> {
   handle(): void {}
 }
 
 const IGNORED = new IgnoredHandler();
 
+// A channel the backend can name must have a handler, or this fails to compile.
 type HandlerTable = {
-  [T in MessageType]: MessageHandler<Extract<OutboundMessage, { type: T }>>;
+  [C in ChannelName]: MessageHandler<ChannelPayload[C]>;
 };
 
 export const HANDLERS: HandlerTable = {
-  tone_spectrum: new ToneSpectrumHandler(),
-  digital_tone: new DigitalToneHandler(),
-  morse_element: new MorseElementHandler(),
-  transcription: new TranscriptionHandler(),
-  tone: IGNORED,
-  carrier_sample: IGNORED,
-  noise_sample: IGNORED,
+  spectrums: new ToneSpectrumHandler(),
+  debounced_tones: new DigitalToneHandler(),
+  morse_elements: new MorseElementHandler(),
+  corrected_text: new CorrectedTextHandler(),
+  limited_spectrums: IGNORED,
+  carrier_samples: IGNORED,
+  noise_samples: IGNORED,
+  raw_tones: IGNORED,
+  decoded_symbols: IGNORED,
 };
