@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterable, AsyncIterator
 
-from morse_decoder.api.messages import OutboundMessage
+from morse_decoder.api.messages import ChannelName, StreamMessage
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.config import StreamSettings
 from morse_decoder.pipeline.dto import (
@@ -49,14 +49,15 @@ class Pipeline:
         self._interpreter = interpreter
         self._stream_settings = stream_settings
 
-    def run(self) -> AsyncIterator[OutboundMessage]:
+    def run(self) -> AsyncIterator[StreamMessage]:
         chunks = self._source.stream()
-        streams: list[AsyncIterator[OutboundMessage]] = []
+        streams: list[AsyncIterable[StreamMessage]] = []
 
         spectrums = self._spectrum_analyzer.process(chunks)
         spectrums = _maybe_stream(
             spectrums,
             streams,
+            "spectrums",
             self._stream_settings.spectrums,
         )
 
@@ -64,6 +65,7 @@ class Pipeline:
         limited_spectrums = _maybe_stream(
             limited_spectrums,
             streams,
+            "limited_spectrums",
             self._stream_settings.limited_spectrums,
         )
 
@@ -73,6 +75,7 @@ class Pipeline:
         carrier_samples = _maybe_stream(
             carrier_samples,
             streams,
+            "carrier_samples",
             self._stream_settings.carrier_samples,
         )
 
@@ -80,6 +83,7 @@ class Pipeline:
         noise_samples = _maybe_stream(
             noise_samples,
             streams,
+            "noise_samples",
             self._stream_settings.noise_samples,
         )
 
@@ -93,6 +97,7 @@ class Pipeline:
         raw_tones = _maybe_stream(
             raw_tones,
             streams,
+            "raw_tones",
             self._stream_settings.raw_tones,
         )
 
@@ -100,45 +105,46 @@ class Pipeline:
         debounced_tones = _maybe_stream(
             debounced_tones,
             streams,
+            "debounced_tones",
             self._stream_settings.debounced_tones,
         )
 
-        tones_to_decoder, tones_to_messages = StreamFork(debounced_tones).branches()
-
-        morse_elements = self._timing_decoder.process(tones_to_decoder)
+        morse_elements = self._timing_decoder.process(debounced_tones)
         morse_elements = _maybe_stream(
             morse_elements,
             streams,
+            "morse_elements",
             self._stream_settings.morse_elements,
         )
 
-        morse_to_interpreter, morse_to_messages = StreamFork(morse_elements).branches()
-
-        transcriptions = self._interpreter.process(morse_to_interpreter)
+        transcriptions = self._interpreter.process(morse_elements)
         _maybe_stream(
             transcriptions,
             streams,
+            "transcriptions",
             self._stream_settings.transcriptions,
         )
 
         return StreamMerge(streams).stream()
 
 
-def _maybe_stream(
-    items: AsyncIterator[Serializable],
-    streams: list[AsyncIterator[OutboundMessage]],
+def _maybe_stream[T: Serializable](
+    items: AsyncIterator[T],
+    streams: list[AsyncIterable[StreamMessage]],
+    channel: ChannelName,
     is_enabled: bool,
-) -> AsyncIterator[Serializable]:
+) -> AsyncIterator[T]:
     if not is_enabled:
         return items
 
     left_branch, right_branch = StreamFork(items).branches()
-    streams.append(_serialize(left_branch))
+    streams.append(_serialize(left_branch, channel))
     return right_branch
 
 
 async def _serialize(
     items: AsyncIterable[Serializable],
-) -> AsyncIterator[OutboundMessage]:
+    channel: ChannelName,
+) -> AsyncIterator[StreamMessage]:
     async for item in items:
-        yield item.to_message()
+        yield StreamMessage(channel=channel, payload=item.to_message())
