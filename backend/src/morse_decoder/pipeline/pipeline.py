@@ -2,6 +2,7 @@ from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.api.messages import OutboundMessage
 from morse_decoder.audio.source import AudioSource
+from morse_decoder.config import StreamSettings
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
     Serializable,
@@ -35,6 +36,7 @@ class Pipeline:
         keying_debouncer: KeyingDebouncer,
         timing_decoder: TimingDecoder,
         interpreter: Interpreter,
+        stream_settings: StreamSettings,
     ) -> None:
         self._source = source
         self._spectrum_analyzer = spectrum_analyzer
@@ -45,6 +47,7 @@ class Pipeline:
         self._keying_debouncer = keying_debouncer
         self._timing_decoder = timing_decoder
         self._interpreter = interpreter
+        self._stream_settings = stream_settings
 
     def run(self) -> AsyncIterator[OutboundMessage]:
         chunks = self._source.stream()
@@ -68,15 +71,18 @@ class Pipeline:
         transcriptions = self._interpreter.process(morse_to_interpreter)
 
         message_stream = StreamMerge(
-            _stream(to_messages),
-            _stream(tones_to_messages),
-            _stream(morse_to_messages),
-            _stream(transcriptions),
+            _stream(to_messages, self._stream_settings.spectrums),
+            _stream(tones_to_messages, self._stream_settings.debounced_tones),
+            _stream(morse_to_messages, self._stream_settings.morse_elements),
+            _stream(transcriptions, self._stream_settings.transcriptions),
         )
 
         return message_stream.stream()
 
 
-async def _stream(items: AsyncIterable[Serializable]) -> AsyncIterator[OutboundMessage]:
-    async for item in items:
-        yield item.serialize()
+async def _stream(
+    items: AsyncIterable[Serializable], is_enabled: bool
+) -> AsyncIterator[OutboundMessage]:
+    if is_enabled:
+        async for item in items:
+            yield item.serialize()

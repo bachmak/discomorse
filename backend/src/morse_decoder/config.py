@@ -19,6 +19,17 @@ class AudioSettings(BaseSettings):
     chunk_size: int = 2048
 
 
+class StreamSettings(BaseSettings):
+    spectrums: bool = True
+    limited_spectrums: bool = False
+    carrier_samples: bool = False
+    noise_samples: bool = False
+    raw_tones: bool = False
+    debounced_tones: bool = True
+    morse_elements: bool = True
+    transcriptions: bool = True
+
+
 class SpectrumAnalyzerSettings(BaseSettings):
     sample_rate: int = 8000
     n_fft: int = 128
@@ -103,6 +114,9 @@ class PipelineSettings(BaseSettings):
     timing_decoder: str = "AdaptiveThresholdDecoder"
     interpreter: str = "DummyInterpreter"
     language: str = "en"
+
+    stream_settings: StreamSettings = Field(default_factory=StreamSettings)
+
     spectrum_analyzer_settings: SpectrumAnalyzerSettings = Field(
         default_factory=SpectrumAnalyzerSettings
     )
