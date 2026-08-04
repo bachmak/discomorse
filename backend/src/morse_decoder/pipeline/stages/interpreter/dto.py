@@ -17,9 +17,6 @@ class SymbolDecoder(ABC):
 @dataclass(frozen=True)
 class MorseSymbol(ABC):
     @abstractmethod
-    def notation(self) -> str: ...
-
-    @abstractmethod
     def decoded_by(self, decoder: SymbolDecoder) -> Token: ...
 
 
@@ -27,17 +24,11 @@ class MorseSymbol(ABC):
 class CharacterCode(MorseSymbol):
     code: str
 
-    def notation(self) -> str:
-        return self.code
-
     def decoded_by(self, decoder: SymbolDecoder) -> Token:
         return decoder.decode_code(self.code)
 
 
 @dataclass(frozen=True)
 class WordBreak(MorseSymbol):
-    def notation(self) -> str:
-        return "/"
-
     def decoded_by(self, decoder: SymbolDecoder) -> Token:
         return decoder.decode_break()
