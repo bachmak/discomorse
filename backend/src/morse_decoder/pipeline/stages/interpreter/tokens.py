@@ -34,6 +34,10 @@ class Digit(Plain):
     pass
 
 
+class Punctuation(Plain):
+    """A mark the message is written with rather than a character it spells."""
+
+
 class Prosign(Bracketed):
     pass
 

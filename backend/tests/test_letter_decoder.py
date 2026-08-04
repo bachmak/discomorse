@@ -11,6 +11,7 @@ from morse_decoder.pipeline.stages.interpreter.tokens import (
     Digit,
     Letter,
     Prosign,
+    Punctuation,
     Token,
     Unknown,
     WordSpace,
@@ -28,7 +29,7 @@ def _decode(symbol: MorseSymbol) -> Token:
     [
         pytest.param(CharacterCode(".-"), Letter("A"), id="letter"),
         pytest.param(CharacterCode(".----"), Digit("1"), id="digit"),
-        pytest.param(CharacterCode(".-.-.-"), Letter("."), id="punctuation"),
+        pytest.param(CharacterCode(".-.-.-"), Punctuation("."), id="punctuation"),
         pytest.param(CharacterCode("...-.-"), Prosign("SK"), id="prosign"),
         pytest.param(
             CharacterCode("........"),
@@ -47,6 +48,7 @@ def test_decode_reads_the_symbol_as_its_token(symbol: MorseSymbol, want: Token) 
     [
         pytest.param(Letter("A"), "A", id="letter-reads-as-itself"),
         pytest.param(Digit("5"), "5", id="digit-reads-as-itself"),
+        pytest.param(Punctuation("?"), "?", id="punctuation-reads-as-itself"),
         pytest.param(Prosign("SK"), "<SK>", id="prosign-is-set-apart"),
         pytest.param(Unknown("....-.-"), "<....-.->", id="unknown-keeps-its-notation"),
         pytest.param(WordSpace(), " ", id="word-space-is-a-space"),

@@ -32,6 +32,16 @@ cd backend
 uv run python scripts/decode_file.py test_audio/<audio-file-name>
 ```
 
+The interpreter groups letters into words against a word list shipped under
+`src/morse_decoder/models/<language>/`. It is committed, so nothing needs
+rebuilding to run the app. To regenerate it, or to add a language:
+
+```bash
+cd backend
+curl -L -o count_1w.txt https://norvig.com/ngrams/count_1w.txt
+uv run python scripts/build_lexicon.py count_1w.txt --language en
+```
+
 **Frontend**
 
 ```bash

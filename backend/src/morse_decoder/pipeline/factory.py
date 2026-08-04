@@ -24,6 +24,9 @@ from morse_decoder.pipeline.stages.interpreter.lettering_interpreter import (
 from morse_decoder.pipeline.stages.interpreter.normalizing_interpreter import (
     NormalizingInterpreter,
 )
+from morse_decoder.pipeline.stages.interpreter.wording_interpreter import (
+    WordingInterpreter,
+)
 from morse_decoder.pipeline.stages.keying_debouncer.interface import KeyingDebouncer
 from morse_decoder.pipeline.stages.keying_debouncer.timed_keying_debouncer import (
     TimedKeyingDebouncer,
@@ -91,6 +94,7 @@ _TIMING_DECODERS: dict[str, _StageConstructor[TimingDecoderSettings, TimingDecod
 _INTERPRETERS: dict[str, _StageConstructor[InterpreterSettings, Interpreter]] = {
     "NormalizingInterpreter": NormalizingInterpreter,
     "LetteringInterpreter": LetteringInterpreter,
+    "WordingInterpreter": WordingInterpreter,
 }
 
 

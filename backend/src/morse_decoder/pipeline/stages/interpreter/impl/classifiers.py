@@ -6,6 +6,7 @@ from morse_decoder.pipeline.stages.interpreter.tokens import (
     Digit,
     Letter,
     Prosign,
+    Punctuation,
     Token,
     Unknown,
 )
@@ -37,6 +38,13 @@ class DigitClassifier(TokenClassifier):
         return Digit(char) if char is not None and char in _DIGITS else None
 
 
+class PunctuationClassifier(TokenClassifier):
+    """What the table spells with neither a letter nor a digit is a mark."""
+
+    def claim(self, code: str, char: str | None) -> Token | None:
+        return Punctuation(char) if char is not None and not char.isalnum() else None
+
+
 class LetterClassifier(TokenClassifier):
     def claim(self, code: str, char: str | None) -> Token | None:
         return Letter(char) if char is not None else None
@@ -48,6 +56,7 @@ _CLASSIFIERS: tuple[TokenClassifier, ...] = (
     UnknownClassifier(),
     ProsignClassifier(),
     DigitClassifier(),
+    PunctuationClassifier(),
     LetterClassifier(),
 )
 
