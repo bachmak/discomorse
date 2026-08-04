@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterable, AsyncIterator
 
-from morse_decoder.api.events import OutboundEvent
+from morse_decoder.api.messages import OutboundMessage
 from morse_decoder.audio.source import AudioSource
 from morse_decoder.pipeline.dto import (
     CarrierNoiseSample,
@@ -46,10 +46,10 @@ class Pipeline:
         self._timing_decoder = timing_decoder
         self._interpreter = interpreter
 
-    def run(self) -> AsyncIterator[OutboundEvent]:
+    def run(self) -> AsyncIterator[OutboundMessage]:
         chunks = self._source.stream()
         raw_spectrums = self._spectrum_analyzer.process(chunks)
-        to_events, to_limiter = StreamFork(raw_spectrums).branches()
+        to_messages, to_limiter = StreamFork(raw_spectrums).branches()
 
         limited_spectrums = self._spectrum_limiter.process(to_limiter)
         to_carrier_source, to_noise_estimator = StreamFork(limited_spectrums).branches()
@@ -62,21 +62,21 @@ class Pipeline:
         )
         raw_tones = self._keying_detector.process(carrier_noise_samples)
         debounced_tones = self._keying_debouncer.process(raw_tones)
-        tones_to_decoder, tones_to_events = StreamFork(debounced_tones).branches()
+        tones_to_decoder, tones_to_messages = StreamFork(debounced_tones).branches()
         morse_elements = self._timing_decoder.process(tones_to_decoder)
-        morse_to_interpreter, morse_to_events = StreamFork(morse_elements).branches()
+        morse_to_interpreter, morse_to_messages = StreamFork(morse_elements).branches()
         transcriptions = self._interpreter.process(morse_to_interpreter)
 
-        event_stream = StreamMerge(
-            _stream(to_events),
-            _stream(tones_to_events),
-            _stream(morse_to_events),
+        message_stream = StreamMerge(
+            _stream(to_messages),
+            _stream(tones_to_messages),
+            _stream(morse_to_messages),
             _stream(transcriptions),
         )
 
-        return event_stream.stream()
+        return message_stream.stream()
 
 
-async def _stream(items: AsyncIterable[Serializable]) -> AsyncIterator[OutboundEvent]:
+async def _stream(items: AsyncIterable[Serializable]) -> AsyncIterator[OutboundMessage]:
     async for item in items:
         yield item.serialize()

@@ -30,11 +30,11 @@ async def handle_file_upload(file: UploadFile) -> StreamingResponse:
 
 
 class FileSession:
-    """Streams a decoded file's events out as newline-delimited JSON."""
+    """Streams a decoded file's messages out as newline-delimited JSON."""
 
     def __init__(self, pipeline: Pipeline) -> None:
         self._pipeline = pipeline
 
     async def run(self) -> AsyncIterator[str]:
-        async for event in self._pipeline.run():
-            yield f"{event.model_dump_json()}\n"
+        async for message in self._pipeline.run():
+            yield f"{message.model_dump_json()}\n"

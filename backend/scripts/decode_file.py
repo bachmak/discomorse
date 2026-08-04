@@ -12,10 +12,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
 
-from morse_decoder.api.events import (
-    MorseElementEvent,
-    OutboundEvent,
-    TranscriptionEvent,
+from morse_decoder.api.messages import (
+    MorseElementMessage,
+    OutboundMessage,
+    TranscriptionMessage,
 )
 from morse_decoder.audio.file_source import FileSource
 from morse_decoder.audio.impl.decoder import SoundFileDecoder
@@ -28,13 +28,13 @@ _EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.UTC)
 
 
 class Excerpt(ABC):
-    """One labelled line of the report, fed by the events it recognizes."""
+    """One labelled line of the report, fed by the messages it recognizes."""
 
     def __init__(self) -> None:
         self._parts: list[str] = []
 
-    def absorb(self, event: OutboundEvent) -> None:
-        self._parts.extend(self._fragments(event))
+    def absorb(self, message: OutboundMessage) -> None:
+        self._parts.extend(self._fragments(message))
 
     def text(self) -> str:
         """Everything this excerpt collected, unlabelled."""
@@ -48,8 +48,8 @@ class Excerpt(ABC):
     def _label(self) -> str: ...
 
     @abstractmethod
-    def _fragments(self, event: OutboundEvent) -> tuple[str, ...]:
-        """What this excerpt reads off the event; empty when it isn't its business."""
+    def _fragments(self, message: OutboundMessage) -> tuple[str, ...]:
+        """What this excerpt reads off the message; empty when it isn't its business."""
         ...
 
 
@@ -60,8 +60,8 @@ class MorseExcerpt(Excerpt):
     def _label(self) -> str:
         return "morse"
 
-    def _fragments(self, event: OutboundEvent) -> tuple[str, ...]:
-        return (event.data,) if isinstance(event, MorseElementEvent) else ()
+    def _fragments(self, message: OutboundMessage) -> tuple[str, ...]:
+        return (message.data,) if isinstance(message, MorseElementMessage) else ()
 
 
 class TextExcerpt(Excerpt):
@@ -71,8 +71,8 @@ class TextExcerpt(Excerpt):
     def _label(self) -> str:
         return "text"
 
-    def _fragments(self, event: OutboundEvent) -> tuple[str, ...]:
-        return (event.data,) if isinstance(event, TranscriptionEvent) else ()
+    def _fragments(self, message: OutboundMessage) -> tuple[str, ...]:
+        return (message.data,) if isinstance(message, TranscriptionMessage) else ()
 
 
 class Report:
@@ -81,9 +81,9 @@ class Report:
     def __init__(self, excerpts: Sequence[Excerpt]) -> None:
         self._excerpts = excerpts
 
-    def absorb(self, event: OutboundEvent) -> None:
+    def absorb(self, message: OutboundMessage) -> None:
         for excerpt in self._excerpts:
-            excerpt.absorb(event)
+            excerpt.absorb(message)
 
     def render(self) -> str:
         return "\n".join(excerpt.render() for excerpt in self._excerpts)
@@ -98,8 +98,8 @@ class FileDecoding:
         self._report = report
 
     async def run(self) -> Report:
-        async for event in self._pipeline().run():
-            self._report.absorb(event)
+        async for message in self._pipeline().run():
+            self._report.absorb(message)
         return self._report
 
     def _pipeline(self) -> Pipeline:

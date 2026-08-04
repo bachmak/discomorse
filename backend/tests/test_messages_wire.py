@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-from morse_decoder.api.events import outbound_event_json_schema
+from morse_decoder.api.messages import outbound_message_json_schema
 from morse_decoder.pipeline.dto import (
     CarrierSample,
     Dah,
@@ -87,14 +87,14 @@ _TONE = Tone(frequency=600.0, magnitude=0.75, ts=_TS)
         ),
     ],
 )
-def test_dto_serializes_to_its_wire_event(
+def test_dto_serializes_to_its_wire_message(
     dto: Serializable, want: dict[str, object]
 ) -> None:
     assert dto.serialize().model_dump() == want
 
 
-def test_schema_covers_every_event_type() -> None:
-    schema = outbound_event_json_schema()
+def test_schema_covers_every_message_type() -> None:
+    schema = outbound_message_json_schema()
     mapping = schema["discriminator"]["mapping"]  # type: ignore[index]  # schema is dict[str, object]
 
     assert set(mapping) == {

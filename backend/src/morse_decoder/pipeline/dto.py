@@ -4,28 +4,28 @@ import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from morse_decoder.api.events import (
-    CarrierSampleEvent,
-    DigitalToneEvent,
-    MorseElementEvent,
-    NoiseSampleEvent,
-    OutboundEvent,
-    ToneEvent,
-    ToneSpectrumEvent,
-    TranscriptionEvent,
+from morse_decoder.api.messages import (
+    CarrierSampleMessage,
+    DigitalToneMessage,
+    MorseElementMessage,
+    NoiseSampleMessage,
+    OutboundMessage,
+    ToneMessage,
+    ToneSpectrumMessage,
+    TranscriptionMessage,
 )
 
 
 @dataclass(frozen=True)
 class Serializable(ABC):
     @abstractmethod
-    def serialize(self) -> OutboundEvent: ...
+    def serialize(self) -> OutboundMessage: ...
 
 
 @dataclass(frozen=True)
 class MorseElement(Serializable, ABC):
-    def serialize(self) -> OutboundEvent:
-        return MorseElementEvent(data=self.notation())
+    def serialize(self) -> OutboundMessage:
+        return MorseElementMessage(data=self.notation())
 
     @abstractmethod
     def notation(self) -> str: ...
@@ -33,6 +33,7 @@ class MorseElement(Serializable, ABC):
 
 @dataclass(frozen=True)
 class Mark(MorseElement, ABC):
+    pass
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ class Dah(Mark):
 
 @dataclass(frozen=True)
 class Gap(MorseElement, ABC):
+    pass
 
 
 @dataclass(frozen=True)
@@ -86,8 +88,8 @@ class ToneSpectrum(Serializable):
     ts: datetime.datetime
     magnitudes: tuple[ToneMagnitude, ...]
 
-    def serialize(self) -> OutboundEvent:
-        return ToneSpectrumEvent(
+    def serialize(self) -> OutboundMessage:
+        return ToneSpectrumMessage(
             data=[float(tone.magnitude) for tone in self.magnitudes],
             ts=self.ts.timestamp(),
         )
@@ -109,8 +111,8 @@ class Tone(Serializable):
     def with_ts(self, ts: datetime.datetime) -> Tone:
         return Tone(frequency=self.frequency, magnitude=self.magnitude, ts=ts)
 
-    def serialize(self) -> OutboundEvent:
-        return ToneEvent(
+    def serialize(self) -> OutboundMessage:
+        return ToneMessage(
             frequency=self.frequency,
             magnitude=self.magnitude,
             ts=self.ts.timestamp(),
@@ -122,8 +124,8 @@ class CarrierSample(Serializable):
     tone: Tone
     is_locked: bool
 
-    def serialize(self) -> OutboundEvent:
-        return CarrierSampleEvent(
+    def serialize(self) -> OutboundMessage:
+        return CarrierSampleMessage(
             frequency=self.tone.frequency,
             magnitude=self.tone.magnitude,
             is_locked=self.is_locked,
@@ -136,8 +138,8 @@ class NoiseSample(Serializable):
     noise: float
     ts: datetime.datetime
 
-    def serialize(self) -> OutboundEvent:
-        return NoiseSampleEvent(magnitude=self.noise, ts=self.ts.timestamp())
+    def serialize(self) -> OutboundMessage:
+        return NoiseSampleMessage(magnitude=self.noise, ts=self.ts.timestamp())
 
 
 @dataclass(frozen=True)
@@ -151,13 +153,13 @@ class DigitalTone(Serializable):
     ts: datetime.datetime
     on: bool
 
-    def serialize(self) -> OutboundEvent:
-        return DigitalToneEvent(on=self.on, ts=self.ts.timestamp())
+    def serialize(self) -> OutboundMessage:
+        return DigitalToneMessage(on=self.on, ts=self.ts.timestamp())
 
 
 @dataclass(frozen=True)
 class Transcription(Serializable):
     text: str
 
-    def serialize(self) -> OutboundEvent:
-        return TranscriptionEvent(data=self.text)
+    def serialize(self) -> OutboundMessage:
+        return TranscriptionMessage(data=self.text)
