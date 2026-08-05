@@ -101,7 +101,12 @@ class TimingDecoderSettings(BaseSettings):
     word_threshold: float = Field(default=5.0, gt=1)
 
 
-class InterpreterSettings(BaseSettings):
+class SymbolDecoderSettings(BaseSettings):
+    """Reading a code off the ITU table takes no deciding, so there is nothing
+    here to tune."""
+
+
+class TextCorrectorSettings(BaseSettings):
     """How much the decoder's own spacing is worth against what a language says.
 
     Both penalties are in nats, the same currency the word costs are quoted in.
@@ -114,14 +119,6 @@ class InterpreterSettings(BaseSettings):
     split_penalty: float = Field(default=5.0, ge=0)
 
 
-class SymbolDecoderSettings(BaseSettings):
-    pass
-
-
-class TextCorrectorSettings(BaseSettings):
-    pass
-
-
 class PipelineSettings(BaseSettings):
     spectrum_analyzer: str = "STFTSpectrumAnalyzer"
     spectrum_limiter: str = "StaticSpectrumLimiter"
@@ -130,8 +127,8 @@ class PipelineSettings(BaseSettings):
     keying_detector: str = "AdaptiveKeyingDetector"
     keying_debouncer: str = "TimedKeyingDebouncer"
     timing_decoder: str = "AdaptiveThresholdDecoder"
-    symbol_decoder: str = "DummySymbolDecoder"
-    text_corrector: str = "DummyTextCorrector"
+    symbol_decoder: str = "ItuSymbolDecoder"
+    text_corrector: str = "WordingTextCorrector"
 
     stream_settings: StreamSettings = Field(default_factory=StreamSettings)
 

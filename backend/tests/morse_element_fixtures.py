@@ -15,7 +15,7 @@ from morse_decoder.pipeline.dto import (
     MorseElement,
     WordGap,
 )
-from morse_decoder.pipeline.stages.interpreter.itu import encode_char
+from morse_decoder.pipeline.stages.symbol_decoder.itu import encode_char
 
 _MARKS: dict[str, MorseElement] = {".": Dit(), "-": Dah()}
 

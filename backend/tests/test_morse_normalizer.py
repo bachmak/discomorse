@@ -8,14 +8,14 @@ from morse_decoder.pipeline.dto import (
     MorseElement,
     WordGap,
 )
-from morse_decoder.pipeline.stages.interpreter.dto import (
+from morse_decoder.pipeline.stages.symbol_decoder.impl.events import _EVENTS, event_of
+from morse_decoder.pipeline.stages.symbol_decoder.impl.morse_normalizer import (
+    MorseNormalizer,
+)
+from morse_decoder.pipeline.stages.symbol_decoder.impl.symbols import (
     CharacterCode,
     MorseSymbol,
     WordBreak,
-)
-from morse_decoder.pipeline.stages.interpreter.impl.events import _EVENTS, event_of
-from morse_decoder.pipeline.stages.interpreter.impl.morse_normalizer import (
-    MorseNormalizer,
 )
 
 

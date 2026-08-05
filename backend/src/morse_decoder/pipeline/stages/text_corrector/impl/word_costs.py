@@ -3,7 +3,7 @@
 import math
 from abc import ABC, abstractmethod
 
-from morse_decoder.pipeline.stages.interpreter.impl.lexicon import Lexicon
+from morse_decoder.pipeline.stages.text_corrector.impl.lexicon import Lexicon
 
 # What share of the words a message uses each kind accounts for. A word is
 # nearly always one the language knows; the rest are numbers and the odd

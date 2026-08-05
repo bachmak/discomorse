@@ -10,7 +10,7 @@ from morse_decoder.pipeline.dto import (
     MorseElement,
     WordGap,
 )
-from morse_decoder.pipeline.stages.interpreter.impl.fsm import (
+from morse_decoder.pipeline.stages.symbol_decoder.impl.fsm import (
     NormalizationState,
     StateTransition,
 )

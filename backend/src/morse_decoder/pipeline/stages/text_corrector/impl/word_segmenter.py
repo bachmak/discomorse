@@ -1,14 +1,14 @@
 """Grouping a stream of characters into the words it spells."""
 
-from morse_decoder.pipeline.stages.interpreter.impl.lattice import (
+from morse_decoder.pipeline.stages.text_corrector.impl.lattice import (
     BreakPrior,
     CharacterRun,
     ConfidentPrefix,
     Lattice,
     SettledPrefix,
 )
-from morse_decoder.pipeline.stages.interpreter.impl.lexicon import Lexicon
-from morse_decoder.pipeline.stages.interpreter.impl.word_costs import WordPrice
+from morse_decoder.pipeline.stages.text_corrector.impl.lexicon import Lexicon
+from morse_decoder.pipeline.stages.text_corrector.impl.word_costs import WordPrice
 
 
 class WordSegmenter:

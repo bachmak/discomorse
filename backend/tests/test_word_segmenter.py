@@ -2,10 +2,12 @@
 
 import pytest
 
-from morse_decoder.pipeline.stages.interpreter.impl.lattice import BreakPrior
-from morse_decoder.pipeline.stages.interpreter.impl.lexicon import lexicon_for
-from morse_decoder.pipeline.stages.interpreter.impl.word_costs import WordPrice
-from morse_decoder.pipeline.stages.interpreter.impl.word_segmenter import WordSegmenter
+from morse_decoder.pipeline.stages.text_corrector.impl.lattice import BreakPrior
+from morse_decoder.pipeline.stages.text_corrector.impl.lexicon import lexicon_for
+from morse_decoder.pipeline.stages.text_corrector.impl.word_costs import WordPrice
+from morse_decoder.pipeline.stages.text_corrector.impl.word_segmenter import (
+    WordSegmenter,
+)
 
 _BREAK = " "
 

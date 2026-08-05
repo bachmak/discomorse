@@ -1,13 +1,12 @@
 import pytest
 
-from morse_decoder.pipeline.stages.interpreter.dto import (
+from morse_decoder.pipeline.stages.symbol_decoder.impl.code_reader import ItuCodeReader
+from morse_decoder.pipeline.stages.symbol_decoder.impl.symbols import (
     CharacterCode,
     MorseSymbol,
     WordBreak,
 )
-from morse_decoder.pipeline.stages.interpreter.impl.letter_decoder import LetterDecoder
-from morse_decoder.pipeline.stages.interpreter.itu import ITU_TABLE, encode_char
-from morse_decoder.pipeline.stages.interpreter.tokens import (
+from morse_decoder.pipeline.stages.symbol_decoder.impl.tokens import (
     Digit,
     Letter,
     Prosign,
@@ -16,12 +15,13 @@ from morse_decoder.pipeline.stages.interpreter.tokens import (
     Unknown,
     WordSpace,
 )
+from morse_decoder.pipeline.stages.symbol_decoder.itu import ITU_TABLE, encode_char
 
 _TABLE = sorted(ITU_TABLE.items())
 
 
 def _decode(symbol: MorseSymbol) -> Token:
-    return LetterDecoder().decode(symbol)
+    return ItuCodeReader().read(symbol)
 
 
 @pytest.mark.parametrize(

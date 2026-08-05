@@ -2,7 +2,7 @@
 
 import pytest
 
-from morse_decoder.pipeline.stages.interpreter.impl.spacing import (
+from morse_decoder.pipeline.stages.text_corrector.impl.spacing import (
     Leading,
     Marks,
     Piece,

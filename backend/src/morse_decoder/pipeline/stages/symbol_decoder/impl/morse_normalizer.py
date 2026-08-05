@@ -1,13 +1,13 @@
 from collections.abc import AsyncIterable, AsyncIterator
 
 from morse_decoder.pipeline.dto import MorseElement
-from morse_decoder.pipeline.stages.interpreter.dto import MorseSymbol
-from morse_decoder.pipeline.stages.interpreter.impl.events import event_of
-from morse_decoder.pipeline.stages.interpreter.impl.fsm import (
+from morse_decoder.pipeline.stages.symbol_decoder.impl.events import event_of
+from morse_decoder.pipeline.stages.symbol_decoder.impl.fsm import (
     LeadingSilence,
     NormalizationState,
     StateTransition,
 )
+from morse_decoder.pipeline.stages.symbol_decoder.impl.symbols import MorseSymbol
 
 
 class MorseNormalizer:
