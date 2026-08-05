@@ -5,7 +5,7 @@ export function SlowModeToggle() {
   const setSlowMode = useStore((s) => s.setSlowMode);
 
   return (
-    <label className="slow-toggle" title="Slow the charts down so the keying is readable">
+    <label className="slow-toggle" title="Run at the speed of the signal so the keying is readable">
       <input
         type="checkbox"
         role="switch"
