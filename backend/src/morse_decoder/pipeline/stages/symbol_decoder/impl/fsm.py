@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from morse_decoder.pipeline.stages.interpreter.dto import (
+from morse_decoder.pipeline.stages.symbol_decoder.impl.symbols import (
     CharacterCode,
     MorseSymbol,
     WordBreak,

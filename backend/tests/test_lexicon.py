@@ -4,8 +4,8 @@ import math
 
 import pytest
 
-from morse_decoder.pipeline.stages.interpreter.impl.lexicon import lexicon_for
-from morse_decoder.pipeline.stages.interpreter.impl.word_costs import WordPrice
+from morse_decoder.pipeline.stages.text_corrector.impl.lexicon import lexicon_for
+from morse_decoder.pipeline.stages.text_corrector.impl.word_costs import WordPrice
 
 _LEXICON = lexicon_for("en")
 _PRICE = WordPrice(_LEXICON)

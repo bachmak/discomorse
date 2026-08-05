@@ -6,8 +6,8 @@ import math
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 
-from morse_decoder.pipeline.stages.interpreter.impl.lexicon import Lexicon
-from morse_decoder.pipeline.stages.interpreter.impl.word_costs import WordPrice
+from morse_decoder.pipeline.stages.text_corrector.impl.lexicon import Lexicon
+from morse_decoder.pipeline.stages.text_corrector.impl.word_costs import WordPrice
 
 # A one-character word has no interior, so "no breaks inside it" is true of it
 # whatever the spacing looks like. A cut is only vouched for by a word that

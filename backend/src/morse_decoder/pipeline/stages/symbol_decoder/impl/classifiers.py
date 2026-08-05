@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from morse_decoder.pipeline.stages.interpreter.tokens import (
+from morse_decoder.pipeline.stages.symbol_decoder.impl.tokens import (
     Digit,
     Letter,
     Prosign,

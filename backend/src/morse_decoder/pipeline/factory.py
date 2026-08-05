@@ -38,14 +38,14 @@ from morse_decoder.pipeline.stages.spectrum_limiter.interface import SpectrumLim
 from morse_decoder.pipeline.stages.spectrum_limiter.static_spectrum_limiter import (
     StaticSpectrumLimiter,
 )
-from morse_decoder.pipeline.stages.symbol_decoder.dummy_symbol_decoder import (
-    DummySymbolDecoder,
-)
 from morse_decoder.pipeline.stages.symbol_decoder.interface import SymbolDecoder
-from morse_decoder.pipeline.stages.text_corrector.dummy_text_corrector import (
-    DummyTextCorrector,
+from morse_decoder.pipeline.stages.symbol_decoder.itu_symbol_decoder import (
+    ItuSymbolDecoder,
 )
 from morse_decoder.pipeline.stages.text_corrector.interface import TextCorrector
+from morse_decoder.pipeline.stages.text_corrector.wording_text_corrector import (
+    WordingTextCorrector,
+)
 from morse_decoder.pipeline.stages.timing_decoder.adaptive_threshold_decoder import (
     AdaptiveThresholdDecoder,
 )
@@ -91,10 +91,10 @@ _TIMING_DECODERS: dict[str, _StageConstructor[TimingDecoderSettings, TimingDecod
     "AdaptiveThresholdDecoder": AdaptiveThresholdDecoder,
 }
 _SYMBOL_DECODERS: dict[str, _StageConstructor[SymbolDecoderSettings, SymbolDecoder]] = {
-    "DummySymbolDecoder": DummySymbolDecoder,
+    "ItuSymbolDecoder": ItuSymbolDecoder,
 }
 _TEXT_CORRECTORS: dict[str, _StageConstructor[TextCorrectorSettings, TextCorrector]] = {
-    "DummyTextCorrector": DummyTextCorrector,
+    "WordingTextCorrector": WordingTextCorrector,
 }
 
 
