@@ -1,41 +1,66 @@
 PRES.DetailView = class DetailView {
   constructor(world, stage, center) {
-    const { el, group, circle } = PRES.svg;
     this.stage = stage;
-    this.cam = { cx: center.x, cy: center.y + 0.8, w: 45, h: 26 };
-    const g = group(world, "detail off");
-    this.el = g;
-
-    this.backdrop = circle(g, center.x, center.y, 34, "");
-    this.backdrop.setAttribute("fill", "#fff");
-    this.backdrop.setAttribute("opacity", 0.985);
-
-    circle(g, center.x, center.y, 7.6, "stroke detail-ring");
-    el("text", { x: center.x, y: center.y - 3.7, class: "detail-type", text: stage.tIn }, g);
-    el("text", { x: center.x, y: center.y + 5.6, class: "detail-type", text: stage.tOut }, g);
-    this.drawArity(center);
-
-    el("line", { x1: center.x, y1: center.y + 7.6, x2: center.x, y2: center.y + 8.9, class: "stroke stroke-hair" }, g);
-    circle(g, center.x, center.y + 9.9, 0.6, "fill breathe");
-    el("text", { x: center.x, y: center.y + 12.4, class: "detail-impl", text: stage.impl }, g);
+    this.center = center;
+    this.el = PRES.svg.group(world, "detail off");
+    this.cam = { cx: center.x + 12, cy: center.y + 1.4, w: 54, h: 30 };
+    this.backdrop = this.drawBackdrop();
+    this.drawRing();
+    this.drawArity();
+    this.drawImpl();
+    this.drawNotes();
   }
 
-  drawArity(center) {
+  drawBackdrop() {
+    const disc = PRES.svg.circle(this.el, this.center.x, this.center.y, 56, "");
+    disc.setAttribute("fill", "#fff");
+    disc.setAttribute("opacity", 0.985);
+    return disc;
+  }
+
+  drawRing() {
     const { el, circle } = PRES.svg;
+    const { x, y } = this.center;
+    circle(this.el, x, y, 7.6, "stroke detail-ring");
+    el("text", { x, y: y - 3.7, class: "detail-type", text: this.stage.tIn }, this.el);
+    el("text", { x, y: y + 5.6, class: "detail-type", text: this.stage.tOut }, this.el);
+  }
+
+  drawImpl() {
+    const { el, circle } = PRES.svg;
+    const { x, y } = this.center;
+    el("line", { x1: x, y1: y + 7.6, x2: x, y2: y + 8.9, class: "stroke stroke-hair" }, this.el);
+    circle(this.el, x, y + 9.9, 0.6, "fill breathe");
+    el("text", { x, y: y + 12.4, class: "detail-impl", text: this.stage.impl }, this.el);
+  }
+
+  drawNotes() {
+    const { el, circle } = PRES.svg;
+    const { notes } = this.stage;
+    notes.forEach((note, i) => {
+      const y = this.center.y + (i - (notes.length - 1) / 2) * 2.6;
+      circle(this.el, this.center.x + 10.4, y - 0.35, 0.22, "fill note-dot");
+      el("text", { x: this.center.x + 11.7, y, class: "detail-note", text: note }, this.el);
+    });
+  }
+
+  drawArity() {
+    const { el, circle } = PRES.svg;
+    const { x, y } = this.center;
     const count = this.stage.oneToOne ? 1 : 3;
     for (const side of [-1, 1]) {
       for (let i = 0; i < count; i += 1) {
         const offset = (i - (count - 1) / 2) * 1.2;
-        circle(this.el, center.x + side * 4.4 + offset, center.y + 0.6, 0.3, "fill");
+        circle(this.el, x + side * 4.4 + offset, y + 0.6, 0.3, "fill");
       }
     }
-    el("line", { x1: center.x, y1: center.y - 0.9, x2: center.x, y2: center.y + 1.7, class: "stroke stroke-hair" }, this.el);
+    el("line", { x1: x, y1: y - 0.9, x2: x, y2: y + 1.7, class: "stroke stroke-hair" }, this.el);
     el(
       "path",
       {
         d: "M -0.7 -0.7 L 0 0 L 0.7 -0.7",
         class: "stroke stroke-hair",
-        transform: `translate(${center.x} ${center.y + 2.1})`,
+        transform: `translate(${x} ${y + 2.1})`,
       },
       this.el,
     );

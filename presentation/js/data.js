@@ -1,5 +1,5 @@
 PRES.data = (() => {
-  const stages = [
+  const interfaces = [
     { id: "sa", name: "SpectrumAnalyzer", impl: "STFTSpectrumAnalyzer", tIn: "PcmChunk", tOut: "ToneSpectrum", oneToOne: false },
     { id: "sl", name: "SpectrumLimiter", impl: "StaticSpectrumLimiter", tIn: "ToneSpectrum", tOut: "ToneSpectrum", oneToOne: true },
     { id: "cs", name: "CarrierSource", impl: "PeakCarrierSource", tIn: "ToneSpectrum", tOut: "CarrierSample", oneToOne: false },
@@ -10,6 +10,64 @@ PRES.data = (() => {
     { id: "sd", name: "SymbolDecoder", impl: "ItuSymbolDecoder", tIn: "MorseElement", tOut: "Token", oneToOne: false },
     { id: "tc", name: "TextCorrector", impl: "WordingTextCorrector", tIn: "Token", tOut: "CorrectedText", oneToOne: false },
   ];
+
+  const notes = {
+    sa: [
+      "Reassembles chunks into whole frames",
+      "Hann window, fixed hop per frame",
+      "FFT magnitude per frequency bin",
+      "Stamps each frame at its centre time",
+    ],
+    sl: [
+      "Holds one band, fixed by config",
+      "Drops every bin outside min..max Hz",
+      "Keeps out-of-band noise off the peak",
+    ],
+    cs: [
+      "Reads the loudest bin per spectrum",
+      "Searches while the peak wanders",
+      "Locks a tone that repeats long enough",
+      "A rival must outlast it to take over",
+    ],
+    ne: [
+      "Looks at every bin of one spectrum",
+      "Takes a low percentile as the floor",
+      "Robust: most bins carry only noise",
+    ],
+    kd: [
+      "Follows the noise floor with an EMA",
+      "Rises fast, falls slow",
+      "Thresholds sit a factor above it",
+      "Hysteresis FSM: on high, off low",
+    ],
+    kb: [
+      "A change must hold before it counts",
+      "Separate rise and fall delays",
+      "Pending state buffers the samples",
+      "Too brief: rewritten to the old side",
+    ],
+    td: [
+      "Cuts the stream into on/off spans",
+      "An EMA tracks the current dit length",
+      "Classifier chain claims each span",
+      "Dits, dahs and gaps, measured in dits",
+    ],
+    sd: [
+      "An FSM gathers elements into codes",
+      "Gaps close a character or a word",
+      "The ITU table reads the code as text",
+      "Same elements always spell the same",
+    ],
+    tc: [
+      "Buffers characters into a run",
+      "Scores every way to cut it up",
+      "Word prices come from a lexicon",
+      "Heard gaps are evidence, not orders",
+      "Emits a word once its cut is settled",
+    ],
+  };
+
+  const stages = interfaces.map((stage) => ({ ...stage, notes: notes[stage.id] }));
 
   const subscribed = new Set([
     "spectrums",

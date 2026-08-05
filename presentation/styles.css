@@ -192,6 +192,8 @@ text {
 .detail-type { font-size: 1.15px; fill: #555; text-anchor: middle; font-family: var(--mono); }
 .detail-impl { font-size: 1.5px; fill: #333; text-anchor: middle; letter-spacing: .05em; }
 .detail-ring { stroke-dasharray: .5 1; }
+.detail-note { font-size: 1.1px; font-weight: 300; fill: #444; letter-spacing: .02em; }
+.note-dot { opacity: .5; }
 
 @media (prefers-reduced-motion: reduce) {
   .breathe, .dotted .shaft, #hint { animation: none; }
