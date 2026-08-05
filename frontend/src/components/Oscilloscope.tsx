@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { useStore, MAX_KEYING_SAMPLES } from "../store";
+import { useStore } from "../store";
 import { HOP_RATE_HZ } from "../audioFormat";
+import { MAX_KEYING_SAMPLES } from "../signals/history";
 import { AXIS_HEIGHT, TimeAxis, axisCaption, type AxisGeometry } from "../charts/axis";
 import { Range } from "../charts/ticks";
 import { ZoomAndPan } from "../charts/gestures";

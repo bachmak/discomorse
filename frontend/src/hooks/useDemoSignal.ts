@@ -3,7 +3,7 @@ import { useStore } from "../store";
 import { demoKeyingOn } from "../fixtures/keying";
 import { demoSpectrumMessage } from "../fixtures/spectrum";
 import type { MessageSink } from "../messages/sink";
-import { storeSink } from "../messages/storeSink";
+import { storeIngest } from "../pacing/storeIngest";
 import { FramePacer, type FrameRate } from "../pacing/framePacer";
 
 // One step is one hop of the backend's streams: a spectrum and a key reading.
@@ -37,7 +37,12 @@ export function useDemoSignal(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    void streamDemo(controller.signal, storeSink());
-    return () => controller.abort();
+    const ingest = storeIngest();
+    void ingest.run();
+    void streamDemo(controller.signal, ingest.sink);
+    return () => {
+      controller.abort();
+      ingest.stop();
+    };
   }, [enabled]);
 }

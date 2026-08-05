@@ -3,7 +3,7 @@ import { UPLOAD_URL } from "../api/endpoints";
 import { SUBSCRIPTION } from "../api/subscription";
 import { MessageRouter } from "../messages/messageRouter";
 import { NdjsonStream } from "../messages/ndjsonStream";
-import { storeSink } from "../messages/storeSink";
+import { storeIngest } from "../pacing/storeIngest";
 import { useStore } from "../store";
 
 export interface FileDecoder {
@@ -21,8 +21,15 @@ function uploadBody(file: File): FormData {
 }
 
 async function render(events: ReadableStream<Uint8Array>): Promise<void> {
-  const router = new MessageRouter(storeSink());
-  for await (const line of new NdjsonStream(events).lines()) router.route(line);
+  const ingest = storeIngest();
+  const router = new MessageRouter(ingest.sink);
+  void ingest.run();
+  try {
+    for await (const line of new NdjsonStream(events).lines()) router.route(line);
+    ingest.flush();
+  } finally {
+    ingest.stop();
+  }
 }
 
 export function useFileDecoder(): FileDecoder {
