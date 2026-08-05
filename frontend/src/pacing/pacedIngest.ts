@@ -1,5 +1,6 @@
-import { BatchingSink, type BatchTarget } from "../messages/batch";
+import type { BatchTarget } from "../messages/batch";
 import type { MessageSink } from "../messages/sink";
+import { BatchCommit } from "./batchCommit";
 import { AnimationFrameRate, FramePacer } from "./framePacer";
 
 // A decoder emits a spectrum and a key reading every hop — hundreds per second,
@@ -8,14 +9,16 @@ import { AnimationFrameRate, FramePacer } from "./framePacer";
 // main thread, so the charts advanced in lurches. Buffering the messages and
 // committing them one animation frame at a time lets them move at paint rate.
 export class PacedIngest {
-  private readonly buffer = new BatchingSink();
+  private readonly commits: BatchCommit;
   private readonly pacer = new FramePacer(new AnimationFrameRate());
   private readonly frames = new AbortController();
 
-  constructor(private readonly target: BatchTarget) {}
+  constructor(target: BatchTarget) {
+    this.commits = new BatchCommit(target);
+  }
 
   get sink(): MessageSink {
-    return this.buffer;
+    return this.commits.sink;
   }
 
   async run(): Promise<void> {
@@ -27,7 +30,7 @@ export class PacedIngest {
   }
 
   flush(): void {
-    if (!this.buffer.empty) this.target.apply(this.buffer.take());
+    this.commits.commit();
   }
 
   stop(): void {

@@ -1,9 +1,8 @@
 import { useRef, useState } from "react";
 import { UPLOAD_URL } from "../api/endpoints";
 import { SUBSCRIPTION } from "../api/subscription";
-import { MessageRouter } from "../messages/messageRouter";
-import { NdjsonStream } from "../messages/ndjsonStream";
-import { storeIngest } from "../pacing/storeIngest";
+import { EnvelopeStream } from "../messages/envelope";
+import { storePlayback } from "../pacing/storePlayback";
 import { useStore } from "../store";
 
 export interface FileDecoder {
@@ -21,14 +20,11 @@ function uploadBody(file: File): FormData {
 }
 
 async function render(events: ReadableStream<Uint8Array>): Promise<void> {
-  const ingest = storeIngest();
-  const router = new MessageRouter(ingest.sink);
-  void ingest.run();
+  const playback = storePlayback();
   try {
-    for await (const line of new NdjsonStream(events).lines()) router.route(line);
-    ingest.flush();
+    await playback.play(new EnvelopeStream(events).envelopes());
   } finally {
-    ingest.stop();
+    playback.stop();
   }
 }
 

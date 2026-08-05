@@ -1,14 +1,18 @@
 import type { OutboundMessage, ServerMessage } from "../types/ws";
+import { parseEnvelope } from "./envelope";
 import { HANDLERS, type MessageHandler } from "./handlers";
 import type { MessageSink } from "./sink";
 
 export class MessageRouter {
   constructor(private readonly sink: MessageSink) {}
 
+  route(envelope: string): void {
+    this.deliver(parseEnvelope(envelope));
+  }
+
   // The channel is what a message is routed by: several stages send the same
   // payload shape, so the payload alone no longer says where it belongs.
-  route(envelope: string): void {
-    const { channel, payload } = JSON.parse(envelope) as ServerMessage;
+  deliver({ channel, payload }: ServerMessage): void {
     this.handlerFor(channel).handle(payload, this.sink);
   }
 
