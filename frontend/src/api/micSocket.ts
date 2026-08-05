@@ -1,5 +1,6 @@
 import { MessageRouter } from "../messages/messageRouter";
-import { storeSink } from "../messages/storeSink";
+import type { PacedIngest } from "../pacing/pacedIngest";
+import { storeIngest } from "../pacing/storeIngest";
 
 export type SocketData = ArrayBuffer | string;
 
@@ -15,14 +16,20 @@ function opened(socket: WebSocket): Promise<void> {
 // One socket is one decoder session: the backend reads the handshake, streams
 // the events it decodes, and is finished when the socket closes.
 export class MicSocket {
-  private constructor(private readonly socket: WebSocket) {}
+  private constructor(
+    private readonly socket: WebSocket,
+    private readonly ingest: PacedIngest,
+  ) {}
 
   static async open(url: string): Promise<MicSocket> {
     const socket = new WebSocket(url);
-    const router = new MessageRouter(storeSink());
+    const ingest = storeIngest();
+    const router = new MessageRouter(ingest.sink);
     socket.onmessage = (event) => router.route(event.data as string);
     await opened(socket);
-    return new MicSocket(socket);
+    const mic = new MicSocket(socket, ingest);
+    void mic.commitWhileOpen();
+    return mic;
   }
 
   readonly send = (data: SocketData): void => {
@@ -37,5 +44,12 @@ export class MicSocket {
 
   close(): void {
     this.socket.close();
+  }
+
+  private async commitWhileOpen(): Promise<void> {
+    void this.ingest.run();
+    await this.closed();
+    this.ingest.flush();
+    this.ingest.stop();
   }
 }

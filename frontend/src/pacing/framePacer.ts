@@ -2,6 +2,13 @@ export interface FrameRate {
   currentMs(): number;
 }
 
+// As often as the screen is repainted, and no more often than that.
+export class AnimationFrameRate implements FrameRate {
+  currentMs(): number {
+    return 0;
+  }
+}
+
 function waitFrame(ms: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.resolve();
   return new Promise((resolve) => {
@@ -26,7 +33,11 @@ export class FramePacer {
   async *frames(signal: AbortSignal): AsyncGenerator<number> {
     for (let index = 0; !signal.aborted; index++) {
       yield index;
-      await waitFrame(this.rate.currentMs(), signal);
+      await this.next(signal);
     }
+  }
+
+  next(signal: AbortSignal): Promise<void> {
+    return waitFrame(this.rate.currentMs(), signal);
   }
 }
