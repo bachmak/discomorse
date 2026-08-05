@@ -1,11 +1,52 @@
 PRES.sceneSystem = (world) => {
   const { el, group, circle, trimmed } = PRES.svg;
-  const client = { x: 250, y: -62, r: 24 };
-  const backend = { x: -176, y: -42, w: 366, h: 84 };
-  const rimGap = 2.5;
+
+  const BOX = { w: 200, h: 112 };
+  const PAD = 16;
+  const GAP = 64;
+  const NODE_R = 32;
+  const RIM_GAP = 2.5;
+  const STRIDE = { x: BOX.w + 2 * PAD + GAP, y: BOX.h + 2 * PAD + GAP };
+
+  class Block {
+    constructor(cx, cy, label) {
+      this.cx = cx;
+      this.cy = cy;
+      this.label = label;
+    }
+
+    get center() {
+      return { x: this.cx, y: this.cy };
+    }
+
+    get rect() {
+      return { x: this.cx - BOX.w / 2, y: this.cy - BOX.h / 2, w: BOX.w, h: BOX.h };
+    }
+
+    get shell() {
+      const r = this.rect;
+      return { x: r.x - PAD, y: r.y - PAD, w: r.w + 2 * PAD, h: r.h + 2 * PAD };
+    }
+
+    get rightEdge() {
+      return this.cx + BOX.w / 2;
+    }
+
+    get shellFoot() {
+      return { x: this.cx, y: this.cy + BOX.h / 2 + PAD };
+    }
+
+    get shellHead() {
+      return { x: this.cx, y: this.cy - BOX.h / 2 - PAD };
+    }
+  }
+
+  const frontend = new Block(250, -62, "frontend");
+  const backend = new Block(frontend.cx - STRIDE.x, frontend.cy, "backend");
+  const caddy = new Block(frontend.cx - STRIDE.x / 2, frontend.cy + STRIDE.y, "caddy");
 
   const clientLayer = group(world, "layer lvl-system");
-  circle(clientLayer, client.x, client.y, client.r, "stroke stroke-bold breathe");
+  circle(clientLayer, frontend.cx, frontend.cy, NODE_R, "stroke stroke-bold breathe");
 
   const pollLayer = group(world, "layer lvl-system");
   const activeTaps = PRES.graph.taps.filter((tap) => tap.active);
@@ -14,32 +55,33 @@ PRES.sceneSystem = (world) => {
   curves.push(inputPull());
 
   const boxLayer = group(world, "layer lvl-system");
-  box(boxLayer, backend, "backend");
-  box(boxLayer, { x: 212, y: -102, w: 78, h: 80 }, "frontend");
+  drawBox(boxLayer, backend);
+  drawBox(boxLayer, frontend);
 
   const wsLayer = group(world, "layer lvl-system");
   const wsLinks = [
-    wsLink(rimPoint(190), edgeOfBackend(-24), 6, "dotted flow-back"),
-    wsLink(edgeOfBackend(-8), rimPoint(160), -6),
+    wsLink(rimPoint(190), backendPort(-8), 8, "dotted flow-back"),
+    wsLink(backendPort(8), rimPoint(170), -8),
   ];
-  el("text", { x: 207, y: -34, class: "micro-label", text: "ws" }, wsLayer);
+  el(
+    "text",
+    { x: (backend.rightEdge + frontend.cx - NODE_R) / 2, y: frontend.cy + 2, class: "micro-label", text: "ws" },
+    wsLayer,
+  );
 
   const deployLayer = group(world, "layer lvl-system");
-  container(deployLayer, -188, -54, 390, 108);
-  container(deployLayer, 200, -114, 102, 104);
-  container(deployLayer, 134, 84, 72, 74);
-  circle(deployLayer, 170, 112, 16, "stroke breathe");
-  el("text", { x: 170, y: 145, class: "box-label", "text-anchor": "middle", text: "caddy" }, deployLayer);
-  route(deployLayer, { x: 10, y: 54 }, "8000", { x: 84, y: 75 });
-  route(deployLayer, { x: 251, y: -10 }, "8080", { x: 220, y: 60 });
-  new PRES.Arrow(deployLayer, trimmed({ x: 216, y: 192 }, { x: 170, y: 112 }, 0, 19), { cls: "stroke-hair" });
-  el("text", { x: 214, y: 172, class: "micro-label", text: "443" }, deployLayer);
+  [backend, frontend, caddy].forEach((block) => drawShell(deployLayer, block));
+  drawBox(deployLayer, caddy);
+  circle(deployLayer, caddy.cx, caddy.cy, NODE_R, "stroke stroke-bold breathe");
+  route(deployLayer, backend, "8000");
+  route(deployLayer, frontend, "8080");
+  ingress(deployLayer, "443");
 
   function rimPoint(angleDeg) {
     const rad = (angleDeg * Math.PI) / 180;
     return {
-      x: client.x + (client.r + rimGap) * Math.cos(rad),
-      y: client.y + (client.r + rimGap) * Math.sin(rad),
+      x: frontend.cx + (NODE_R + RIM_GAP) * Math.cos(rad),
+      y: frontend.cy + (NODE_R + RIM_GAP) * Math.sin(rad),
     };
   }
 
@@ -74,8 +116,8 @@ PRES.sceneSystem = (world) => {
     return new PRES.Arrow(pollLayer, d, { head: 2.8 });
   }
 
-  function edgeOfBackend(y) {
-    return { x: backend.x + backend.w + 2, y };
+  function backendPort(dy) {
+    return { x: backend.rightEdge + 2, y: backend.cy + dy };
   }
 
   function wsLink(from, to, bow, cls = "") {
@@ -83,26 +125,43 @@ PRES.sceneSystem = (world) => {
     return new PRES.Arrow(wsLayer, d, { head: 2.8, cls });
   }
 
-  function box(parent, rect, label) {
-    el("rect", { x: rect.x, y: rect.y, width: rect.w, height: rect.h, rx: 15, class: "stroke" }, parent);
-    el("text", { x: rect.x + 10, y: rect.y + 12, class: "box-label", text: label }, parent);
+  function drawBox(parent, block) {
+    const r = block.rect;
+    el("rect", { x: r.x, y: r.y, width: r.w, height: r.h, rx: 15, class: "stroke" }, parent);
+    el("text", { x: r.x + 12, y: r.y + 15, class: "box-label", text: block.label }, parent);
   }
 
-  function container(parent, x, y, w, h) {
-    el("rect", { x, y, width: w, height: h, rx: 18, class: "stroke stroke-soft" }, parent);
+  function drawShell(parent, block) {
+    const r = block.shell;
+    el("rect", { x: r.x, y: r.y, width: r.w, height: r.h, rx: 20, class: "stroke stroke-soft" }, parent);
     for (let i = 0; i < 3; i += 1) {
       el(
         "rect",
-        { x: x + w - 10 - i * 5.4, y: y + 6, width: 3.2, height: 3.2, class: "stroke stroke-soft" },
+        { x: r.x + r.w - 14 - i * 7, y: r.y + 8, width: 4, height: 4, class: "stroke stroke-soft" },
         parent,
       );
     }
   }
 
-  function route(parent, target, label, at) {
-    const d = trimmed({ x: 170, y: 112 }, target, 19, 2);
-    new PRES.Arrow(parent, d, { head: 3, cls: "stroke-hair" });
-    el("text", { x: at.x, y: at.y, class: "micro-label", text: label }, parent);
+  function route(parent, block, label) {
+    const foot = block.shellFoot;
+    new PRES.Arrow(parent, trimmed(caddy.center, foot, NODE_R + 3, 2), { head: 3, cls: "stroke-hair" });
+    el("text", { ...inGap(block), class: "micro-label", text: label }, parent);
+  }
+
+  function inGap(block) {
+    const y = (block.shellFoot.y + caddy.shellHead.y) / 2;
+    const travelled = (caddy.cy - y) / (caddy.cy - block.shellFoot.y);
+    return {
+      x: caddy.cx + (block.cx - caddy.cx) * travelled + Math.sign(block.cx - caddy.cx) * 22,
+      y: y + 2,
+    };
+  }
+
+  function ingress(parent, label) {
+    const from = { x: caddy.cx, y: caddy.shellFoot.y + 26 };
+    new PRES.Arrow(parent, trimmed(from, caddy.center, 0, NODE_R + 3), { head: 3, cls: "stroke-hair" });
+    el("text", { x: from.x + 20, y: from.y - 16, class: "micro-label", text: label }, parent);
   }
 
   let polled = false;

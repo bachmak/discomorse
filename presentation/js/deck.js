@@ -11,8 +11,8 @@ PRES.Deck = class Deck {
       { header: "streams", cam: { cx: 10, cy: -1, w: 400, h: 120 } },
       { header: "pull", cam: { cx: 10, cy: 3, w: 400, h: 120 } },
       { header: "client", cam: { cx: 52, cy: -8, w: 530, h: 155 } },
-      { header: "frontend · backend", cam: { cx: 55, cy: -20, w: 555, h: 215 } },
-      { header: "deployment", cam: { cx: 57, cy: 32, w: 640, h: 330 } },
+      { header: "frontend · backend", cam: { cx: 102, cy: -62, w: 586, h: 230 } },
+      { header: "deployment", cam: { cx: 102, cy: 55, w: 620, h: 478 } },
     ];
     this.hud = document.getElementById("hud-title");
     this.flipped = false;
