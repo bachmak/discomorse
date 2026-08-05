@@ -1,2 +1,3 @@
 FROM caddy:2-alpine
-COPY Caddyfile /etc/caddy/Caddyfile
+COPY caddy/Caddyfile /etc/caddy/Caddyfile
+COPY presentation /srv/presentation

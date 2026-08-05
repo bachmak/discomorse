@@ -1,3 +1,4 @@
+import { PresentationLink } from "./PresentationLink";
 import { SlowModeToggle } from "./SlowModeToggle";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -17,6 +18,7 @@ export function AppHeader({ demo }: AppHeaderProps) {
             <span className="demo-badge">DEMO</span>
           </>
         )}
+        <PresentationLink />
         <ThemeToggle />
       </div>
     </header>
