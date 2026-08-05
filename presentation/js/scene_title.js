@@ -26,7 +26,7 @@ PRES.sceneTitle = (world) => {
   drawText(layer, spokes[2].x * 412, spokes[2].y * 412);
   drawMorse(layer, 0, 248, PRES.data.morse("discomorse"));
 
-  return { el: layer, range: [1, 1] };
+  return { el: layer, on: ["title"] };
 };
 
 function drawFft(layer, x, y) {

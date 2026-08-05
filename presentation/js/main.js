@@ -15,8 +15,5 @@
 
   PRES.deck = new PRES.Deck(PRES.camera, layers);
   PRES.deck.start();
-
-  document.addEventListener("keydown", (event) => {
-    if (PRES.deck.handleKey(event)) event.preventDefault();
-  });
+  new PRES.Controls(PRES.deck);
 })();

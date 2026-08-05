@@ -167,26 +167,26 @@ PRES.sceneSystem = (world) => {
   let polled = false;
   let linked = false;
   return [
-    { el: clientLayer, range: [7, 9] },
+    { el: clientLayer, on: ["consumer", "system", "deployment"] },
     {
       el: pollLayer,
-      range: [7, 7],
+      on: ["consumer"],
       enter: () => {
         if (polled) return;
         polled = true;
         curves.forEach((curve, i) => curve.growFrom(250 + i * 110));
       },
     },
-    { el: boxLayer, range: [8, 9] },
+    { el: boxLayer, on: ["system", "deployment"] },
     {
       el: wsLayer,
-      range: [8, 9],
+      on: ["system", "deployment"],
       enter: () => {
         if (linked) return;
         linked = true;
         wsLinks.forEach((wsArrow, i) => wsArrow.growFrom(300 + i * 200));
       },
     },
-    { el: deployLayer, range: [9, 9] },
+    { el: deployLayer, on: ["deployment"] },
   ];
 };

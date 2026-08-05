@@ -73,8 +73,9 @@ body.detail-open #progress { opacity: 0; pointer-events: none; }
 
 /* ---- svg ---------------------------------------------------------- */
 
-.layer { transition: opacity .75s ease; }
-.layer.off { opacity: 0; pointer-events: none; }
+/* leaving layers clear out before arriving ones fade in, so zooms never cross */
+.layer { transition: opacity .6s ease .45s; }
+.layer.off { transition: opacity .4s ease 0s; opacity: 0; pointer-events: none; }
 
 .stroke, .arrow path {
   stroke: var(--ink);

@@ -105,13 +105,13 @@ PRES.sceneGraph = (world) => {
 
   const allArrows = () => [...edges, ...taps.map((t) => t.arrow)];
 
-  function flipAll(reversed) {
+  function flipAll(reversed, after = 0) {
     const sorted = allArrows().sort((p, q) => {
       const px = p.pointAt(p.len).x;
       const qx = q.pointAt(q.len).x;
       return reversed ? qx - px : px - qx;
     });
-    sorted.forEach((arrow, i) => arrow.flip(reversed, i * 45));
+    sorted.forEach((arrow, i) => arrow.flip(reversed, after + i * 45));
   }
 
   let edgesDrawn = false;
@@ -119,35 +119,39 @@ PRES.sceneGraph = (world) => {
 
   PRES.graph = { nodes, taps, inputPort, R, flipAll };
 
+  const ON_GRAPH = ["stages", "streams", "pull", "consumer"];
+  const ON_STREAMS = ["streams", "pull", "consumer"];
+
   return [
-    { el: glyphLayer, range: [4, 7] },
+    { el: glyphLayer, on: ON_GRAPH },
     {
       el: graph,
-      range: [4, 7],
+      on: ON_GRAPH,
       enter: () => {
         if (edgesDrawn) return;
         edgesDrawn = true;
         edges.forEach((edge, i) => edge.drawIn(i * 70));
       },
-      update: (n) => {
-        document.getElementById("stage").classList.toggle("interactive", n >= 4 && n <= 7);
-        inputEdge.group.classList.toggle("gone", n >= 7);
+      update: (scene) => {
+        document.getElementById("stage").classList.toggle("interactive", ON_GRAPH.includes(scene));
+        inputEdge.group.classList.toggle("gone", PRES.deck.reached("consumer"));
       },
     },
     {
       el: streamLayer,
-      range: [5, 7],
+      on: ON_STREAMS,
       enter: () => {
         if (streamsGrown) return;
         streamsGrown = true;
         taps.forEach((tap, i) => tap.arrow.growFrom(150 + i * 80));
       },
-      update: (n) => {
+      update: () => {
+        const pulling = PRES.deck.reached("consumer");
         for (const tap of taps) {
-          tap.dot.classList.toggle("live", n >= 7 && tap.active);
-          tap.dot.classList.toggle("faint", n >= 7 && !tap.active);
-          tap.arrow.group.classList.toggle("gone", n >= 7 && tap.active);
-          tap.arrow.group.classList.toggle("faint", n >= 7 && !tap.active);
+          tap.dot.classList.toggle("live", pulling && tap.active);
+          tap.dot.classList.toggle("faint", pulling && !tap.active);
+          tap.arrow.group.classList.toggle("gone", pulling && tap.active);
+          tap.arrow.group.classList.toggle("faint", pulling && !tap.active);
         }
       },
     },

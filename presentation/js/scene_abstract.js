@@ -48,13 +48,13 @@ PRES.sceneAbstract = (world) => {
   return [
     {
       el: graph,
-      range: [2, 3],
+      on: ["pipeline", "interface"],
       enter: () => {
         if (drawn) return;
         drawn = true;
         arrows.forEach((arrow, i) => arrow.drawIn(i * 90));
       },
     },
-    { el: code, range: [3, 3] },
+    { el: code, on: ["interface"] },
   ];
 };

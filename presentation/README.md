@@ -18,7 +18,7 @@ python3 -m http.server -d presentation 8137
 | `→` `↓` `Space` `PgDn` | nächste Slide |
 | `←` `↑` `PgUp` | vorherige Slide |
 | `Home` / `End` | erste / letzte Slide |
-| Klick auf eine Stage (Slides 4–7) | in die Stage zoomen (Interface + Implementierung) |
+| Klick auf eine Stage (auf `stages`, `streams`, `pull`, `consumer`) | in die Stage zoomen (Interface + Implementierung) |
 | `←` / `→` im Stage-Zoom | vorherige / nächste Stage |
 | `Esc` / `Space` im Stage-Zoom | zurück zur Slide |
 | Klick auf die Punkte unten | zu einer Slide springen |

@@ -23,6 +23,7 @@ PRES.Camera = class Camera {
   jumpTo(view) {
     if (this.cancel) this.cancel();
     this.apply(view);
+    return 0;
   }
 
   flyTo(target) {
@@ -38,6 +39,7 @@ PRES.Camera = class Camera {
         this.cancel = null;
       },
     });
+    return ms;
   }
 
   static between(a, b, e) {
