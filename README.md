@@ -54,6 +54,16 @@ The dev server is available at `http://localhost:5173` with hot reload. It proxi
 `/api` and `/ws` to the backend on `http://localhost:8000`, the same prefixes Caddy
 serves in Docker, so start the backend first.
 
+**Presentation**
+
+The slides in `presentation/` are plain static files. Caddy serves them at
+`/presentation/` in Docker, which is where the header button in the app points. To
+make that button work in the dev server too, serve them on the port it proxies:
+
+```bash
+python3 -m http.server -d presentation 8137
+```
+
 ---
 
 ## Docker
@@ -62,7 +72,9 @@ serves in Docker, so start the backend first.
 docker compose up --build
 ```
 
-Starts backend, frontend (nginx), and Caddy reverse proxy. The app is served at `http://localhost`.
+Starts backend, frontend (nginx), and Caddy reverse proxy. The app is served at
+`http://localhost`, the slides at `http://localhost/presentation/` — Caddy is built
+from the repository root so it can bake `presentation/` into its image.
 
 ---
 

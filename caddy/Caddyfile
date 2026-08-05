@@ -14,6 +14,11 @@
 	handle /ws/* {
 		reverse_proxy backend:8000
 	}
+	handle /presentation* {
+		encode zstd gzip
+		root * /srv
+		file_server
+	}
 	handle {
 		encode zstd gzip
 		reverse_proxy frontend:8080
