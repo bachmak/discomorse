@@ -1,50 +1,37 @@
 import { useStore } from "../store";
-import { CopyButton } from "./CopyButton";
+import { useTypedDecoded } from "../hooks/useTypedDecoded";
+import type { DecodedLines } from "../text/decodedLines";
+import { StreamingLine } from "./StreamingLine";
 
-interface DecodedLineProps {
-  className: string;
-  value: string;
+interface LineSpec {
+  name: keyof DecodedLines;
   label: string;
   placeholder: string;
 }
 
-function DecodedLine({ className, value, label, placeholder }: DecodedLineProps) {
-  return (
-    <div className="decoded-line">
-      <pre className={className}>
-        {value || <span className="placeholder">{placeholder}</span>}
-      </pre>
-      <CopyButton value={value} target={label} />
-    </div>
-  );
-}
+const LINES: LineSpec[] = [
+  { name: "text", label: "corrected text", placeholder: "Corrected text will appear here…" },
+  { name: "symbols", label: "raw text", placeholder: "Raw text will appear here…" },
+  { name: "morse", label: "morse elements", placeholder: "Morse elements will appear here…" },
+];
 
 export function DecodedText() {
-  const morse = useStore((s) => s.decodedMorse);
-  const symbols = useStore((s) => s.decodedSymbols);
-  const text = useStore((s) => s.correctedText);
+  const full = useStore((s) => s.decoded);
+  const shown = useTypedDecoded();
   const clearDecoded = useStore((s) => s.clearDecoded);
 
   return (
     <div className="decoded-body">
-      <DecodedLine
-        className="text"
-        value={text}
-        label="corrected text"
-        placeholder="Corrected text will appear here…"
-      />
-      <DecodedLine
-        className="symbols"
-        value={symbols}
-        label="raw text"
-        placeholder="Raw text will appear here…"
-      />
-      <DecodedLine
-        className="morse"
-        value={morse}
-        label="morse elements"
-        placeholder="Morse elements will appear here…"
-      />
+      {LINES.map(({ name, label, placeholder }) => (
+        <StreamingLine
+          key={name}
+          className={name}
+          shown={shown[name]}
+          full={full[name]}
+          label={label}
+          placeholder={placeholder}
+        />
+      ))}
       <button onClick={clearDecoded}>Clear</button>
     </div>
   );

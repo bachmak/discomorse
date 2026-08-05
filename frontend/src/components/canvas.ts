@@ -28,16 +28,26 @@ export function useCanvasSize(height: number): ResponsiveCanvas {
   return { ref, size: { width, height } };
 }
 
+// Resizing a canvas throws its buffer away and allocates another, which a chart
+// that redraws every frame cannot afford; one already the right size is cleared.
+function resize(canvas: HTMLCanvasElement, size: CanvasSize, ratio: number): void {
+  const width = Math.round(size.width * ratio);
+  const height = Math.round(size.height * ratio);
+  if (canvas.width === width && canvas.height === height) return;
+  canvas.width = width;
+  canvas.height = height;
+}
+
 export function prepareSurface(
   canvas: HTMLCanvasElement,
   size: CanvasSize,
   palette: ChartPalette,
 ): ChartSurface | null {
   const ratio = window.devicePixelRatio || 1;
-  canvas.width = size.width * ratio;
-  canvas.height = size.height * ratio;
+  resize(canvas, size, ratio);
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, size.width, size.height);
   return { ctx, palette };
 }
