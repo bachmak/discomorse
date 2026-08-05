@@ -97,7 +97,7 @@ PRES.sceneGraph = (world) => {
   return [
     {
       el: graph,
-      range: [4, 9],
+      range: [4, 7],
       enter: () => {
         if (edgesDrawn) return;
         edgesDrawn = true;
@@ -110,7 +110,7 @@ PRES.sceneGraph = (world) => {
     },
     {
       el: streamLayer,
-      range: [5, 9],
+      range: [5, 7],
       enter: () => {
         if (streamsGrown) return;
         streamsGrown = true;
