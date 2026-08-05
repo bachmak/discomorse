@@ -93,6 +93,7 @@ body.detail-open #progress { opacity: 0; pointer-events: none; }
   stroke-dasharray: .01 3;
   animation: dotflow 3.4s linear infinite;
 }
+.dotted.flow-back .shaft { animation-direction: reverse; }
 @keyframes dotflow { to { stroke-dashoffset: -6.02; } }
 
 /* stroke widths per zoom level, in world units */

@@ -12,11 +12,13 @@ PRES.sceneGraph = (world) => {
   };
   const fork = { x: -72, y: 0 };
   const zip = { x: -14, y: 0 };
-  const inputStart = { x: -160, y: 0 };
+  const inputTail = { x: -160, y: 0 };
+  const inputPort = { x: nodes.sa.x - R - 1.5, y: 0 };
 
   const graph = group(world, "layer lvl-graph");
+  const inputEdge = new PRES.Arrow(graph, lineD(inputTail, inputPort));
   const edges = [
-    new PRES.Arrow(graph, "M -160 0 L -135.5 0"),
+    inputEdge,
     new PRES.Arrow(graph, trimmed(nodes.sa, nodes.sl, R + 1.5, R + 1.5)),
     forkEdge(nodes.cs), forkEdge(nodes.ne),
     zipEdge(nodes.cs), zipEdge(nodes.ne),
@@ -90,7 +92,7 @@ PRES.sceneGraph = (world) => {
   let edgesDrawn = false;
   let streamsGrown = false;
 
-  PRES.graph = { nodes, taps, inputStart, R, flipAll };
+  PRES.graph = { nodes, taps, inputPort, R, flipAll };
 
   return [
     {
@@ -103,6 +105,7 @@ PRES.sceneGraph = (world) => {
       },
       update: (n) => {
         document.getElementById("stage").classList.toggle("interactive", n >= 4 && n <= 7);
+        inputEdge.group.classList.toggle("gone", n >= 7);
       },
     },
     {

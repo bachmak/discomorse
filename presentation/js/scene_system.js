@@ -1,14 +1,15 @@
 PRES.sceneSystem = (world) => {
   const { el, group, circle, trimmed } = PRES.svg;
   const client = { x: 250, y: -62, r: 24 };
+  const rimGap = 2.5;
 
   const clientLayer = group(world, "layer lvl-system");
   circle(clientLayer, client.x, client.y, client.r, "stroke stroke-bold breathe");
 
   const activeTaps = PRES.graph.taps.filter((tap) => tap.active);
   const angles = [215, 182, 158, 136, 112];
-  const curves = activeTaps.map((tap, i) => curveTo(tap.at, angles[i]));
-  curves.push(uplink());
+  const curves = activeTaps.map((tap, i) => pollCurve(tap.at, angles[i]));
+  curves.push(inputPull());
 
   const boxLayer = group(world, "layer lvl-system");
   box(boxLayer, -176, -42, 366, 84, "backend");
@@ -26,26 +27,36 @@ PRES.sceneSystem = (world) => {
   new PRES.Arrow(deployLayer, trimmed({ x: 216, y: 192 }, { x: 170, y: 112 }, 0, 19), { cls: "stroke-hair" });
   el("text", { x: 214, y: 172, class: "micro-label", text: "443" }, deployLayer);
 
-  function curveTo(from, angleDeg) {
+  function rimPoint(angleDeg) {
     const rad = (angleDeg * Math.PI) / 180;
-    const target = {
-      x: client.x + client.r * Math.cos(rad),
-      y: client.y + client.r * Math.sin(rad),
+    return {
+      x: client.x + (client.r + rimGap) * Math.cos(rad),
+      y: client.y + (client.r + rimGap) * Math.sin(rad),
     };
-    const dist = Math.hypot(target.x - from.x, target.y - from.y);
-    const bow = 18 + dist * 0.12;
-    const ctrl = { x: (from.x + target.x) / 2, y: (from.y + target.y) / 2 - bow };
-    const toCtrl = Math.hypot(ctrl.x - from.x, ctrl.y - from.y);
-    const start = {
-      x: from.x + ((ctrl.x - from.x) / toCtrl) * 3,
-      y: from.y + ((ctrl.y - from.y) / toCtrl) * 3,
-    };
-    const d = `M ${start.x} ${start.y} Q ${ctrl.x} ${ctrl.y} ${target.x} ${target.y}`;
-    return new PRES.Arrow(clientLayer, d, { head: 2.3, cls: "dotted" });
   }
 
-  function uplink() {
-    const d = "M 245.8 -38.4 Q 40 120 -160 3.5";
+  function nudged(point, toward, by) {
+    const len = Math.hypot(toward.x - point.x, toward.y - point.y);
+    return {
+      x: point.x + ((toward.x - point.x) / len) * by,
+      y: point.y + ((toward.y - point.y) / len) * by,
+    };
+  }
+
+  function pollCurve(tap, angleDeg) {
+    const start = rimPoint(angleDeg);
+    const dist = Math.hypot(start.x - tap.x, start.y - tap.y);
+    const bow = 18 + dist * 0.12;
+    const ctrl = { x: (start.x + tap.x) / 2, y: (start.y + tap.y) / 2 - bow };
+    const tip = nudged(tap, ctrl, 3);
+    const d = `M ${start.x} ${start.y} Q ${ctrl.x} ${ctrl.y} ${tip.x} ${tip.y}`;
+    return new PRES.Arrow(clientLayer, d, { head: 2.3, cls: "dotted flow-back" });
+  }
+
+  function inputPull() {
+    const port = PRES.graph.inputPort;
+    const tip = rimPoint(100);
+    const d = `M ${port.x} ${port.y} C -235 50, 60 120, ${tip.x} ${tip.y}`;
     return new PRES.Arrow(clientLayer, d, { head: 2.8 });
   }
 
