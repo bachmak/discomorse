@@ -10,6 +10,7 @@
   --text: light-dark(#101a26, #e6edf3);
   --muted: light-dark(#5a6b81, #8b9bb4);
   --accent: light-dark(#0e7490, #22d3ee);
+  --danger: light-dark(#b91c1c, #f87171);
   --accent-dim: light-dark(#22d3ee, #0e7490);
   --screen: light-dark(#f8fbfe, #060a10);
   --control: light-dark(#e7eef6, #182230);
@@ -282,9 +283,13 @@ button:focus-visible {
   cursor: grabbing;
 }
 
+.decoded-line {
+  position: relative;
+}
+
 .decoded pre {
   margin: 0 0 10px;
-  padding: 16px 18px;
+  padding: 16px 52px 16px 18px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: linear-gradient(180deg, var(--screen-wash), transparent 60%), var(--screen);
@@ -321,8 +326,52 @@ button:focus-visible {
   opacity: 0.4;
 }
 
-.decoded button {
+.decoded-body > button {
   margin-top: 2px;
+}
+
+.copy-button {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.copy-button:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--control-hover);
+  border-color: var(--border-strong);
+}
+
+.copy-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.copy-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.copy-button.copied {
+  color: var(--accent);
+}
+
+.copy-button.failed {
+  color: var(--danger);
+}
+
+.copy-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 @media (max-width: 520px) {
