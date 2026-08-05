@@ -9,3 +9,9 @@ export const NYQUIST_HZ = WS_SAMPLE_RATE_HZ / 2;
 // Mirrors pipeline.spectrum_analyzer_settings.hop_length in the backend config.
 const HOP_SAMPLES = 16;
 export const HOP_RATE_HZ = WS_SAMPLE_RATE_HZ / HOP_SAMPLES;
+
+// Spectrum frames carry real-FFT bins: the first sits at DC and the last at
+// Nyquist, so it takes bins - 1 steps to cross the band.
+export function binFrequency(bin: number, bins: number): number {
+  return (bin / Math.max(1, bins - 1)) * NYQUIST_HZ;
+}

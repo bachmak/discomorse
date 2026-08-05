@@ -1,30 +1,10 @@
-export interface SpanLimits {
-  min: number;
-  max: number;
-}
-
-export interface Bounds {
-  total: number;
-  limits: SpanLimits;
-}
-
-export interface ItemWindow {
-  from: number;
-  to: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function furthestBack(span: number, total: number): number {
-  return Math.max(0, total - span);
-}
+import { clamp } from "./numbers";
+import { furthestOffset, type Bounds, type Draggable, type ItemWindow } from "./window";
 
 // A window over the tail of a growing buffer, measured in items rather than
 // pixels. `back` is the distance from the newest item, so a viewport that has
 // never been dragged stays glued to live data as the buffer grows.
-export class Viewport {
+export class Viewport implements Draggable<Viewport> {
   constructor(
     readonly span: number,
     readonly back: number = 0,
@@ -34,14 +14,15 @@ export class Viewport {
     return this.back === 0;
   }
 
-  panned(items: number, bounds: Bounds): Viewport {
-    return new Viewport(this.span, clamp(this.back + items, 0, furthestBack(this.span, bounds.total)));
+  dragged(items: number, bounds: Bounds): Viewport {
+    const back = clamp(this.back + items, 0, furthestOffset(this.span, bounds.total));
+    return new Viewport(this.span, back);
   }
 
   zoomed(factor: number, anchor: number, bounds: Bounds): Viewport {
     const span = clamp(this.span * factor, bounds.limits.min, bounds.limits.max);
     const back = this.back + (this.span - span) * (1 - anchor);
-    return new Viewport(span, clamp(back, 0, furthestBack(span, bounds.total)));
+    return new Viewport(span, clamp(back, 0, furthestOffset(span, bounds.total)));
   }
 
   atLive(): Viewport {
@@ -49,7 +30,7 @@ export class Viewport {
   }
 
   window(total: number): ItemWindow {
-    const to = total - Math.min(this.back, furthestBack(this.span, total));
+    const to = total - Math.min(this.back, furthestOffset(this.span, total));
     return { from: to - this.span, to };
   }
 }

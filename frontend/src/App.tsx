@@ -43,14 +43,17 @@ export function App() {
           <Oscilloscope />
         </Panel>
 
-        <Panel title="Spectrum" hint="Instantaneous frequency content. The pitch of the CW tone.">
+        <Panel
+          title="Spectrum"
+          hint="Instantaneous frequency content. Scroll to zoom the band, drag to pan, double-click to reset."
+        >
           <FFTSpectrum />
         </Panel>
 
         <Panel
           className="span-full"
           title="Waterfall"
-          hint="Frequency over time. Scroll or drag to look back, double-click to follow live."
+          hint="Frequency over time. Scroll to zoom the band, drag sideways to pan and up to look back."
         >
           <Waterfall />
         </Panel>

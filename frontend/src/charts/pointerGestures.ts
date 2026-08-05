@@ -1,21 +1,21 @@
-import type { Gesture, PlotBox } from "./gestures";
-import type { Bounds, Viewport } from "./viewport";
+import type { Gesture, GestureContext } from "./gestures";
+import type { Bounds } from "./window";
 
-export type ApplyGesture = (change: (view: Viewport, bounds: Bounds) => Viewport) => void;
+export type ApplyGesture<V> = (change: (view: V, bounds: Bounds) => V) => void;
 
 interface DragOrigin {
   x: number;
   y: number;
 }
 
-/** Translates wheel and pointer events on an element into viewport changes. */
-export class PointerGestures {
+/** Translates wheel and pointer events on an element into view changes. */
+export class PointerGestures<V> {
   private origin: DragOrigin | null = null;
 
   constructor(
     private readonly target: HTMLElement,
-    private readonly gesture: Gesture,
-    private readonly apply: ApplyGesture,
+    private readonly gesture: Gesture<V>,
+    private readonly apply: ApplyGesture<V>,
   ) {}
 
   attach(): void {
@@ -54,7 +54,7 @@ export class PointerGestures {
     this.origin = null;
   };
 
-  private context(bounds: Bounds): { plot: PlotBox; bounds: Bounds } {
+  private context(bounds: Bounds): GestureContext {
     const rect = this.target.getBoundingClientRect();
     return { plot: { width: rect.width, height: rect.height }, bounds };
   }

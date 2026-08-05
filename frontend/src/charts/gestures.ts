@@ -1,12 +1,7 @@
-import type { Bounds, Viewport } from "./viewport";
+import type { Bounds, Draggable, PlotBox } from "./window";
 
 const ZOOM_RATE = 0.0015;
 const LINE_PIXELS = 16;
-
-export interface PlotBox {
-  width: number;
-  height: number;
-}
 
 export interface DragDelta {
   dx: number;
@@ -18,9 +13,9 @@ export interface GestureContext {
   bounds: Bounds;
 }
 
-export interface Gesture {
-  wheel(view: Viewport, event: WheelEvent, context: GestureContext): Viewport;
-  drag(view: Viewport, delta: DragDelta, context: GestureContext): Viewport;
+export interface Gesture<V> {
+  wheel(view: V, event: WheelEvent, context: GestureContext): V;
+  drag(view: V, delta: DragDelta, context: GestureContext): V;
 }
 
 function wheelPixels(event: WheelEvent, page: number): number {
@@ -33,26 +28,25 @@ function anchorAt(event: WheelEvent, width: number): number {
   return Math.min(1, Math.max(0, event.offsetX / width));
 }
 
-/** Wheel zooms the time axis around the cursor, dragging pans through history. */
-export class ZoomAndPan implements Gesture {
-  wheel(view: Viewport, event: WheelEvent, context: GestureContext): Viewport {
+/** Wheel zooms the horizontal axis around the cursor, dragging pans along it. */
+export class ZoomAndPan<V extends Draggable<V>> implements Gesture<V> {
+  wheel(view: V, event: WheelEvent, context: GestureContext): V {
     const factor = Math.exp(wheelPixels(event, context.plot.width) * ZOOM_RATE);
     return view.zoomed(factor, anchorAt(event, context.plot.width), context.bounds);
   }
 
-  drag(view: Viewport, delta: DragDelta, context: GestureContext): Viewport {
-    return view.panned((delta.dx * view.span) / context.plot.width, context.bounds);
+  drag(view: V, delta: DragDelta, context: GestureContext): V {
+    return view.dragged((delta.dx * view.span) / context.plot.width, context.bounds);
   }
 }
 
-/** Wheel and drag both scroll the view up into older rows. */
-export class VerticalScroll implements Gesture {
-  wheel(view: Viewport, event: WheelEvent, context: GestureContext): Viewport {
-    const rows = (-wheelPixels(event, context.plot.height) * view.span) / context.plot.height;
-    return view.panned(rows, context.bounds);
+/** Drags the vertical axis; the wheel is left to the horizontal one. */
+export class VerticalPan<V extends Draggable<V>> implements Gesture<V> {
+  wheel(view: V): V {
+    return view;
   }
 
-  drag(view: Viewport, delta: DragDelta, context: GestureContext): Viewport {
-    return view.panned((delta.dy * view.span) / context.plot.height, context.bounds);
+  drag(view: V, delta: DragDelta, context: GestureContext): V {
+    return view.dragged((delta.dy * view.span) / context.plot.height, context.bounds);
   }
 }

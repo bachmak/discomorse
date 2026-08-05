@@ -4,11 +4,13 @@ import { HOP_RATE_HZ } from "../audioFormat";
 import { MAX_KEYING_SAMPLES } from "../signals/history";
 import { AXIS_HEIGHT, TimeAxis, axisCaption, type AxisGeometry } from "../charts/axis";
 import { Range } from "../charts/ticks";
+import type { ChartViewSetup } from "../charts/chartView";
 import { ZoomAndPan } from "../charts/gestures";
 import { useChartPalette } from "../charts/palette";
 import type { ChartSurface } from "../charts/surface";
-import type { ItemWindow } from "../charts/viewport";
-import { useViewport, type ViewportSetup } from "../hooks/useViewport";
+import { Viewport } from "../charts/viewport";
+import type { Bounds, ItemWindow } from "../charts/window";
+import { useChartView } from "../hooks/useChartView";
 import { useCanvasSize, prepareSurface } from "./canvas";
 import { ChartCanvas } from "./ChartCanvas";
 
@@ -19,11 +21,15 @@ const AMPLITUDE = MID * 0.9;
 
 const TIME_AXIS = new TimeAxis();
 
-const SCOPE_VIEW: ViewportSetup = {
-  gesture: new ZoomAndPan(),
-  span: 4 * HOP_RATE_HZ,
-  limits: { min: 0.1 * HOP_RATE_HZ, max: MAX_KEYING_SAMPLES },
+const SCOPE_VIEW: ChartViewSetup<Viewport> = {
+  gesture: new ZoomAndPan<Viewport>(),
+  initial: new Viewport(4 * HOP_RATE_HZ),
+  home: (view) => view.atLive(),
 };
+
+function scopeBounds(samples: number): Bounds {
+  return { total: samples, limits: { min: 0.1 * HOP_RATE_HZ, max: MAX_KEYING_SAMPLES } };
+}
 
 function geometry(width: number): AxisGeometry {
   return {
@@ -108,7 +114,7 @@ export function Oscilloscope() {
   const { ref, size } = useCanvasSize(HEIGHT);
   const palette = useChartPalette();
   const levels = useStore((s) => s.keyingLevels);
-  const { view, goLive } = useViewport(ref, levels.length, SCOPE_VIEW);
+  const { view, goHome } = useChartView(ref, scopeBounds(levels.length), SCOPE_VIEW);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -117,5 +123,5 @@ export function Oscilloscope() {
     if (surface) drawScope(surface, levels, view.window(levels.length), size.width);
   }, [ref, levels, view, size.width, size.height, palette]);
 
-  return <ChartCanvas canvasRef={ref} height={HEIGHT} goLive={goLive} />;
+  return <ChartCanvas canvasRef={ref} height={HEIGHT} onReset={goHome} />;
 }
