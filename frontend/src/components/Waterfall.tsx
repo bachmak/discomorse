@@ -3,27 +3,35 @@ import { useStore } from "../store";
 import type { ToneSpectrumMessage } from "../types/ws";
 import { NYQUIST_HZ } from "../audioFormat";
 import { AXIS_HEIGHT, FrequencyAxis, axisCaption, type AxisGeometry } from "../charts/axis";
-import { Range } from "../charts/ticks";
-import { VerticalScroll } from "../charts/gestures";
+import type { ChartViewSetup } from "../charts/chartView";
+import { VerticalPan } from "../charts/gestures";
 import { useChartPalette } from "../charts/palette";
+import { Spectrogram } from "../charts/spectrogram";
 import type { ChartSurface } from "../charts/surface";
-import type { ItemWindow } from "../charts/viewport";
-import { useViewport, type ViewportSetup } from "../hooks/useViewport";
+import { Range } from "../charts/ticks";
+import { Viewport } from "../charts/viewport";
+import type { Bounds, ItemWindow } from "../charts/window";
+import { useChartView } from "../hooks/useChartView";
 import { useCanvasSize, prepareSurface } from "./canvas";
 import { ChartCanvas } from "./ChartCanvas";
+import { BAND_BOUNDS, BAND_VIEW } from "./frequencyBand";
 
 const HEIGHT = 300;
 const PLOT_HEIGHT = HEIGHT - AXIS_HEIGHT;
 const VISIBLE_FRAMES = 200;
 
 const FREQUENCY_AXIS = new FrequencyAxis();
-const FREQUENCY_RANGE = new Range(0, NYQUIST_HZ);
+const FULL_BAND = new Range(0, NYQUIST_HZ);
 
-const WATERFALL_VIEW: ViewportSetup = {
-  gesture: new VerticalScroll(),
-  span: VISIBLE_FRAMES,
-  limits: { min: VISIBLE_FRAMES, max: VISIBLE_FRAMES },
+const TIME_VIEW: ChartViewSetup<Viewport> = {
+  gesture: new VerticalPan<Viewport>(),
+  initial: new Viewport(VISIBLE_FRAMES),
+  home: (view) => view.atLive(),
 };
+
+function timeBounds(frames: number): Bounds {
+  return { total: frames, limits: { min: VISIBLE_FRAMES, max: VISIBLE_FRAMES } };
+}
 
 function geometry(width: number): AxisGeometry {
   return {
@@ -35,75 +43,18 @@ function geometry(width: number): AxisGeometry {
   };
 }
 
-function drawAxis(surface: ChartSurface, width: number): void {
-  FREQUENCY_AXIS.draw(surface, FREQUENCY_RANGE, geometry(width));
+function drawAxis(surface: ChartSurface, band: Range, width: number): void {
+  FREQUENCY_AXIS.draw(surface, band, geometry(width));
   axisCaption(surface, "Time (newer ↓)");
 }
 
-type Rgb = readonly [number, number, number];
-
-const PALETTE: readonly Rgb[] = [
-  [9, 6, 50],
-  [26, 14, 110],
-  [64, 18, 150],
-  [120, 28, 170],
-  [186, 50, 150],
-  [230, 90, 110],
-  [250, 200, 90],
-  [255, 255, 238],
-];
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value));
+function visibleRows(frames: ToneSpectrumMessage[], window: ItemWindow): number[][] {
+  const from = Math.max(0, Math.round(window.from));
+  return frames.slice(from, Math.max(0, Math.round(window.to))).map((frame) => frame.data);
 }
 
-function mix(low: Rgb, high: Rgb, t: number): Rgb {
-  return [
-    low[0] + (high[0] - low[0]) * t,
-    low[1] + (high[1] - low[1]) * t,
-    low[2] + (high[2] - low[2]) * t,
-  ];
-}
-
-function magnitudeColor(magnitude: number): Rgb {
-  const scaled = clamp01(magnitude) * (PALETTE.length - 1);
-  const low = Math.min(PALETTE.length - 2, Math.floor(scaled));
-  return mix(PALETTE[low], PALETTE[low + 1], scaled - low);
-}
-
-function paintRow(image: ImageData, row: number, magnitudes: number[]): void {
-  for (let x = 0; x < image.width; x++) {
-    const [r, g, b] = magnitudeColor(magnitudes[x] ?? 0);
-    const offset = (row * image.width + x) * 4;
-    image.data.set([r, g, b, 255], offset);
-  }
-}
-
-function visibleFrames(frames: ToneSpectrumMessage[], window: ItemWindow): ToneSpectrumMessage[] {
-  return frames.slice(Math.max(0, Math.round(window.from)), Math.max(0, Math.round(window.to)));
-}
-
-function buildSpectrogram(frames: ToneSpectrumMessage[]): ImageData | null {
-  const width = frames.length > 0 ? frames[frames.length - 1].data.length : 0;
-  if (width === 0) return null;
-  const image = new ImageData(width, frames.length);
-  frames.forEach((frame, row) => paintRow(image, row, frame.data));
-  return image;
-}
-
-function scaleOnto(
-  ctx: CanvasRenderingContext2D,
-  image: ImageData,
-  buffer: HTMLCanvasElement,
-  width: number,
-): void {
-  buffer.width = image.width;
-  buffer.height = image.height;
-  const bufferCtx = buffer.getContext("2d");
-  if (!bufferCtx) return;
-  bufferCtx.putImageData(image, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(buffer, 0, 0, width, PLOT_HEIGHT);
+function visibleBins(band: Range): ItemWindow {
+  return { from: FULL_BAND.fractionOf(band.min), to: FULL_BAND.fractionOf(band.max) };
 }
 
 function drawHint({ ctx, palette }: ChartSurface, width: number): void {
@@ -115,31 +66,38 @@ function drawHint({ ctx, palette }: ChartSurface, width: number): void {
 
 function drawWaterfall(
   surface: ChartSurface,
-  frames: ToneSpectrumMessage[],
-  buffer: HTMLCanvasElement,
+  rows: number[][],
+  spectrogram: Spectrogram,
+  band: Range,
   width: number,
 ): void {
-  const image = buildSpectrogram(frames);
-  if (image) scaleOnto(surface.ctx, image, buffer, width);
+  const plot = { width, height: PLOT_HEIGHT };
+  if (rows.length > 0) spectrogram.draw(surface.ctx, rows, visibleBins(band), plot);
   else drawHint(surface, width);
-  drawAxis(surface, width);
+  drawAxis(surface, band, width);
 }
 
 export function Waterfall() {
   const { ref, size } = useCanvasSize(HEIGHT);
   const palette = useChartPalette();
-  const bufferRef = useRef<HTMLCanvasElement | null>(null);
+  const spectrogram = useRef<Spectrogram | null>(null);
   const frames = useStore((s) => s.spectrumFrames);
-  const { view, goLive } = useViewport(ref, frames.length, WATERFALL_VIEW);
+  const { view: time, goHome: goLive } = useChartView(ref, timeBounds(frames.length), TIME_VIEW);
+  const { view: band, goHome: resetBand } = useChartView(ref, BAND_BOUNDS, BAND_VIEW);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || size.width === 0) return;
     const surface = prepareSurface(canvas, size, palette);
-    bufferRef.current ??= document.createElement("canvas");
-    const visible = visibleFrames(frames, view.window(frames.length));
-    if (surface) drawWaterfall(surface, visible, bufferRef.current, size.width);
-  }, [ref, frames, view, size.width, size.height, palette]);
+    spectrogram.current ??= new Spectrogram();
+    const rows = visibleRows(frames, time.window(frames.length));
+    if (surface) drawWaterfall(surface, rows, spectrogram.current, band.range, size.width);
+  }, [ref, frames, time, band, size.width, size.height, palette]);
 
-  return <ChartCanvas canvasRef={ref} height={HEIGHT} goLive={goLive} />;
+  const reset = () => {
+    goLive();
+    resetBand();
+  };
+
+  return <ChartCanvas canvasRef={ref} height={HEIGHT} onReset={reset} />;
 }

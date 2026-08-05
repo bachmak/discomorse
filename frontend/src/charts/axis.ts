@@ -4,6 +4,7 @@ import type { Range } from "./ticks";
 const AXIS_FONT = "12px ui-monospace, monospace";
 const CAPTION_PAD = 5;
 const CAPTION_TOP = 8;
+const LABEL_GAP = 6;
 const LABEL_PITCH = 52;
 const MINOR_TICK_LENGTH = 6;
 const MINORS_PER_MAJOR = 2;
@@ -58,7 +59,22 @@ function labelX(x: number, align: CanvasTextAlign, geometry: AxisGeometry): numb
   return x;
 }
 
+interface Extent {
+  left: number;
+  right: number;
+}
+
+function textSpan(x: number, width: number, align: CanvasTextAlign): Extent {
+  if (align === "left") return { left: x, right: x + width };
+  if (align === "right") return { left: x - width, right: x };
+  return { left: x - width / 2, right: x + width / 2 };
+}
+
+// Painted from the outer end inwards, so the label carrying the unit keeps its
+// place and crowded neighbours drop out rather than printing on top of it.
 class AxisPainter {
+  private claimed = Infinity;
+
   constructor(
     private readonly surface: ChartSurface,
     private readonly range: Range,
@@ -74,7 +90,19 @@ class AxisPainter {
     const x = this.x(value);
     this.tick(x, this.geometry.tickTop);
     const align = alignAt(x, this.geometry);
-    axisLabel(this.surface, text, labelX(x, align, this.geometry), this.geometry.labelY, align);
+    this.label(text, labelX(x, align, this.geometry), align);
+  }
+
+  private label(text: string, x: number, align: CanvasTextAlign): void {
+    const span = textSpan(x, this.measure(text), align);
+    if (span.right + LABEL_GAP > this.claimed) return;
+    this.claimed = span.left;
+    axisLabel(this.surface, text, x, this.geometry.labelY, align);
+  }
+
+  private measure(text: string): number {
+    this.surface.ctx.font = AXIS_FONT;
+    return this.surface.ctx.measureText(text).width;
   }
 
   private x(value: number): number {
@@ -99,9 +127,8 @@ abstract class LabeledAxis {
     const painter = new AxisPainter(surface, range, geometry);
     const step = range.step(Math.floor(geometry.width / LABEL_PITCH));
     range.ticks(step / MINORS_PER_MAJOR).forEach((value) => painter.minorTick(value));
-    const labelled = range.ticks(step);
-    const last = labelled.length - 1;
-    labelled.forEach((value, i) => painter.majorTick(value, this.format(value, i === last)));
+    const outermostFirst = range.ticks(step).reverse();
+    outermostFirst.forEach((value, i) => painter.majorTick(value, this.format(value, i === 0)));
   }
 }
 
