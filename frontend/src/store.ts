@@ -1,20 +1,17 @@
 import { create } from "zustand";
 import type { Batch } from "./messages/batch";
-import { MAX_KEYING_SAMPLES, SPECTRUM_HISTORY_FRAMES, appendCapped } from "./signals/history";
+import { SPECTRUM_HISTORY_FRAMES, appendCapped } from "./signals/history";
+import { KeyingHistory } from "./signals/keyingHistory";
+import { NO_LINES, type DecodedLines } from "./text/decodedLines";
 import type { ToneSpectrumMessage } from "./types/ws";
-
-const KEY_DOWN = 1;
-const KEY_UP = 0;
 
 interface Signals {
   spectrumFrames: ToneSpectrumMessage[];
-  keyingLevels: number[];
+  keying: KeyingHistory;
 }
 
 interface Decoded {
-  decodedMorse: string;
-  decodedSymbols: string;
-  correctedText: string;
+  decoded: DecodedLines;
 }
 
 interface State extends Signals, Decoded {
@@ -25,20 +22,22 @@ interface State extends Signals, Decoded {
   setSlowMode: (on: boolean) => void;
 }
 
-const NO_SIGNALS: Signals = { spectrumFrames: [], keyingLevels: [] };
-const NO_DECODED: Decoded = { decodedMorse: "", decodedSymbols: "", correctedText: "" };
+const NO_SIGNALS: Signals = { spectrumFrames: [], keying: KeyingHistory.empty() };
+const NO_DECODED: Decoded = { decoded: NO_LINES };
 
-function levels(keying: readonly boolean[]): number[] {
-  return keying.map((on) => (on ? KEY_DOWN : KEY_UP));
+function appended(current: DecodedLines, batch: Batch): DecodedLines {
+  return {
+    morse: current.morse + batch.morse,
+    symbols: current.symbols + batch.symbols,
+    text: current.text + batch.text,
+  };
 }
 
 function grown(current: Signals & Decoded, batch: Batch): Signals & Decoded {
   return {
     spectrumFrames: appendCapped(current.spectrumFrames, batch.spectrums, SPECTRUM_HISTORY_FRAMES),
-    keyingLevels: appendCapped(current.keyingLevels, levels(batch.keying), MAX_KEYING_SAMPLES),
-    decodedMorse: current.decodedMorse + batch.morse,
-    decodedSymbols: current.decodedSymbols + batch.symbols,
-    correctedText: current.correctedText + batch.text,
+    keying: current.keying.grownBy(batch.keying),
+    decoded: appended(current.decoded, batch),
   };
 }
 
