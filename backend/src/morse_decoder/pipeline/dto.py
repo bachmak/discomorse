@@ -14,6 +14,8 @@ from morse_decoder.api.messages import (
     ToneSpectrumMessage,
 )
 
+_WIRE_DECIMALS = 4
+
 
 @dataclass(frozen=True)
 class Serializable(ABC):
@@ -89,7 +91,9 @@ class ToneSpectrum(Serializable):
 
     def to_message(self) -> OutboundMessage:
         return ToneSpectrumMessage(
-            data=[float(tone.magnitude) for tone in self.magnitudes],
+            data=[
+                round(float(tone.magnitude), _WIRE_DECIMALS) for tone in self.magnitudes
+            ],
             ts=self.ts.timestamp(),
         )
 
