@@ -62,6 +62,31 @@ PRES.sceneGraph = (world) => {
     tap.arrow = new PRES.Arrow(streamLayer, lineD(start, tap.tip), { head: 2.4, cls: "dotted" });
   }
 
+  const glyphSpots = {
+    in: { x: -147, y: 14 },
+    sa: { x: -116, y: -14 },
+    sl: { x: -81, y: 14 },
+    cs: { x: -48, y: -30 },
+    ne: { x: -48, y: 30 },
+    zip: { x: -17, y: -14 },
+    kd: { x: 24, y: 14 },
+    kb: { x: 52, y: -14 },
+    td: { x: 94, y: 14 },
+    sd: { x: 124, y: -14 },
+    tc: { x: 170, y: 14 },
+  };
+  const glyphNames = {
+    ...Object.fromEntries(PRES.data.stages.map((s) => [s.id, s.glyphs.out])),
+    in: PRES.data.byId.sa.glyphs.in,
+    zip: PRES.data.byId.kd.glyphs.in,
+  };
+
+  const glyphLayer = group(world, "layer lvl-graph");
+  Object.entries(glyphSpots).forEach(([id, at], i) => {
+    const g = PRES.glyphs.draw(glyphLayer, glyphNames[id], at, { size: 7, stroke: 0.5 });
+    g.style.transitionDelay = `${i * 70}ms`;
+  });
+
   function forkEdge(target) {
     const d = trimmed(fork, target, 0, R + 1.5);
     return new PRES.Arrow(graph, `M -84.5 0 L ${fork.x} ${fork.y} ${d.slice(d.indexOf("L"))}`);
@@ -95,6 +120,7 @@ PRES.sceneGraph = (world) => {
   PRES.graph = { nodes, taps, inputPort, R, flipAll };
 
   return [
+    { el: glyphLayer, range: [4, 7] },
     {
       el: graph,
       range: [4, 7],

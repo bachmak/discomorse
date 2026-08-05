@@ -19,11 +19,15 @@ PRES.DetailView = class DetailView {
   }
 
   drawRing() {
-    const { el, circle } = PRES.svg;
+    PRES.svg.circle(this.el, this.center.x, this.center.y, 7.6, "stroke detail-ring");
+    this.drawPort(this.stage.tIn, this.stage.glyphs.in, { text: -5.1, glyph: -3.2 });
+    this.drawPort(this.stage.tOut, this.stage.glyphs.out, { text: 6.6, glyph: 3.9 });
+  }
+
+  drawPort(type, glyph, dy) {
     const { x, y } = this.center;
-    circle(this.el, x, y, 7.6, "stroke detail-ring");
-    el("text", { x, y: y - 3.7, class: "detail-type", text: this.stage.tIn }, this.el);
-    el("text", { x, y: y + 5.6, class: "detail-type", text: this.stage.tOut }, this.el);
+    PRES.svg.el("text", { x, y: y + dy.text, class: "detail-type", text: type }, this.el);
+    PRES.glyphs.draw(this.el, glyph, { x, y: y + dy.glyph }, { size: 2.8, stroke: 0.09 });
   }
 
   drawImpl() {

@@ -67,7 +67,24 @@ PRES.data = (() => {
     ],
   };
 
-  const stages = interfaces.map((stage) => ({ ...stage, notes: notes[stage.id] }));
+  const glyphs = {
+    sa: { in: "wave", out: "spectrum" },
+    sl: { in: "spectrum", out: "band" },
+    cs: { in: "band", out: "peak" },
+    ne: { in: "band", out: "noise" },
+    kd: { in: "mixed", out: "pulses" },
+    kb: { in: "pulses", out: "clean" },
+    td: { in: "clean", out: "morse" },
+    sd: { in: "morse", out: "letters" },
+    tc: { in: "letters", out: "text" },
+  };
+
+  const stages = interfaces.map((stage) => ({
+    ...stage,
+    notes: notes[stage.id],
+    glyphs: glyphs[stage.id],
+  }));
+  const byId = Object.fromEntries(stages.map((stage) => [stage.id, stage]));
 
   const subscribed = new Set([
     "spectrums",
@@ -101,5 +118,5 @@ PRES.data = (() => {
     return [...word].map((letter) => morseTable[letter]);
   }
 
-  return { stages, subscribed, code, morse };
+  return { stages, byId, subscribed, code, morse };
 })();
