@@ -1,16 +1,21 @@
 import { useStore } from "../store";
+import { CopyButton } from "./CopyButton";
 
 interface DecodedLineProps {
   className: string;
   value: string;
+  label: string;
   placeholder: string;
 }
 
-function DecodedLine({ className, value, placeholder }: DecodedLineProps) {
+function DecodedLine({ className, value, label, placeholder }: DecodedLineProps) {
   return (
-    <pre className={className}>
-      {value || <span className="placeholder">{placeholder}</span>}
-    </pre>
+    <div className="decoded-line">
+      <pre className={className}>
+        {value || <span className="placeholder">{placeholder}</span>}
+      </pre>
+      <CopyButton value={value} target={label} />
+    </div>
   );
 }
 
@@ -21,10 +26,25 @@ export function DecodedText() {
   const clearDecoded = useStore((s) => s.clearDecoded);
 
   return (
-    <div>
-      <DecodedLine className="text" value={text} placeholder="Corrected text will appear here…" />
-      <DecodedLine className="symbols" value={symbols} placeholder="Raw text will appear here…" />
-      <DecodedLine className="morse" value={morse} placeholder="Morse elements will appear here…" />
+    <div className="decoded-body">
+      <DecodedLine
+        className="text"
+        value={text}
+        label="corrected text"
+        placeholder="Corrected text will appear here…"
+      />
+      <DecodedLine
+        className="symbols"
+        value={symbols}
+        label="raw text"
+        placeholder="Raw text will appear here…"
+      />
+      <DecodedLine
+        className="morse"
+        value={morse}
+        label="morse elements"
+        placeholder="Morse elements will appear here…"
+      />
       <button onClick={clearDecoded}>Clear</button>
     </div>
   );
